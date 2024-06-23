@@ -1,33 +1,29 @@
 import { Knex } from "knex";
-import { Resource, ResourceKey } from "../../shared/db.js";
+import { Resource } from "../../shared/db.js";
 import { ResourceManager } from "../resource.js";
-import { Database } from "../db.js";
+import { Database } from "../database.js";
 
-export interface TestResource
-  extends Resource<TestResource, TestManager, typeof TestKey> {}
+export interface TestResource extends Resource<TestResource, TestManager> {
+  test: string;
+  number: number;
+}
 
-export class TestManager extends ResourceManager<
-  TestResource,
-  TestManager,
-  typeof TestKey
-> {
+export class TestManager extends ResourceManager<TestResource, TestManager> {
   public constructor(
     db: Database,
     init: (onInit: (version?: number) => Promise<void>) => void
   ) {
-    super(db, init, "test", 1, TestKey, [TestKey.Test]);
+    super(db, init, "test", 1, ["test"]);
   }
 
   protected upgrade(table: Knex.AlterTableBuilder, version: number): void {
     if (version < 1) {
-      table.string(TestKey.Test).notNullable();
+      table.string("test").notNullable();
+      table.integer("number").notNullable();
     }
   }
 
-  
+  public async create(test: string, number: number): Promise<TestResource> {
+    return await this.insert({ test, number });
+  }
 }
-
-export const TestKey = Object.freeze({
-  ...ResourceKey,
-  Test: "test",
-});

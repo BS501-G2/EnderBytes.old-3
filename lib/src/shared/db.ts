@@ -4,19 +4,14 @@ export interface ResourceHolder {
   id: number;
 }
 
-export type Resource<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey
-> = {
-  [key in keyof K]: R[keyof R];
-};
+export interface Resource<
+  R extends Resource<R, M> = never,
+  M extends ResourceManager<R, M> = never
+> {
+  dataId: number;
+  recordId: number;
+  createTime: number;
 
-export const ResourceKey = Object.freeze({
-  DataId: "dataId",
-  RecordId: "recordId",
-  CreateTime: "createTime",
-
-  PreviousDataId: "previousId",
-  NextDataId: "nextId",
-});
+  previousDataId: number | null;
+  nextDataId: number | null;
+}

@@ -1,30 +1,27 @@
 import { Knex } from "knex";
-import { Resource, ResourceKey } from "../shared/db.js";
-import { Database } from "./db.js";
+import { Resource } from "../shared/db.js";
+import { Database, ResourceManagerConstructor } from "./database.js";
 import { LogLevel } from "../shared/service.js";
 
 export abstract class ResourceManager<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey
+  R extends Resource<R, M>,
+  M extends ResourceManager<R, M>
 > {
   constructor(
     db: Database,
     init: (onInit: (version?: number) => Promise<void>) => void,
     name: string,
     version: number,
-    keys: K,
-    ftsColumns: K[keyof K][] = []
+    searchableColumns: string[] = []
   ) {
     this.#db = db;
     this.#name = name;
+    this.#searchableColumns = searchableColumns;
 
     if (version <= 0) {
       throw new Error("Invalid version");
     }
     this.#version = version;
-    this.#keys = keys;
-    this.#ftsColumns = ftsColumns;
 
     init((version) => this.#init(version));
   }
@@ -32,8 +29,7 @@ export abstract class ResourceManager<
   readonly #db: Database;
   readonly #name: string;
   readonly #version: number;
-  readonly #keys: K;
-  readonly #ftsColumns: K[keyof K][];
+  readonly #searchableColumns: string[];
 
   get #RECORD_TABLE() {
     return `${this.#name}_Record`;
@@ -55,25 +51,29 @@ export abstract class ResourceManager<
     return this.#version;
   }
 
+  get searchableColumns(): string[] {
+    return [...this.#searchableColumns];
+  }
+
   async #init(version: number = 0): Promise<void> {
     if (version === 0) {
       await this.logSql(
         LogLevel.Debug,
         this.db.schema.createTable(this.#RECORD_TABLE, (table) => {
-          table.increments(ResourceRecordKey.Id);
-          table.boolean(ResourceRecordKey.Deleted);
+          table.increments("id");
+          table.boolean("deleted");
         })
       );
 
       await this.logSql(
         LogLevel.Debug,
         this.db.schema.createTable(this.#DATA_TABLE, (table) => {
-          table.increments(ResourceKey.DataId);
-          table.integer(ResourceKey.RecordId).notNullable();
-          table.integer(ResourceKey.CreateTime).notNullable();
+          table.increments("dataId");
+          table.integer("recordId").notNullable();
+          table.integer("createTime").notNullable();
 
-          table.integer(ResourceKey.PreviousDataId).nullable();
-          table.integer(ResourceKey.NextDataId).nullable();
+          table.integer("previousDataId").nullable();
+          table.integer("nextDataId").nullable();
         })
       );
     }
@@ -86,64 +86,118 @@ export abstract class ResourceManager<
     );
   }
 
-  public get keys(): K {
-    return this.#keys as K;
+  public getManager<R extends Resource<R, M>, M extends ResourceManager<R, M>>(
+    init: ResourceManagerConstructor<R, M>
+  ) {
+    return this.#db.getManager<R, M>(init);
   }
 
-  public get ftsColumns(): K[keyof K][] {
-    return [...this.#ftsColumns];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public getManagers<R extends ResourceManagerConstructor<any, any>[]>(
+    ...constructors: R
+  ) {
+    return this.#db.getManagers(...constructors);
   }
 
-  public async create(data: Omit<R, keyof typeof ResourceKey>): Promise<R> {
+  public async insert(data: Omit<R, keyof Resource>): Promise<R> {
     const resourceRecord = (
-      await this.db
-        .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
-        .insert({ [ResourceRecordKey.Deleted]: false })
-        .returning("*")
+      await this.logSql(
+        LogLevel.Debug,
+        this.db
+          .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
+          .insert({ deleted: false })
+          .returning("*")
+      )
     )[0];
 
-    const dataResult = await this.db
-      .table<R, R[]>(this.#DATA_TABLE)
-      .insert({
-        [ResourceKey.RecordId]: resourceRecord[ResourceRecordKey.Id],
-        [ResourceKey.CreateTime]: Date.now(),
-        [ResourceKey.PreviousDataId]: null,
-        [ResourceKey.NextDataId]: null,
-        ...data,
-      } as never)
-      .returning("*");
+    const dataResult = await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<R, R[]>(this.#DATA_TABLE)
+        .insert({
+          recordId: resourceRecord.id,
+          createTime: Date.now(),
+          previousDataId: null,
+          nextDataId: null,
+          ...data,
+        } as never)
+        .returning("*")
+    );
 
     return dataResult[0] as R;
   }
 
+  public async getById(
+    id: number,
+    { includeDeleted = false, dataId }: GetByIdOptions<R, M> = {}
+  ): Promise<R | null> {
+    const resourceRecord = await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
+        .where("id", "=", id)
+        .first()
+    );
+
+    if (resourceRecord == null) {
+      return null;
+    } else if (!includeDeleted && resourceRecord.deleted) {
+      return null;
+    }
+
+    if (dataId == null) {
+      return (await this.logSql(
+        LogLevel.Debug,
+        this.db
+          .table<R, R[]>(this.#DATA_TABLE)
+          .where("recordId", "=", id)
+          .where("nextDataId", "is", null)
+          .first()
+      ))! as R;
+    }
+
+    return (await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<R, R[]>(this.#DATA_TABLE)
+        .where("recordId", "=", id)
+        .where("dataId", "=", dataId)
+        .first()
+    ))! as R;
+  }
+
   public async update(
     data: R,
-    newData: Partial<Omit<R, keyof typeof ResourceKey>>,
-    options?: UpdateOptions<R, M, K>
+    newData: Partial<Omit<R, keyof Resource>>,
+    options?: UpdateOptions<R, M>
   ): Promise<R> {
-    const resourceRecord = await this.db
-      .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
-      .where(ResourceRecordKey.Id, "=", data[ResourceKey.RecordId as keyof K])
-      .first();
+    const resourceRecord = await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
+        .where("id", "=", data.recordId)
+        .first()
+    );
 
     if (resourceRecord == null) {
       throw new Error("Resource not found");
     }
 
-    if (resourceRecord[ResourceRecordKey.Deleted] === true) {
+    if (resourceRecord.deleted === true) {
       throw new Error("Resource is deleted");
     }
 
-    const base = await this.db
-      .table<R, R[]>(this.#DATA_TABLE)
-      .where(
-        ResourceKey.DataId,
-        "=",
-        options?.baseVersionId != null
-          ? options.baseVersionId
-          : data[ResourceKey.DataId as keyof K]
-      )
-      .first();
+    const base = await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<R, R[]>(this.#DATA_TABLE)
+        .where(
+          "recordId",
+          "=",
+          options?.baseVersionId != null ? options.baseVersionId : data.dataId
+        )
+        .first()
+    );
 
     if (base == null) {
       throw new Error("Base version not found");
@@ -152,54 +206,119 @@ export abstract class ResourceManager<
     const insertRow: R = {
       ...base,
       ...newData,
-      [ResourceKey.RecordId]: resourceRecord[ResourceRecordKey.Id],
-      [ResourceKey.CreateTime]: Date.now(),
-      [ResourceKey.PreviousDataId]: base[ResourceKey.DataId],
-      [ResourceKey.NextDataId]: null,
-    };
+      recordId: resourceRecord.id,
+      createTime: Date.now(),
+      previousDataId: base.dataId,
+      nextDataId: null,
+    } as never;
 
-    delete (insertRow as never)[ResourceKey.DataId];
+    delete (insertRow as Partial<R>).dataId;
 
     const newDataResult: R = (
-      await this.db
-        .table<R, R[]>(this.#DATA_TABLE)
-        .insert(insertRow as never)
-        .returning("*")
+      await this.logSql(
+        LogLevel.Debug,
+        this.db
+          .table<R, R[]>(this.#DATA_TABLE)
+          .insert(
+            Object.assign(insertRow, {
+              dataId: null,
+            }) as never
+          )
+          .returning("*")
+      )
     )[0] as never;
 
-    await this.db
-      .table<R, R[]>(this.#DATA_TABLE)
-      .where({
-        [ResourceKey.DataId as keyof K]: base[ResourceKey.DataId as keyof K],
-      })
-      .update({
-        [ResourceKey.NextDataId as keyof K]:
-          newDataResult[ResourceKey.DataId as keyof K],
-      } as never);
+    await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<R, R[]>(this.#DATA_TABLE)
+        .where("dataId", "=", data.dataId)
+        .update({
+          nextDataId: newDataResult.dataId,
+        } as never)
+    );
 
-    data[ResourceKey.NextDataId as keyof K] =
-      newDataResult[ResourceKey.DataId as keyof K];
+    data.nextDataId = newDataResult.dataId;
 
     return newDataResult;
   }
 
   public async delete(data: R): Promise<void> {
-    await this.db
-      .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
-      .where(ResourceRecordKey.Id, "=", data[ResourceKey.RecordId as keyof K])
-      .update({ [ResourceRecordKey.Deleted]: true });
-
-    await this.db
-      .table<R, R[]>(this.#DATA_TABLE)
-      .where(ResourceKey.RecordId, "=", data[ResourceKey.RecordId as keyof K])
-      .delete();
+    await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
+        .where("id", "=", data.recordId)
+        .update({ deleted: true })
+    );
   }
 
-  public async read(options?: QueryOptions<R, M, K>): Promise<R[]> {
-    let offset = options?.offset ?? 0;
-    const results: R[] = [];
+  public async restore(data: R): Promise<void> {
+    await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
+        .where("id", "=", data.recordId)
+        .update({ deleted: false })
+    );
+  }
 
-    while (results.length < (options?.limit ?? Infinity)) {
+  public async purge(data: R): Promise<void> {
+    await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<R, R[]>(this.#DATA_TABLE)
+        .where("recordId", "=", data.recordId)
+        .delete()
+    );
+
+    await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
+        .where("id", "=", data.recordId)
+        .delete()
+    );
+  }
+
+  public async count(where?: (WhereClause<R, M> | null)[]): Promise<number> {
+    let query = this.db
+      .fromRaw(
+        this.db
+          .table<R>(this.#DATA_TABLE)
+          .select("*")
+          .innerJoin(
+            this.#RECORD_TABLE,
+            this.#RECORD_TABLE + ".id",
+            "=",
+            this.#DATA_TABLE + ".recordId"
+          )
+          .toQuery()
+      )
+      .where("nextDataId", "is", null)
+      .where("deleted", "=", false)
+      .count("* as count")
+      .first();
+
+    if (where != null) {
+      query = where.reduce((query, where) => {
+        if (where == null) {
+          return query;
+        }
+
+        const [key, op, value] = where;
+        return query.where(key as never, op, value as never);
+      }, query);
+    }
+
+    return (await this.logSql(LogLevel.Debug, query))["count"] as number;
+  }
+
+  public async *read(options?: QueryOptions<R, M>): AsyncGenerator<R> {
+    let offset = options?.offset ?? 0;
+    let yielded = 0;
+
+    while (yielded < (options?.limit ?? Infinity)) {
       let query = this.db.table<R, R[]>(this.#DATA_TABLE).select("*");
 
       if (options?.where != null) {
@@ -209,19 +328,19 @@ export abstract class ResourceManager<
           }
 
           const [key, op, value] = where;
-          return query.where(`${key as string}`, op, value);
+          return query.where(key as never, op, value as never);
         }, query);
       }
 
       if (options?.search != null) {
         query = query.whereRaw(
-          `(${this.#ftsColumns.join(" || ' ' || ")}) @@ plainto_tsquery('${
-            options.search
-          }')`
+          `(${this.searchableColumns.join(
+            " || ' ' || "
+          )}) @@ plainto_tsquery('${options.search}')`
         );
       }
 
-      query = query.where(ResourceKey.NextDataId, "is", null);
+      query = query.where("nextDataId", "is", null);
 
       if (options?.orderBy != null) {
         query = options.orderBy.reduce(
@@ -233,32 +352,46 @@ export abstract class ResourceManager<
         );
       }
 
-      if (options?.limit != null) {
-        query = query.limit(options.limit - results.length);
+      query = query.offset(offset);
+      query = query.limit(
+        Math.min(
+          options?.limit != null ? options.limit - yielded : Infinity,
+          100
+        )
+      );
+
+      const resources = await this.logSql(LogLevel.Debug, query);
+
+      if (resources.length === 0) {
+        break;
       }
 
-      query = query.offset(offset);
-
-      for (const resource of await query) {
-        const resourceRecord = await this.db
-          .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
-          .select("*")
-          .where(
-            ResourceRecordKey.Id,
-            "=",
-            (resource as R)[this.keys.RecordId as keyof K]
-          )
-          .first();
-
-        if (resourceRecord?.[ResourceRecordKey.Deleted] === false) {
-          results.push(resource as R);
+      for (const resource of resources) {
+        if (options?.includeDeleted ?? false) {
+          yield resource as R;
+          yielded++;
+          continue;
         }
+
+        const resourceRecord = await this.logSql(
+          LogLevel.Debug,
+          this.db
+            .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
+            .select("*")
+            .where("id", "=", (resource as R).recordId)
+            .first()
+        );
+
+        if (resourceRecord != null && !resourceRecord.deleted) {
+          yield resource as R;
+          yielded++;
+        }
+
+        console.log(resourceRecord);
 
         offset++;
       }
     }
-
-    return results;
   }
 
   protected abstract upgrade(
@@ -275,67 +408,57 @@ export abstract class ResourceManager<
 }
 
 export interface ResourceRecord {
-  [ResourceRecordKey.Id]: number;
-  [ResourceRecordKey.Deleted]: boolean;
+  id: number;
+  deleted: boolean;
 }
 
-export const ResourceRecordKey = Object.freeze({
-  Id: "id",
-  Deleted: "deleted",
-});
-
 export interface UpdateOptions<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey
+  R extends Resource<R, M>,
+  M extends ResourceManager<R, M>
 > {
   baseVersionId?: number;
 }
 
 export interface DeleteOptions<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey
+  R extends Resource<R, M>,
+  M extends ResourceManager<R, M>
 > {
-  where?: WhereClause<R, M, K>[];
+  where?: WhereClause<R, M>[];
 }
 
 export interface GetByIdOptions<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey
+  R extends Resource<R, M>,
+  M extends ResourceManager<R, M>
 > {
-  deleted?: boolean;
-  versionId?: number;
+  includeDeleted?: boolean;
+  dataId?: number;
 }
 
 export interface SearchOptions<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey
+  R extends Resource<R, M>,
+  M extends ResourceManager<R, M>
 > {
   string: string;
 
-  searchColumns: (keyof K)[];
+  searchColumns: keyof R[];
 }
 
 export type QueryOptions<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey
+  R extends Resource<R, M>,
+  M extends ResourceManager<R, M>
 > = {
-  where?: (WhereClause<R, M, K> | null)[];
+  where?: (WhereClause<R, M> | null)[];
   search?: string;
 
-  orderBy?: (OrderByClause<R, M, K> | null)[];
+  orderBy?: (OrderByClause<R, M> | null)[];
 
   offset?: number;
   limit?: number;
 
-  deleted?: boolean;
+  includeDeleted?: boolean;
 } & (
   | {
-      where: (WhereClause<R, M, K> | null)[];
+      where: (WhereClause<R, M> | null)[];
       search: null;
     }
   | {
@@ -346,10 +469,9 @@ export type QueryOptions<
 );
 
 export type WhereClause<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey,
-  T extends keyof K = keyof K
+  R extends Resource<R, M>,
+  M extends ResourceManager<R, M>,
+  T extends keyof R = keyof R
 > = [
   T,
   "=" | ">" | ">=" | "<" | "<=" | "<>" | "!=" | "is" | "is not" | "like",
@@ -357,7 +479,6 @@ export type WhereClause<
 ];
 
 export type OrderByClause<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey
-> = [key: keyof K, descending?: boolean];
+  R extends Resource<R, M>,
+  M extends ResourceManager<R, M>
+> = [key: keyof R, descending?: boolean];

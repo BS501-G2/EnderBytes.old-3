@@ -1,32 +1,9 @@
-import { Resource, ResourceKey } from "../shared/db.js";
 import { LogLevel, Service } from "../shared/service.js";
 import knex, { Knex } from "knex";
 import FS from "fs";
 import { TaskQueue, createTaskQueue } from "../shared/task-queue.js";
 import { ResourceManager } from "./resource.js";
-
-export type DataManagerConstructor<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey
-> = new (db: Database, init: (onInit: () => Promise<void>) => void) => M;
-
-export type DataManagerRegistration<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey
-> = {
-  init: DataManagerConstructor<R, M, K>;
-};
-
-export type DataManagerInstance<
-  R extends Resource<R, M, K>,
-  M extends ResourceManager<R, M, K>,
-  K extends typeof ResourceKey
-> = {
-  init: DataManagerConstructor<R, M, K>;
-  instance: M;
-};
+import { Resource } from "../shared/db.js";
 
 interface VersionTable {
   name: string;
@@ -37,12 +14,33 @@ interface DatabaseInstance {
   db: Knex;
   currentTransaction: Knex.Transaction | null;
   taskQueue: TaskQueue;
-  mangers: DataManagerInstance<never, never, never>[];
+  managers: DatabaseResourceManagerInstance<never, never>[];
 }
+
+export type ResourceManagerConstructor<
+  R extends Resource<R, M>,
+  M extends ResourceManager<R, M>
+> = new (
+  db: Database,
+  init: (onInit: (version?: number) => Promise<void>) => void
+) => M;
+
+export type DatabaseResourceManagerInstance<
+  R extends Resource<R, M>,
+  M extends ResourceManager<R, M>
+> = {
+  init: ResourceManagerConstructor<R, M>;
+  instance: M;
+};
+
+export type ExtractInstanceFromConstructor<T> =
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  T extends ResourceManagerConstructor<infer _R, infer M> ? M : never;
 
 export class Database extends Service<
   DatabaseInstance,
-  [managers: DataManagerConstructor<never, never, never>[]]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [managers: ResourceManagerConstructor<any, any>[]]
 > {
   public constructor() {
     let getInstanceData: (() => DatabaseInstance) | null = null;
@@ -80,8 +78,9 @@ export class Database extends Service<
     return this.#instanceData.db;
   }
 
-  get #managers(): DataManagerInstance<never, never, never>[] {
-    return this.#instanceData.mangers;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get #managers(): DatabaseResourceManagerInstance<any, any>[] {
+    return this.#instanceData.managers;
   }
 
   public get transacting(): boolean {
@@ -91,12 +90,13 @@ export class Database extends Service<
   async run(
     setData: (instance: DatabaseInstance) => void,
     onReady: (onStop: () => void) => void,
-    managers: DataManagerConstructor<never, never, never>[]
+    managers: ResourceManagerConstructor<never, never>[]
   ): Promise<void> {
     if (!FS.existsSync(this.#databaseFolder)) {
       FS.mkdirSync(this.#databaseFolder);
     }
 
+    let destroyed = false;
     const db: Knex = knex({
       client: "sqlite3",
       connection: {
@@ -116,14 +116,15 @@ export class Database extends Service<
       db,
       currentTransaction: null,
       taskQueue: createTaskQueue(),
-      mangers: [],
+      managers: [],
     });
 
     await this.transact(async () => {
       for (const entry of managers) {
         let init: ((number?: number) => Promise<void>) | null = null;
 
-        const instance: ResourceManager<never, never, never> = new entry(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const instance: ResourceManager<any, any> = new entry(
           this,
           (onInit) => {
             init = onInit;
@@ -138,11 +139,41 @@ export class Database extends Service<
 
         await this.#setVersion(instance.name, instance.version);
 
-        this.#instanceData.mangers.push(instance as never);
+        this.#instanceData.managers.push({
+          init: entry,
+          instance: instance as never,
+        });
       }
     });
 
-    onReady(() => {});
+    onReady(() => {
+      destroyed = true;
+    });
+
+    while (!destroyed) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+
+  public getManager<R extends Resource<R, M>, M extends ResourceManager<R, M>>(
+    init: ResourceManagerConstructor<R, M>
+  ) {
+    const instance = this.#managers.find((entry) => entry.init === init);
+
+    if (instance == null) {
+      throw new Error("Manager not found");
+    }
+
+    return instance.instance as M;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public getManagers<R extends ResourceManagerConstructor<any, any>[]>(
+    ...constructors: R
+  ) {
+    return constructors.map((manager) => this.getManager(manager)) as {
+      [K in keyof R]: ExtractInstanceFromConstructor<R[K]>;
+    };
   }
 
   public get db(): Knex.Transaction {
@@ -214,42 +245,12 @@ export class Database extends Service<
     return transaction;
   }
 
-  public getManager<
-    R extends Resource<R, M, K>,
-    M extends ResourceManager<R, M, K>,
-    K extends typeof ResourceKey
-  >(init: DataManagerConstructor<R, M, K>): M {
-    const entry = this.#managers.find(
-      (entry) => entry.init === (init as never)
-    );
-    if (entry != null) {
-      return entry.instance as M;
-    }
-
-    const instance = new init(this, () => this.db as never);
-    this.#managers.push({ init: init as never, instance: instance as never });
-    return instance;
-  }
-
-  public getManagers<
-    C extends readonly DataManagerConstructor<never, never, never>[]
-  >(...init: C): { [K in keyof C]: DataManagerConstructorInstance<C[K]> } {
-    return init.map((init) => this.getManager(init)) as {
-      [K in keyof C]: DataManagerConstructorInstance<C[K]>;
-    };
-  }
-
   public logSql<T extends Knex.QueryBuilder | Knex.SchemaBuilder>(
     level: LogLevel,
     query: T
   ): T {
-    console.log(query.toQuery());
     this.log(level, query.toQuery());
 
     return query;
   }
 }
-
-export type DataManagerConstructorInstance<T> =
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  T extends DataManagerConstructor<infer _M, infer D, infer _A> ? D : never;

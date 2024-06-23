@@ -68,6 +68,7 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
               }
 
               runtime.onStop = onStop;
+              resolve();
               isReady = true;
               this.log(LogLevel.Debug, "Service is now ready.");
             },
@@ -78,7 +79,7 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
         }
       };
 
-      setTimeout(() => run().then(resolve, reject), 0);
+      setTimeout(() => run().catch(reject), 0);
     });
 
     return promise;
