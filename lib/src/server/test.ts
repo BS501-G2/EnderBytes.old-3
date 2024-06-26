@@ -1,12 +1,26 @@
 import { TestFunctions } from "../test.js";
 import { Database } from "./database.js";
+import { FileAccessManager } from "./db/file-access.js";
+import { FileContentManager } from "./db/file-content.js";
+import { FileManager } from "./db/file.js";
 import { TestManager, TestResource } from "./db/test-manager.js";
+import { UserAuthenticationManager } from "./db/user-authentication.js";
+import { UserSessionManager } from "./db/user-session.js";
+import { UserManager } from "./db/user.js";
 
 export const testFunctions: TestFunctions = {
   db: async () => {
     const db = new Database();
 
-    await db.start([TestManager]);
+    await db.start([
+      FileAccessManager,
+      FileContentManager,
+      FileManager,
+      TestManager,
+      UserAuthenticationManager,
+      UserSessionManager,
+      UserManager,
+    ]);
 
     const [testManager] = db.getManagers(TestManager);
 
