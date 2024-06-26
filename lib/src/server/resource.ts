@@ -69,7 +69,7 @@ export abstract class ResourceManager<
         LogLevel.Debug,
         this.db.schema.createTable(this.#DATA_TABLE, (table) => {
           table.increments("dataId");
-          table.integer("recordId").notNullable();
+          table.integer("id").notNullable();
           table.integer("createTime").notNullable();
 
           table.integer("previousDataId").nullable();
@@ -115,7 +115,7 @@ export abstract class ResourceManager<
       this.db
         .table<R, R[]>(this.#DATA_TABLE)
         .insert({
-          recordId: resourceRecord.id,
+          id: resourceRecord.id,
           createTime: Date.now(),
           previousDataId: null,
           nextDataId: null,
@@ -150,7 +150,7 @@ export abstract class ResourceManager<
         LogLevel.Debug,
         this.db
           .table<R, R[]>(this.#DATA_TABLE)
-          .where("recordId", "=", id)
+          .where("id", "=", id)
           .where("nextDataId", "is", null)
           .first()
       ))! as R;
@@ -160,7 +160,7 @@ export abstract class ResourceManager<
       LogLevel.Debug,
       this.db
         .table<R, R[]>(this.#DATA_TABLE)
-        .where("recordId", "=", id)
+        .where("id", "=", id)
         .where("dataId", "=", dataId)
         .first()
     ))! as R;
@@ -175,7 +175,7 @@ export abstract class ResourceManager<
       LogLevel.Debug,
       this.db
         .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
-        .where("id", "=", data.recordId)
+        .where("id", "=", data.id)
         .first()
     );
 
@@ -192,7 +192,7 @@ export abstract class ResourceManager<
       this.db
         .table<R, R[]>(this.#DATA_TABLE)
         .where(
-          "recordId",
+          "dataId",
           "=",
           options?.baseVersionId != null ? options.baseVersionId : data.dataId
         )
@@ -206,7 +206,7 @@ export abstract class ResourceManager<
     const insertRow: R = {
       ...base,
       ...newData,
-      recordId: resourceRecord.id,
+      id: resourceRecord.id,
       createTime: Date.now(),
       previousDataId: base.dataId,
       nextDataId: null,
@@ -248,9 +248,95 @@ export abstract class ResourceManager<
       LogLevel.Debug,
       this.db
         .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
-        .where("id", "=", data.recordId)
+        .where("id", "=", data.id)
         .update({ deleted: true })
     );
+  }
+
+  public async updateWhere(
+    set: Partial<Omit<R, keyof Resource>>,
+    where: (WhereClause<R, M> | null)[]
+  ): Promise<void> {
+    const ids: number[] = [];
+
+    for await (const resource of this.readStream({ where })) {
+      ids.push(resource.id);
+    }
+
+    for (const id of ids) {
+      const data = await this.getById(id);
+
+      if (data == null) {
+        continue;
+      }
+
+      await this.update(data, set);
+    }
+  }
+
+  public async deleteWhere(where: (WhereClause<R, M> | null)[]): Promise<void> {
+    let query = this.db
+      .table<R, R[]>(this.#DATA_TABLE)
+      .select(["id as id"]);
+    query = where.reduce((query, where) => {
+      if (where == null) {
+        return query;
+      }
+
+      const [column, op, value] = where;
+
+      return query.where(column as never, op, value as never);
+    }, query);
+
+    await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
+        .update({ deleted: true })
+        .whereIn("id", query)
+    );
+  }
+
+  public async restoreWhere(
+    where: (WhereClause<R, M> | null)[]
+  ): Promise<void> {
+    let query = this.db
+      .table<R, R[]>(this.#DATA_TABLE)
+      .select(["id as id"]);
+    query = where.reduce((query, where) => {
+      if (where == null) {
+        return query;
+      }
+
+      const [column, op, value] = where;
+
+      return query.where(column as never, op, value as never);
+    }, query);
+
+    await this.logSql(
+      LogLevel.Debug,
+      this.db
+        .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
+        .update({ deleted: false })
+        .whereIn("id", query)
+    );
+  }
+
+  public async purgeWhere(where: (WhereClause<R, M> | null)[]): Promise<void> {
+    const ids: number[] = [];
+
+    for await (const resource of this.readStream({ where })) {
+      ids.push(resource.id);
+    }
+
+    for (const id of ids) {
+      const data = await this.getById(id);
+      if (data == null) {
+        continue;
+      }
+
+      await this.purge(data);
+    }
   }
 
   public async restore(data: R): Promise<void> {
@@ -258,7 +344,7 @@ export abstract class ResourceManager<
       LogLevel.Debug,
       this.db
         .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
-        .where("id", "=", data.recordId)
+        .where("id", "=", data.id)
         .update({ deleted: false })
     );
   }
@@ -268,7 +354,7 @@ export abstract class ResourceManager<
       LogLevel.Debug,
       this.db
         .table<R, R[]>(this.#DATA_TABLE)
-        .where("recordId", "=", data.recordId)
+        .where("id", "=", data.id)
         .delete()
     );
 
@@ -276,7 +362,7 @@ export abstract class ResourceManager<
       LogLevel.Debug,
       this.db
         .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
-        .where("id", "=", data.recordId)
+        .where("id", "=", data.id)
         .delete()
     );
   }
@@ -291,7 +377,7 @@ export abstract class ResourceManager<
             this.#RECORD_TABLE,
             this.#RECORD_TABLE + ".id",
             "=",
-            this.#DATA_TABLE + ".recordId"
+            this.#DATA_TABLE + ".id"
           )
           .toQuery()
       )
@@ -314,7 +400,17 @@ export abstract class ResourceManager<
     return (await this.logSql(LogLevel.Debug, query))["count"] as number;
   }
 
-  public async *read(options?: QueryOptions<R, M>): AsyncGenerator<R> {
+  public async read(options?: QueryOptions<R, M>): Promise<R[]> {
+    const result: R[] = [];
+
+    for await (const record of this.readStream(options)) {
+      result.push(record);
+    }
+
+    return result;
+  }
+
+  public async *readStream(options?: QueryOptions<R, M>): AsyncGenerator<R> {
     let offset = options?.offset ?? 0;
     let yielded = 0;
 
@@ -333,11 +429,13 @@ export abstract class ResourceManager<
       }
 
       if (options?.search != null) {
-        query = query.whereRaw(
-          `(${this.searchableColumns.join(
-            " || ' ' || "
-          )}) @@ plainto_tsquery('${options.search}')`
-        );
+        for (const searchableColumn of this.#searchableColumns) {
+          query = query.orWhere(
+            searchableColumn,
+            "like",
+            `%${options.search}%`
+          );
+        }
       }
 
       query = query.where("nextDataId", "is", null);
@@ -378,7 +476,7 @@ export abstract class ResourceManager<
           this.db
             .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
             .select("*")
-            .where("id", "=", (resource as R).recordId)
+            .where("id", "=", (resource as R).id)
             .first()
         );
 
@@ -399,7 +497,7 @@ export abstract class ResourceManager<
     version: number
   ): void;
 
-  public logSql<T extends Knex.QueryBuilder | Knex.SchemaBuilder>(
+  public logSql<T extends Knex.QueryBuilder | Knex.SchemaBuilder | Knex.Raw>(
     level: LogLevel,
     query: T
   ): T {

@@ -16,7 +16,7 @@ export const testFunctions: TestFunctions = {
       }
 
       const tests: TestResource[] = [];
-      for await (const test of testManager.read()) {
+      for await (const test of testManager.readStream()) {
         tests.push(test);
       }
 
@@ -28,6 +28,8 @@ export const testFunctions: TestFunctions = {
           number: test.number + 1,
         });
       }
+
+      await testManager.purgeWhere([["test", "like", "test: %"]]);
 
       console.log(tests.length);
     });

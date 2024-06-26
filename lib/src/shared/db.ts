@@ -9,7 +9,7 @@ export interface Resource<
   M extends ResourceManager<R, M> = never
 > {
   dataId: number;
-  recordId: number;
+  id: number;
   createTime: number;
 
   previousDataId: number | null;

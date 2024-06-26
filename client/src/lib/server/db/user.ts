@@ -5,9 +5,9 @@ import { UserSessionManager } from './user-session';
 import {
   UserKeyType,
   UserRole,
-  UsernameVerificationFlag,
   usernameLength,
-  usernameValidCharacters
+  usernameValidCharacters,
+  UsernameVerificationFlag
 } from '$lib/shared/db';
 
 export interface User extends Data<UserManager, User> {

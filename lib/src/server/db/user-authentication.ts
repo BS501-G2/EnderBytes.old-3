@@ -1,6 +1,6 @@
 import { Knex } from "knex";
 import { Resource } from "../../shared/db.js";
-import { UserAuthenticationType } from "../../shared/db/user-key.js";
+import { UserAuthenticationType } from "../../shared/db/user-authentication.js";
 import { Database } from "../database.js";
 import { ResourceManager } from "../resource.js";
 import {
@@ -27,8 +27,8 @@ export interface UserAuthentication
   publicKey: Uint8Array;
 }
 
-export interface UnlockedUserKey extends UserAuthentication {
-  unlockedPrivateKey: Uint8Array;
+export interface UnlockedUserAuthentication extends UserAuthentication {
+  privateKey: Uint8Array;
 }
 
 export class UserAuthenticationManager extends ResourceManager<
@@ -68,7 +68,7 @@ export class UserAuthenticationManager extends ResourceManager<
     user: UserResource,
     type: UserAuthenticationType,
     payload: Uint8Array
-  ): Promise<UnlockedUserKey> {
+  ): Promise<UnlockedUserAuthentication> {
     const [[privateKey, publicKey], salt, iv] = await Promise.all([
       generateKeyPair(),
       randomBytes(32),
@@ -102,7 +102,7 @@ export class UserAuthenticationManager extends ResourceManager<
     user: UserResource,
     filterType?: UserAuthenticationType
   ): AsyncGenerator<UserAuthentication> {
-    return this.read({
+    return this.readStream({
       where: [
         filterType != null ? ["type", "=", filterType] : null,
         ["userId", "=", user.dataId],
@@ -114,7 +114,7 @@ export class UserAuthenticationManager extends ResourceManager<
     user: UserResource,
     type: UserAuthenticationType,
     payload: Uint8Array
-  ): Promise<UnlockedUserKey | null> {
+  ): Promise<UnlockedUserAuthentication | null> {
     for await (const key of this.list(user, type)) {
       try {
         const unlocked = await this.unlock(key, payload);
@@ -133,7 +133,7 @@ export class UserAuthenticationManager extends ResourceManager<
   public async unlock(
     key: UserAuthentication,
     payload: Uint8Array
-  ): Promise<UnlockedUserKey> {
+  ): Promise<UnlockedUserAuthentication> {
     const privateKey = decryptSymmetric(
       await hashPayload(payload, key.salt),
 
@@ -144,7 +144,7 @@ export class UserAuthenticationManager extends ResourceManager<
 
     return {
       ...key,
-      unlockedPrivateKey: privateKey,
+      privateKey: privateKey,
     };
   }
 
@@ -152,12 +152,12 @@ export class UserAuthenticationManager extends ResourceManager<
     user: UserResource,
     oldPassword: string,
     newPassword: string
-  ): Promise<UnlockedUserKey> {
+  ): Promise<UnlockedUserAuthentication> {
     for await (const userAuthentication of this.list(
       user,
       UserAuthenticationType.Password
     )) {
-      let unlockedUserKey: UnlockedUserKey;
+      let unlockedUserKey: UnlockedUserAuthentication;
       try {
         unlockedUserKey = await this.unlock(
           userAuthentication,
@@ -174,7 +174,7 @@ export class UserAuthenticationManager extends ResourceManager<
       const [encryptedAuthTag, encryptedPrivateKey] = encryptSymmetric(
         newKey,
         unlockedUserKey.iv,
-        unlockedUserKey.unlockedPrivateKey
+        unlockedUserKey.privateKey
       );
 
       const newUserKey = await this.update(userAuthentication, {
@@ -188,8 +188,8 @@ export class UserAuthenticationManager extends ResourceManager<
     throw new Error("User has no password");
   }
 
-  public decrypt(key: UnlockedUserKey, payload: Uint8Array): Uint8Array {
-    return decryptAsymmetric(key.unlockedPrivateKey, payload);
+  public decrypt(key: UnlockedUserAuthentication, payload: Uint8Array): Uint8Array {
+    return decryptAsymmetric(key.privateKey, payload);
   }
 
   public encrypt(key: UserAuthentication, payload: Uint8Array): Uint8Array {

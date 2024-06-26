@@ -108,6 +108,7 @@ export class Database extends Service<
     await db.raw("PRAGMA synchtonization = ON;");
     await db.raw("PRAGMA journal_mode = MEMORY;");
     await db.raw("PRAGMA read_uncommitted = true;");
+    await db.raw("PRAGMA foreign_keys = ON;");
     await db.raw(
       `create table if not exists version (name text primary key, version integer);`
     );
@@ -245,7 +246,7 @@ export class Database extends Service<
     return transaction;
   }
 
-  public logSql<T extends Knex.QueryBuilder | Knex.SchemaBuilder>(
+  public logSql<T extends Knex.QueryBuilder | Knex.SchemaBuilder | Knex.Raw>(
     level: LogLevel,
     query: T
   ): T {

@@ -8,11 +8,11 @@ import {
 import { Resource } from "../../shared/db.js";
 import { ResourceManager } from "../resource.js";
 import {
-  UnlockedUserKey,
+  UnlockedUserAuthentication,
   UserAuthenticationManager,
 } from "./user-authentication.js";
 import { Database } from "../database.js";
-import { UserAuthenticationType } from "../../shared/db/user-key.js";
+import { UserAuthenticationType } from "../../shared/db/user-authentication.js";
 
 export interface UserResource extends Resource<UserResource, UserManager> {
   username: string;
@@ -96,7 +96,7 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
     password: string = this.generateRandomPassword(16),
     role: UserRole = UserRole.Member
   ): Promise<
-    [user: UserResource, unlockedUserKey: UnlockedUserKey, password: string]
+    [user: UserResource, unlockedUserKey: UnlockedUserAuthentication, password: string]
   > {
     if ((await this.verify(username)) !== UsernameVerificationFlag.OK) {
       throw new Error("Invalid username");
@@ -124,6 +124,16 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
 
   public async delete(user: UserResource) {
     await super.delete(user);
+
+    const [userKeyManager] = this.getManagers(UserAuthenticationManager);
+    await userKeyManager.deleteWhere([["userId", "=", user.dataId]]);
+  }
+
+  public async purge(data: UserResource): Promise<void> {
+    await super.purge(data);
+
+    const [userKeyManager] = this.getManagers(UserAuthenticationManager);
+    await userKeyManager.purgeWhere([["userId", "=", data.dataId]]);
   }
 
   public async getByUsername(username: string): Promise<UserResource | null> {
@@ -131,7 +141,7 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
       return null;
     }
 
-    for await (const user of this.read({
+    for await (const user of this.readStream({
       where: [["username", "=", username]],
       limit: 1,
     })) {

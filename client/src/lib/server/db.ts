@@ -515,7 +515,6 @@ export abstract class DataManager<M extends DataManager<M, D>, D extends Data<M,
 
     const result = await query;
 
-    console.log(query.toQuery())
     return result[0]['count(*)'];
   }
 
@@ -557,7 +556,6 @@ export abstract class DataManager<M extends DataManager<M, D>, D extends Data<M,
 
       query = query.offset(currentOffset);
 
-      console.log(query.toQuery());
       const entries = <D[]>await query;
       if (entries.length === 0) {
         break;
