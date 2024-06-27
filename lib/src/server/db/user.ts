@@ -28,7 +28,7 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
     db: Database,
     init: (onInit: (version?: number) => Promise<void>) => void
   ) {
-    super(db, init, "UserKey", 1);
+    super(db, init, "User", 1);
   }
 
   get searchableColumns(): (keyof UserResource)[] {

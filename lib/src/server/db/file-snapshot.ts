@@ -28,21 +28,21 @@ export class FileSnapshotManager extends ResourceManager<
         .integer("fileId")
         .notNullable()
         .references("id")
-        .inTable(this.getManager(FileManager).name)
+        .inTable(this.getManager(FileManager).recordTableName)
         .onDelete("cascade");
 
       table
         .integer("fileContentId")
         .notNullable()
         .references("id")
-        .inTable(this.getManager(FileContentManager).name)
+        .inTable(this.getManager(FileContentManager).recordTableName)
         .onDelete("cascade");
 
       table
         .integer("baseFileSnapshotId")
         .nullable()
         .references("id")
-        .inTable(this.name)
+        .inTable(this.recordTableName)
         .onDelete("cascade");
     }
   }

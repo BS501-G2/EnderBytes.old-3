@@ -3,7 +3,7 @@ export enum FileType {
   Folder,
 }
 
-export const fileNameLength: [min: number, max: number] = [1, 256] as const;
+export const fileNameLength: readonly [min: number, max: number] = Object.freeze([1, 256]);
 export const fileNameInvalidCharacters = "\\/:*?'\"<>|";
 
 export enum FileNameVerificationFlag {
@@ -12,3 +12,5 @@ export enum FileNameVerificationFlag {
   InvalidLength = 1 << 1,
   FileExists = 1 << 2,
 }
+
+export const fileBufferSize = 1_024 * 64

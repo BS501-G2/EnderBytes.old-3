@@ -1,17 +1,34 @@
 export interface ServiceRuntime<T = unknown> {
-  promise: Promise<void>;
+  onStop: ServiceStopCallback;
 
-  onStop: (() => void) | null;
+  resolve: () => void;
+  reject: () => void;
 
   instance: [T] | null;
 }
 
-export abstract class Service<T = unknown, A extends unknown[] = never[]> {
-  public constructor(onGetInstanceData: (getInstanceData: () => T) => void) {
-    this.#runtime = null;
+export type ServiceGetDataCallback<T = unknown> = () => T;
+export type ServiceOnGetDataCallback<T = unknown> = (
+  func: ServiceGetDataCallback<T>
+) => void;
+export type ServiceSetDataCallback<T = unknown> = (data: T) => T;
+export type ServiceReadyCallback = (onStop: ServiceStopCallback) => void;
+export type ServiceStopCallback = () => Promise<void> | void;
 
-    onGetInstanceData(() => this.#instanceData);
+export abstract class Service<T = unknown, A extends unknown[] = never[]> {
+  public constructor(
+    onData?: ServiceOnGetDataCallback<T> | null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    upstreamService?: Service<any, any[]> | null
+  ) {
+    this.#runtime = null;
+    this.#upstreamService = upstreamService ?? null;
+
+    onData?.(() => this.#instanceData);
   }
+
+  readonly #upstreamService: Service | null;
+  #runtime: ServiceRuntime<T> | null;
 
   get #instanceData(): T {
     if (this.#runtime == null) {
@@ -24,73 +41,91 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
   }
 
   abstract run(
-    setData: (instance: T) => void,
-    onReady: (onStop: () => void) => void,
+    setData: ServiceSetDataCallback<T>,
+    onReady: ServiceReadyCallback,
     ...args: A
-  ): Promise<void>;
-
-  #runtime: ServiceRuntime<T> | null;
+  ): Promise<void> | void;
 
   public async stop(): Promise<void> {
     if (this.#runtime) {
-      this.#runtime.onStop?.();
+      this.log(LogLevel.Info, "Stopping...");
+      await this.#runtime.onStop?.();
+      this.log(LogLevel.Info, "Service has stopped.");
     }
   }
 
   public start(...args: A): Promise<void> {
-    const promise = new Promise<void>((resolve, reject) => {
-      const run = async () => {
-        this.log(LogLevel.Debug, "Preparing to start.");
+    return new Promise<void>((resolve, reject) => {
+      if (this.#runtime != null) {
+        throw new Error("Already running.");
+      }
 
-        try {
-          if (this.#runtime != null) {
-            this.log(LogLevel.Debug, "Already started.");
-            throw new Error("Already started");
-          }
+      const runtime: ServiceRuntime = (this.#runtime = {
+        resolve: null as never,
+        reject: null as never,
+        onStop: null as never,
 
-          this.log(LogLevel.Debug, "Setting runtime data.");
-          const runtime: ServiceRuntime<T> = (this.#runtime = {
-            onStop: null,
-            promise,
-            instance: null,
-          });
+        instance: null,
+      });
+      this.log(LogLevel.Debug, "Runtime data has been set.");
 
-          this.log(LogLevel.Debug, "Starting service...");
-          let isReady: boolean = false;
-          await this.run(
-            (instance) => {
-              runtime.instance = [instance];
-              this.log(LogLevel.Debug, "Instance data has been set.");
-            },
-            (onStop) => {
-              if (isReady) {
-                return;
-              }
-
-              runtime.onStop = onStop;
-              resolve();
-              isReady = true;
-              this.log(LogLevel.Debug, "Service is now ready.");
-            },
-            ...args
-          );
-        } finally {
-          this.#runtime = null;
-        }
+      const setInstance: ServiceSetDataCallback<T> = (data: T) => {
+        runtime.instance = [data];
+        return data;
       };
 
-      setTimeout(() => run().catch(reject), 0);
-    });
+      let isReady: boolean = false;
+      const onReady: ServiceReadyCallback = (onStop) => {
+        runtime.onStop = onStop;
+        isReady = true;
+        resolve();
+        this.log(LogLevel.Debug, "Service has started.");
+      };
 
-    return promise;
+      (async () => await this.run(setInstance, onReady, ...args))()
+        .then(() => {
+          if (!isReady) {
+            this.log(
+              LogLevel.Debug,
+              "Service has stopped without sending ready signal."
+            );
+            resolve();
+          }
+        })
+        .catch((error: unknown) => {
+          if (!isReady) {
+            this.log(
+              LogLevel.Debug,
+              "Service has stopped initializing with an error."
+            );
+            reject(error);
+          }
+        })
+        .finally(() => {
+          this.#runtime = null;
+          this.log(LogLevel.Debug, "Service runtime data has been cleaned up.");
+        });
+    });
   }
 
-  public async log(level: LogLevel, message: string): Promise<void> {
-    console.log(
-      `[${LogLevel[level]}] [${new Date()}] [${
-        this.constructor.name
-      }] ${message}`
-    );
+  #log(level: LogLevel, message: string, upstream: string[]): void {
+    if (this.#upstreamService != null) {
+      this.#upstreamService.#log(level, message, [
+        this.constructor.name,
+        ...upstream,
+      ]);
+    } else {
+      const timestamp = new Date().getTime();
+      const stack: string[] = [this.constructor.name, ...upstream];
+
+      console.log(
+        `[${timestamp}] [${stack.join(" > ")}] [${LogLevel[level]}] ${message}`
+      );
+    }
+  }
+
+  public log(level: LogLevel, message: string) {
+    return this.#log(level, message, []);
   }
 }
 

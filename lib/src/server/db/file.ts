@@ -50,20 +50,20 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
         .integer("parentFileId")
         .nullable()
         .references("id")
-        .inTable(this.name)
+        .inTable(this.recordTableName)
         .onDelete("cascade");
 
       table
         .integer("creatorUserId")
         .notNullable()
         .references("id")
-        .inTable(this.getManager(UserManager).name);
+        .inTable(this.getManager(UserManager).recordTableName);
 
       table
         .integer("ownerUserId")
         .notNullable()
         .references("id")
-        .inTable(this.getManager(UserManager).name);
+        .inTable(this.getManager(UserManager).recordTableName);
 
       table.string("name").collate("nocase").notNullable();
       table.integer("type").notNullable();
@@ -79,8 +79,8 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
   public verifyFileName<
     T extends FileResource | undefined,
     X = T extends FileResource
-      ? Promise<FileNameVerificationFlag>
-      : FileNameVerificationFlag
+    ? Promise<FileNameVerificationFlag>
+    : FileNameVerificationFlag
   >(name: string, parentFolder?: T): X {
     let flag = FileNameVerificationFlag.OK;
 
@@ -89,7 +89,7 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
       flag |= FileNameVerificationFlag.InvalidLength;
     }
 
-    if (name.match(`[${fileNameInvalidCharacters}]`)) {
+    if (name.match(`^[${fileNameInvalidCharacters}]+$`)) {
       flag |= FileNameVerificationFlag.InvalidCharacters;
     }
 
@@ -97,11 +97,11 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
       parentFolder == null
         ? flag
         : this.count([
-            ["parentFileId", "=", parentFolder.id],
-            ["name", "=", name],
-          ]).then((existing) =>
-            existing > 0 ? FileNameVerificationFlag.FileExists : flag
-          )
+          ["parentFileId", "=", parentFolder.id],
+          ["name", "=", name],
+        ]).then((existing) =>
+          existing > 0 ? FileNameVerificationFlag.FileExists : flag
+        )
     ) as X;
   }
   public async unlock(

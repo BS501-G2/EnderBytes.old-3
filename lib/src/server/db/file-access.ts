@@ -32,13 +32,13 @@ export class FileAccessManager extends ResourceManager<
         .integer("userId")
         .notNullable()
         .references("id")
-        .inTable(this.getManager(UserManager).name)
+        .inTable(this.getManager(UserManager).recordTableName)
         .onDelete("cascade");
       table
         .integer("fileId")
         .notNullable()
         .references("id")
-        .inTable(this.getManager(FileManager).name)
+        .inTable(this.getManager(FileManager).recordTableName)
         .onDelete("cascade");
       table.integer("level").notNullable();
       table.binary("encryptedKey").notNullable();

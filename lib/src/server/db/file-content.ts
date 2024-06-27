@@ -30,7 +30,7 @@ export class FileContentManager extends ResourceManager<
         .notNullable()
         .references("id")
 
-        .inTable(this.getManager(FileManager).name)
+        .inTable(this.getManager(FileManager).recordTableName)
         .onDelete("cascade");
 
       table.boolean("isMain").notNullable();

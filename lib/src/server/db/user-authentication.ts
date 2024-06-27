@@ -39,7 +39,7 @@ export class UserAuthenticationManager extends ResourceManager<
     db: Database,
     init: (onInit: (version?: number) => Promise<void>) => void
   ) {
-    super(db, init, "UserKey", 1);
+    super(db, init, "UserAuthentication", 1);
   }
 
   get searchableColumns(): (keyof UserAuthentication)[] {

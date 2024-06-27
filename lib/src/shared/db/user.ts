@@ -4,7 +4,7 @@ export enum UserRole {
   SystemAdmin,
 }
 
-export const usernameLength: [min: number, max: number] = [6, 16] as const;
+export const usernameLength: readonly [min: number, max: number] = Object.freeze([6, 16]);
 export const usernameValidCharacters = Object.freeze(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_."
 );

@@ -1,9 +1,10 @@
-import { LogLevel, Service } from "../shared/service.js";
+import { LogLevel, Service, ServiceGetDataCallback } from "../shared/service.js";
 import knex, { Knex } from "knex";
 import FS from "fs";
 import { TaskQueue, createTaskQueue } from "../shared/task-queue.js";
 import { ResourceManager } from "./resource.js";
 import { Resource } from "../shared/db.js";
+import { Server } from "./core/server.js";
 
 interface VersionTable {
   name: string;
@@ -34,7 +35,6 @@ export type DatabaseResourceManagerInstance<
 };
 
 export type ExtractInstanceFromConstructor<T> =
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   T extends ResourceManagerConstructor<infer _R, infer M> ? M : never;
 
 export class Database extends Service<
@@ -42,28 +42,28 @@ export class Database extends Service<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [managers: ResourceManagerConstructor<any, any>[]]
 > {
-  public constructor() {
-    let getInstanceData: (() => DatabaseInstance) | null = null;
+  public constructor(server: Server) {
+    let getInstanceData: ServiceGetDataCallback<DatabaseInstance> = null as never;
 
-    super((getter) => {
-      getInstanceData = getter;
-    });
+    super((func) => {
+      getInstanceData = func;
+    }, server);
 
     this.#databaseFolder = ".db";
     this.#databaseFile = `${this.#databaseFolder}/database.db`;
-    this.#getInstanceData = getInstanceData!;
 
     this.#transactions = new WeakMap();
     this.#nextTransactionId = 0;
-  }
 
-  #getInstanceData: null | (() => DatabaseInstance);
+    this.#getInstanceData = getInstanceData;
+  }
 
   readonly #databaseFolder: string;
   readonly #databaseFile: string;
+  readonly #getInstanceData: () => DatabaseInstance;
 
-  get #instanceData(): DatabaseInstance {
-    return this.#getInstanceData!();
+  get #instanceData() {
+    return this.#getInstanceData();
   }
 
   get #currentTransaction(): Knex.Transaction | null {
@@ -96,7 +96,6 @@ export class Database extends Service<
       FS.mkdirSync(this.#databaseFolder);
     }
 
-    let destroyed = false;
     const db: Knex = knex({
       client: "sqlite3",
       connection: {
@@ -147,13 +146,7 @@ export class Database extends Service<
       }
     });
 
-    onReady(() => {
-      destroyed = true;
-    });
-
-    while (!destroyed) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
+    await new Promise<void>((resolve) => onReady(() => resolve()));
   }
 
   public getManager<R extends Resource<R, M>, M extends ResourceManager<R, M>>(
@@ -162,7 +155,7 @@ export class Database extends Service<
     const instance = this.#managers.find((entry) => entry.init === init);
 
     if (instance == null) {
-      throw new Error("Manager not found");
+      throw new Error(`Manager not found: ${init.name}`);
     }
 
     return instance.instance as M;
@@ -250,7 +243,15 @@ export class Database extends Service<
     level: LogLevel,
     query: T
   ): T {
-    this.log(level, query.toQuery());
+    for (let queryEntry of query.toQuery().split("\n")) {
+      queryEntry = queryEntry.trim();
+
+      if (queryEntry.length === 0) {
+        continue;
+      }
+
+      this.log(level, queryEntry);
+    }
 
     return query;
   }

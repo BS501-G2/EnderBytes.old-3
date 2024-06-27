@@ -52,13 +52,13 @@ export class UserSessionManager extends ResourceManager<
         .integer("userId")
         .notNullable()
         .references("id")
-        .inTable(this.getManager(UserManager).name)
+        .inTable(this.getManager(UserManager).recordTableName)
         .onDelete("cascade");
       table
         .integer("originUserAuthenticationId")
         .notNullable()
         .references("id")
-        .inTable(this.getManager(UserAuthenticationManager).name)
+        .inTable(this.getManager(UserAuthenticationManager).recordTableName)
         .onDelete('cascade');
 
       table.binary("encryptedPrivateKey").notNullable();

@@ -47,6 +47,14 @@ export abstract class ResourceManager<
     return this.#name;
   }
 
+  get dataTableName() {
+    return this.#DATA_TABLE
+  }
+
+  get recordTableName() {
+    return this.#RECORD_TABLE
+  }
+
   get version() {
     return this.#version;
   }
