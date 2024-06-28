@@ -3,6 +3,7 @@ import * as SocketIO from "socket.io";
 
 import { LogLevel, Service } from "../../shared/service.js";
 import { Server } from "../core/server.js";
+import { ServerConnectionManager } from "./connection.js";
 
 export interface ApiServerData {
   httpServer: HTTP.Server;
@@ -16,11 +17,14 @@ export class ApiServer extends Service<ApiServerData, ApiServerOptions> {
     super(null, server);
 
     this.#server = server;
+    this.#connections = new ServerConnectionManager(this);
   }
 
   #server: Server;
+  #connections: ServerConnectionManager;
 
-  async #handle(connection: SocketIO.Socket): Promise<void> {}
+  async #handle(connection: SocketIO.Socket): Promise<void> {
+  }
 
   async run(
     setData: (instance: ApiServerData) => void,
@@ -30,9 +34,7 @@ export class ApiServer extends Service<ApiServerData, ApiServerOptions> {
     const httpServer = HTTP.createServer();
     this.log(LogLevel.Info, "HTTP initialized.");
     const sio = new SocketIO.Server({
-      cors: {
-        origin: "*",
-      },
+      cors: { origin: "*", allowedHeaders: "*", methods: "*" },
     });
     this.log(LogLevel.Info, "Socket.IO handler initialized.");
 
@@ -56,11 +58,13 @@ export class ApiServer extends Service<ApiServerData, ApiServerOptions> {
     });
     this.log(LogLevel.Debug, "Socket.IO hooks attached.");
 
+    await this.#connections.start();
     httpServer.listen(port);
     await new Promise<void>((resolve) => onReady(resolve));
 
     httpServer.close();
     sio.close();
     this.log(LogLevel.Debug, "HTTP & Socket.IO server closed.");
+    await this.#connections.stop();
   }
 }

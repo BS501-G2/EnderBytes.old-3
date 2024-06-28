@@ -7,6 +7,7 @@ import {
   listUsers,
   updateUser
 } from '$lib/client/api-functions';
+import { Client } from '@rizzzi/enderdrive-lib/client'
 
 type TestFunctions = [string, (log: (data: any) => void) => any | Promise<any>][];
 
@@ -71,5 +72,10 @@ export const testFunctions: TestFunctions = [
       return await updateUser(authentication!.userId, { firstName: 'Test' + Date.now() });
     }
   ],
-  ['List Users', () => listUsers()]
+  ['List Users', () => listUsers()],
+  ['Asd', async () => {
+    const client = await Client.getInstance('10.1.0.58', 8082)
+
+    console.log(client)
+  }]
 ];

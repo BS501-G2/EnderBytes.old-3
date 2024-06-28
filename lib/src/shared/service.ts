@@ -19,15 +19,15 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
   public constructor(
     onData?: ServiceOnGetDataCallback<T> | null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    upstreamService?: Service<any, any[]> | null
+    downstream?: Service<any, any[]> | null
   ) {
     this.#runtime = null;
-    this.#upstreamService = upstreamService ?? null;
+    this.#downstream = downstream ?? null;
 
     onData?.(() => this.#instanceData);
   }
 
-  readonly #upstreamService: Service | null;
+  readonly #downstream: Service | null;
   #runtime: ServiceRuntime<T> | null;
 
   get #instanceData(): T {
@@ -108,15 +108,16 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
     });
   }
 
-  #log(level: LogLevel, message: string, upstream: string[]): void {
-    if (this.#upstreamService != null) {
-      this.#upstreamService.#log(level, message, [
-        this.constructor.name,
-        ...upstream,
-      ]);
+  #log(level: LogLevel, message: string, downstream: string[]): void {
+    const {
+      constructor: { name },
+    } = this;
+
+    if (this.#downstream != null) {
+      this.#downstream.#log(level, message, [name, ...downstream]);
     } else {
       const timestamp = new Date().getTime();
-      const stack: string[] = [this.constructor.name, ...upstream];
+      const stack: string[] = [name, ...downstream];
 
       console.log(
         `[${timestamp}] [${stack.join(" > ")}] [${LogLevel[level]}] ${message}`

@@ -18,6 +18,7 @@
 	"devDependencies": {
 		"@fortawesome/fontawesome-free": "^6.5.2",
 		"@playwright/test": "^1.28.1",
+		"@rizzzi/enderdrive-lib": "file:../lib",
 		"@rizzzi/svelte-commons": "file:../../svelte-commons",
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/adapter-node": "^5.0.1",

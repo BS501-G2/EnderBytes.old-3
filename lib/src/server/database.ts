@@ -132,7 +132,6 @@ export class Database extends Service<
         );
 
         const version = (await this.#getVersion(instance.name)) ?? 0;
-
         await (init as unknown as (version?: number) => Promise<void>)?.(
           version
         );
