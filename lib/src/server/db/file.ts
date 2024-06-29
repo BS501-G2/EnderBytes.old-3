@@ -15,7 +15,7 @@ import {
 } from "./user-authentication.js";
 import { FileAccessManager } from "./file-access.js";
 import { FileAccessLevel } from "../../shared/db/file-access.js";
-import { decryptSymmetric } from "../crypto.js";
+import { decryptSymmetric, encryptSymmetric, randomBytes } from "../crypto.js";
 
 export interface FileResource extends Resource {
   parentFileId: number | null;
@@ -79,8 +79,8 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
   public verifyFileName<
     T extends FileResource | undefined,
     X = T extends FileResource
-    ? Promise<FileNameVerificationFlag>
-    : FileNameVerificationFlag
+      ? Promise<FileNameVerificationFlag>
+      : FileNameVerificationFlag
   >(name: string, parentFolder?: T): X {
     let flag = FileNameVerificationFlag.OK;
 
@@ -97,21 +97,122 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
       parentFolder == null
         ? flag
         : this.count([
-          ["parentFileId", "=", parentFolder.id],
-          ["name", "=", name],
-        ]).then((existing) =>
-          existing > 0 ? FileNameVerificationFlag.FileExists : flag
-        )
+            ["parentFileId", "=", parentFolder.id],
+            ["name", "=", name],
+          ]).then((existing) =>
+            existing > 0 ? FileNameVerificationFlag.FileExists : flag
+          )
     ) as X;
   }
+
+  public async create<T extends FileType>(
+    unlockedUserKey: UnlockedUserAuthentication,
+    parent: UnlockedFileResource,
+    name: string,
+    type: T
+  ): Promise<UnlockedFileResource> {
+    if (parent == null) {
+      throw new Error("Parent is null");
+    }
+
+    let fnCount = 1;
+    const friendlyName = () => (fnCount === 1 ? name : `${name} (${fnCount})`);
+    while (
+      (await this.scanFolder(parent)).find(
+        (entry) => entry.name.toLowerCase() === friendlyName().toLowerCase()
+      ) != null
+    ) {
+      if (type === FileType.Folder) {
+        throw Error("Folder already exists.");
+      }
+
+      fnCount++;
+    }
+
+    if (parent.type !== FileType.Folder) {
+      throw new Error("Parent is not a folder.");
+    }
+
+    const [key, iv] = await Promise.all([randomBytes(32), randomBytes(16)]);
+    const unlockedParent = await this.unlock(parent, unlockedUserKey);
+
+    const [authTag, encryptedKey] = encryptSymmetric(
+      unlockedParent.aesKey,
+      iv,
+      key
+    );
+
+    const file = await this.insert({
+      parentFileId: parent.id,
+      creatorUserId: unlockedUserKey.userId,
+      ownerUserId: unlockedParent.ownerUserId,
+
+      name: friendlyName(),
+      type: type,
+      deleted: false,
+      encryptedAesKey: encryptedKey,
+      encryptedAesKeyIv: iv,
+      encryptedAesKeyAuthTag: authTag,
+    });
+
+    await this.update(
+      parent,
+      {},
+      {
+        baseDataId: parent.dataId,
+      }
+    );
+
+    return {
+      ...file,
+      aesKey: key,
+    };
+  }
+
+  public async getRoot(
+    unlockedUserKey: UnlockedUserAuthentication
+  ): Promise<FileResource> {
+    const root = (
+      await this.read({
+        where: [
+          ["parentFileId", "is", null],
+          ["ownerUserId", "=", unlockedUserKey.userId],
+        ],
+        limit: 1,
+      })
+    )[0]!;
+
+    if (root != null) {
+      return root;
+    }
+
+    const key = await randomBytes(32);
+    const [userKeys] = this.getManagers(UserAuthenticationManager);
+    const encryptedAesKey = userKeys.encrypt(unlockedUserKey, key);
+
+    const newRoot = await this.insert({
+      parentFileId: null,
+      creatorUserId: unlockedUserKey.userId,
+      ownerUserId: unlockedUserKey.userId,
+      name: "root",
+      type: FileType.Folder,
+
+      deleted: false,
+
+      encryptedAesKey: encryptedAesKey,
+      encryptedAesKeyIv: new Uint8Array(0),
+      encryptedAesKeyAuthTag: new Uint8Array(0),
+    });
+
+    return (await this.getById(newRoot.id))!;
+  }
+
   public async unlock(
     file: FileResource,
     unlockedUserAuthentication: UnlockedUserAuthentication,
     accessLevel?: FileAccessLevel
   ): Promise<UnlockedFileResource> {
-    const [userAuthenticationManager] = this.getManagers(
-      UserAuthenticationManager
-    );
+    const [userKeys] = this.getManagers(UserAuthenticationManager);
     const parentFileid = file.parentFileId;
 
     if (parentFileid != null) {
@@ -127,7 +228,7 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
         const fileAccess = (
           await fileAccesses.read({
             where: [
-              ['fileId', "=", file.id],
+              ["fileId", "=", file.id],
               ["userId", "=", unlockedUserAuthentication.userId],
               ["level", ">=", accessLevel],
             ],
@@ -170,7 +271,7 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
         throw new Error("User does not have access to the file.");
       }
 
-      const key = userAuthenticationManager.decrypt(
+      const key = userKeys.decrypt(
         unlockedUserAuthentication,
         file.encryptedAesKey
       );
@@ -180,5 +281,71 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
         aesKey: key,
       };
     }
+  }
+
+  public async scanFolder(folder: FileResource): Promise<FileResource[]> {
+    const files = await this.read({
+      where: [
+        ["id", "=", folder.id],
+        ["deleted", "=", false],
+      ],
+      orderBy: [["type", true]],
+    });
+
+    return files;
+  }
+
+  public async move(
+    file: UnlockedFileResource,
+    newParent: UnlockedFileResource
+  ) {
+    const files = await this.scanFolder(newParent);
+
+    if (file.parentFileId == null) {
+      throw new Error("Cannot move  root folder");
+    }
+
+    if (files.find((f) => f.name === file.name)) {
+      throw new Error("Destination has conflicting file");
+    }
+
+    const checkForParent = async (folder: FileResource) => {
+      if (folder.id == file.id) {
+        throw new Error("Cannot move a folder into itself");
+      } else {
+        const parentId = folder.parentFileId;
+        if (parentId == null) {
+          return;
+        }
+
+        const parent = await this.getById(parentId);
+        if (parent != null) {
+          await checkForParent(parent);
+        }
+      }
+    };
+
+    await checkForParent(newParent);
+
+    const iv = await randomBytes(16);
+    const [authTag, encryptedKey] = encryptSymmetric(
+      newParent.aesKey,
+      iv,
+      file.aesKey
+    );
+
+    await this.update(file, {
+      parentFileId: newParent.id,
+      encryptedAesKey: encryptedKey,
+      encryptedAesKeyIv: iv,
+      encryptedAesKeyAuthTag: authTag,
+    });
+    await this.update(newParent, {});
+  }
+
+  public async trash(file: UnlockedFileResource): Promise<void> {
+    await this.update(file, {
+      deleted: true,
+    });
   }
 }

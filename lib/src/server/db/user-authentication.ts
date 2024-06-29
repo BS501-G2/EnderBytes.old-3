@@ -131,19 +131,19 @@ export class UserAuthenticationManager extends ResourceManager<
   }
 
   public async unlock(
-    key: UserAuthentication,
+    authentication: UserAuthentication,
     payload: Uint8Array
   ): Promise<UnlockedUserAuthentication> {
     const privateKey = decryptSymmetric(
-      await hashPayload(payload, key.salt),
+      await hashPayload(payload, authentication.salt),
 
-      key.iv,
-      key.encryptedPrivateKey,
-      key.encryptedAuthTag
+      authentication.iv,
+      authentication.encryptedPrivateKey,
+      authentication.encryptedAuthTag
     );
 
     return {
-      ...key,
+      ...authentication,
       privateKey: privateKey,
     };
   }

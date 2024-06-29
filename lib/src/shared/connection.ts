@@ -11,224 +11,168 @@ import type * as SocketIOClient from "socket.io-client";
 
 export type Socket = SocketIOServer.Socket | SocketIOClient.Socket;
 
-export interface ServerFunctions extends ConnectionFunctions {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  echo: [[data: any], any]
+export type ConnectionFunction<P extends any[], R> = (...args: P) => Promise<R>;
+
+export interface ConnectionFunctions {
+  [key: string]: ConnectionFunction<any[], any>;
+
+  echo: <T>(data: T) => Promise<T>;
 }
 
-export interface ClientFunctions extends ConnectionFunctions {
+export const baseConnectionFunctions: ConnectionFunctions = {
+  echo: async <T>(data: T) => data,
+};
 
-}
-
-export enum ConnectionMessageType {
+export enum MessageType {
   Request,
   ResponseOk,
   ResponseError,
 }
 
-export type ConnectionFunction<T extends unknown[], R> = (
-  ...args: T
-) => Promise<Awaited<R>> | Awaited<R>;
+export type Message<
+  FL extends ConnectionFunctions,
+  FR extends ConnectionFunctions
+> = RequestMessage<FR> | ResponseOkMessage<FL> | ResponseErrorMessage;
 
-export interface ConnectionFunctions {
-  [key: string]: [parameters: unknown[], response: unknown];
+export type RequestMessage<
+  F extends ConnectionFunctions,
+  K extends keyof F = keyof F
+> = [
+  type: MessageType.Request,
+  id: number,
+  name: K,
+  parameters: Parameters<F[K]>
+];
+
+export type ResponseOkMessage<
+  F extends ConnectionFunctions,
+  K extends keyof F = keyof F
+> = [type: MessageType.ResponseOk, id: number, data: ReturnType<F[K]>];
+
+export type ResponseErrorMessage = [
+  type: MessageType.ResponseError,
+  id: number,
+  name: string,
+  message: string,
+  stack?: string
+];
+
+export interface PendingRequest<
+  F extends ConnectionFunctions,
+  K extends keyof F = keyof F
+> {
+  resolve: (data: ReturnType<F[K]>) => void;
+  reject: (error: Error) => void;
 }
 
-export type ConnectionFunctionMap<T extends ConnectionFunctions> = {
-  [key in keyof T]: ConnectionFunction<T[key][0], T[key][1]>;
-};
+export interface PendingRequestMap<F extends ConnectionFunctions> {
+  [id: string]: PendingRequest<F>;
+}
 
-export type ConnectionMessageData<
-  FL extends ConnectionFunctions,
+export type SocketWrapper<
   FR extends ConnectionFunctions,
-  KL extends keyof FL = keyof FL,
-  KR extends keyof FR = keyof FR
-> =
-  | [
-    type: ConnectionMessageType.Request,
-    id: number,
-    name: KR,
-    parameters: FR[KR][0]
-  ]
-  | [type: ConnectionMessageType.ResponseOk, id: number, response: FL[KL][1]]
-  | [
-    type: ConnectionMessageType.ResponseError,
-    id: number,
-    name: string,
-    message: string,
-    stack?: string
-  ];
-
-export abstract class Connection<
-  S extends Socket,
-  C extends Connection<S, C, FL, FR>,
   FL extends ConnectionFunctions,
-  FR extends ConnectionFunctions
-> {
-  public constructor(socket: S, functions: ConnectionFunctionMap<FL>) {
-    this.#socket = socket;
-    this.#instance = null;
-    this.#functions = functions;
-    this.#pending = new Map();
-  }
+  S extends Socket
+> = ReturnType<typeof wrapSocket<FR, FL, S>>;
 
-  readonly #functions: ConnectionFunctionMap<FL>;
-  readonly #socket: S;
-  readonly #pending: Map<
-    number,
-    {
-      resolve: (data: Awaited<FR[keyof FR][1]>) => void;
-      reject: (error: Error) => void;
+export function wrapSocket<
+  FR extends ConnectionFunctions,
+  FL extends ConnectionFunctions,
+  S extends Socket
+>(socket: S, map: FL) {
+  const pending: PendingRequestMap<FR> = {};
+
+  const receive = (...message: Message<FR, FL>) => {
+    if (message[0] === MessageType.ResponseOk) {
+      const [, id, data] = message;
+
+      if (!(id in pending)) {
+        return;
+      }
+
+      const {
+        [id]: { resolve },
+      } = pending;
+
+      resolve(data);
+      delete pending[id];
+    } else if (message[0] === MessageType.ResponseError) {
+      const [, id, name, errorMessage, stack] = message;
+
+      if (!(id in pending)) {
+        return;
+      }
+
+      const {
+        [id]: { reject },
+      } = pending;
+      reject(Object.assign(new Error(errorMessage), { name, stack }));
+      delete pending[id];
+    } else if (message[0] === MessageType.Request) {
+      const [, id, name, args] = message;
+      const { [name]: func } = map;
+
+      (async () => func(...args))()
+        .then((data: Awaited<ReturnType<typeof func>>) =>
+          send(MessageType.ResponseOk, id, data)
+        )
+        .catch((error: unknown) => {
+          const sendError = (name: string, message: string, stack?: string) =>
+            send(MessageType.ResponseError, id, name, message, stack);
+
+          if (error instanceof Error) {
+            sendError(error.name, error.message, error.stack);
+          } else {
+            sendError("Uncaught", `${error}`);
+          }
+        });
     }
-  >;
-  #instance: Promise<void> | null;
+  };
 
-  call<K extends keyof FL>(
+  const send = (...message: Message<FL, FR>) => {
+    if (destroyed) {
+      throw new Error("Destroyed");
+    }
+
+    socket.send(...message);
+  };
+
+  socket.on("message", receive);
+  let destroyed: boolean = false;
+
+  const call = <K extends keyof FR, T extends FR[K]>(
     name: K,
-    ...parameters: FL[K][0]
-  ): Promise<Awaited<FL[K][1]>> {
-    return new Promise((resolve, reject) => {
-      let id: number
+    ...args: Parameters<T>
+  ): Promise<Awaited<ReturnType<T>>> =>
+    new Promise((resolve, reject: (error: Error) => void) => {
+      let id: number;
       do {
-        id = Math.floor(Math.random() * 1000000000)
-      } while (this.#pending.has(id))
+        id = Math.floor(Math.random() * Math.pow(2, 31));
+      } while (id in pending);
 
-
-      this.#pending.set(id, { resolve, reject, })
-      this.#send(ConnectionMessageType.Request, id, name as never, ...parameters as never);
+      pending[id] = { resolve, reject };
+      send(MessageType.Request, id, name, args);
     });
-  }
 
-  #send(...args: ConnectionMessageData<FL, FR>): void {
-    this.#socket.send(...args);
-  }
+  const obj: {
+    destroy: () => void;
+    funcs: FR;
+  } = {
+    destroy: () => {
+      (socket.off as any)("message", receive);
+      destroyed = true;
 
-  async #receive(...args: ConnectionMessageData<FL, FR>): Promise<void> {
-    if (args[0] === ConnectionMessageType.Request) {
-      const [, id, name, parameters] = args;
-
-      try {
-        this.#socket.send([
-          ConnectionMessageType.ResponseOk,
-          id,
-          await this.#functions[name as never](...(parameters as never)),
-        ]);
-      } catch (error: unknown) {
-        const sendError = (error: Error) => {
-          this.#socket.send([
-            ConnectionMessageType.ResponseError,
-            error.name,
-            error.message,
-            error.stack,
-          ]);
-        };
-
-        sendError(error instanceof Error ? error : new Error(`${error}`));
+      for (const id in pending) {
+        pending[id].reject(new Error("Destroyed"));
       }
-    } else if (args[0] === ConnectionMessageType.ResponseError) {
-      const [, id, name, message, stack] = args;
+    },
 
-      const data = this.#pending.get(id);
-      if (data == null) {
-        return;
-      }
-
-      this.#pending.delete(id);
-      data.reject(Object.assign(new Error(message), { name, stack }));
-    } else if (args[0] === ConnectionMessageType.ResponseOk) {
-      const [, id, response] = args;
-
-      const data = this.#pending.get(id);
-      if (data == null) {
-        return;
-      }
-
-      this.#pending.delete(id);
-      data.resolve(response as never);
-    }
-  }
-
-  async #handle(): Promise<void> {
-    const socket = this.#socket;
-
-    socket.on("message", (...data) => this.#receive(...(data as never)));
-
-    await new Promise<void>((resolve) => {
-      if (!socket.connected) {
-        resolve();
-      } else {
-        socket.on("disconnect", () => resolve());
-      }
-    });
-  }
-
-  handle(): Promise<void> {
-    return (this.#instance ??= this.#handle().finally(
-      () => (this.#instance = null)
-    ));
-  }
-}
-
-export interface ConnectionManagerData<
-  S extends Socket,
-  C extends Connection<S, C, FL, FR>,
-  FL extends ConnectionFunctions,
-  FR extends ConnectionFunctions
-> {
-  connections: C[];
-
-  handle: (socket: SocketIOClient.Socket) => void;
-}
-
-export abstract class ConnectionManager<
-  S extends Socket,
-  C extends Connection<S, C, FL, FR>,
-  FL extends ConnectionFunctions,
-  FR extends ConnectionFunctions
-> extends Service<ConnectionManagerData<S, C, FL, FR>> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public constructor(downstream?: Service<any>) {
-    let getData: ServiceGetDataCallback<ConnectionManagerData<S, C, FL, FR>> =
-      null as never;
-    super((func) => (getData = func), downstream);
-
-    this.#getData = getData;
-  }
-
-  readonly #getData: ServiceGetDataCallback<
-    ConnectionManagerData<S, C, FL, FR>
-  >;
-  get #data() {
-    return this.#getData;
-  }
-
-  abstract newConnection(socket: Socket): C;
-
-  async run(
-    setData: ServiceSetDataCallback<ConnectionManagerData<S, C, FL, FR>>,
-    onReady: ServiceReadyCallback
-  ): Promise<void> {
-    const data = setData({
-      connections: [],
-      handle: (socket) => {
-        const { connections } = data;
-        const connection = this.newConnection(socket);
-
-        connections.push(connection);
-        connection
-          .handle()
-          .catch((error: unknown) =>
-            this.log(
-              LogLevel.Error,
-              `Error: ${error instanceof Error ? error.stack : `${error}`}`
-            )
-          )
-          .finally(() => {
-            connections.splice(connections.indexOf(connection), 1);
-          });
+    funcs: new Proxy<FR>({} as never, {
+      get: (_, key) => {
+        return (...args: never[]) => call(key as never, ...(args as never));
       },
-    });
+    }),
+  };
 
-    await new Promise<void>(onReady);
-  }
+  return obj;
 }

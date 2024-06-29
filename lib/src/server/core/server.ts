@@ -1,4 +1,4 @@
-import { Service } from "../../shared/service.js";
+import { Service, ServiceGetDataCallback } from "../../shared/service.js";
 import { ApiServer } from "../api/api.js";
 import { Database } from "../database.js";
 import { FileAccessManager } from "../db/file-access.js";
@@ -18,6 +18,22 @@ export interface ServerInstanceData {
 export type ServerOptions = [port: number];
 
 export class Server extends Service<ServerInstanceData, ServerOptions> {
+  public constructor() {
+    let getData: ServiceGetDataCallback<ServerInstanceData> = null as never;
+    super((func) => (getData = func));
+
+    this.#getData = getData;
+  }
+
+  #getData: ServiceGetDataCallback<ServerInstanceData>;
+  get #data() {
+    return this.#getData();
+  }
+
+  get database() {
+    return this.#data.database;
+  }
+
   async run(
     setData: (instance: ServerInstanceData) => void,
     onReady: (onStop: () => void) => void,
@@ -25,6 +41,8 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
   ): Promise<void> {
     const apiServer = new ApiServer(this);
     const database = new Database(this);
+
+    setData({ database });
 
     await apiServer.start(port);
     await database.start([

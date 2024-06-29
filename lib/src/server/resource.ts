@@ -202,7 +202,7 @@ export abstract class ResourceManager<
         .where(
           "dataId",
           "=",
-          options?.baseVersionId != null ? options.baseVersionId : data.dataId
+          options?.baseDataId != null ? options.baseDataId : data.dataId
         )
         .first()
     );
@@ -522,7 +522,7 @@ export interface UpdateOptions<
   R extends Resource<R, M>,
   M extends ResourceManager<R, M>
 > {
-  baseVersionId?: number;
+  baseDataId?: number;
 }
 
 export interface DeleteOptions<

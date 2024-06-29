@@ -3,7 +3,9 @@ import * as SocketIO from "socket.io";
 
 import { LogLevel, Service } from "../../shared/service.js";
 import { Server } from "../core/server.js";
-import { ServerConnectionManager } from "./connection.js";
+import { wrapSocket } from "../../shared/connection.js";
+import { ClientFunctions } from "../../client.js";
+import { ApiServerFunctions, getApiFunctions } from "./api-functions.js";
 
 export interface ApiServerData {
   httpServer: HTTP.Server;
@@ -17,13 +19,15 @@ export class ApiServer extends Service<ApiServerData, ApiServerOptions> {
     super(null, server);
 
     this.#server = server;
-    this.#connections = new ServerConnectionManager(this);
   }
 
   #server: Server;
-  #connections: ServerConnectionManager;
 
-  async #handle(connection: SocketIO.Socket): Promise<void> {
+  #wrapSocket(socket: SocketIO.Socket) {
+    return wrapSocket<ClientFunctions, ApiServerFunctions, SocketIO.Socket>(
+      socket,
+      getApiFunctions(this.#server)
+    );
   }
 
   async run(
@@ -38,33 +42,18 @@ export class ApiServer extends Service<ApiServerData, ApiServerOptions> {
     });
     this.log(LogLevel.Info, "Socket.IO handler initialized.");
 
-    const data = setData({ httpServer, sio });
+    setData({ httpServer, sio });
 
     sio.attach(httpServer);
-    sio.on("connection", (socket) => {
-      const promise = this.#handle(socket);
-
-      const onError = (error: Error) => {
-        this.log(LogLevel.Error, `Socket error: ${error.stack}`);
-      };
-
-      promise.catch((error: unknown) => {
-        if (error instanceof Error) {
-          onError(error);
-        } else {
-          onError(new Error(`${error}`));
-        }
-      });
-    });
     this.log(LogLevel.Debug, "Socket.IO hooks attached.");
 
-    await this.#connections.start();
+    sio.on("connection", (socket) => this.#wrapSocket(socket));
+
     httpServer.listen(port);
     await new Promise<void>((resolve) => onReady(resolve));
 
     httpServer.close();
     sio.close();
     this.log(LogLevel.Debug, "HTTP & Socket.IO server closed.");
-    await this.#connections.stop();
   }
 }

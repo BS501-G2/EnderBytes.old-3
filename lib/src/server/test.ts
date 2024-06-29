@@ -16,14 +16,4 @@ export const testFunctions: TestFunctions = {
 
     process.on("SIGINT", onStop);
   },
-
-  socketServer: async () => {
-    const server = new SocketIO.Server({ cors: { origin: "*" } });
-
-    server.on("connection", (connection) => {
-      connection.on("message", console.log);
-    });
-
-    server.listen(8083);
-  },
 };
