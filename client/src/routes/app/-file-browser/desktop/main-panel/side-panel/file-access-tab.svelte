@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { File } from '$lib/server/db/file';
   import {
     Awaiter,
     Banner,
@@ -8,34 +7,30 @@
     Input,
     InputType,
     LoadingSpinner,
-    Overlay,
     type AwaiterResetFunction
   } from '@rizzzi/svelte-commons';
   import { writable, type Writable } from 'svelte/store';
   import { type Snippet } from 'svelte';
-  import {
-    getAuthentication,
-    getUser,
-    grantAccessToUser,
-    listFileAccess,
-    searchUser
-  } from '$lib/client/api-functions';
-  import type { FileAccess } from '$lib/server/db/file-access';
-  import { FileAccessLevel } from '$lib/shared/db';
-  import type { User } from '$lib/server/db/user';
-  import UserComponent from '$lib/client/user.svelte';
-  import { ApiError } from '$lib/shared/api';
   import FileAccessTabEntry from './file-access-tab-entry.svelte';
+  import type { FileAccessResource, FileResource, UserResource } from '@rizzzi/enderdrive-lib/server';
+  import { ApiError, FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
+  import { getConnection } from '@rizzzi/enderdrive-lib/client';
+  import { getAuthentication } from '$lib/client/auth';
+    import User from '$lib/client/user.svelte';
 
-  const { file }: { file: File } = $props();
+  const { file }: { file: FileResource } = $props();
 
   const userSearch: Writable<string> = writable('');
 
   let reset: AwaiterResetFunction<void> | undefined = $state();
-  let toGrant: [user: User, accessLevel: FileAccessLevel] | null = null;
+  let toGrant: [user: UserResource, accessLevel: FileAccessLevel] | null = null;
 
   const toGrantError: Writable<Error | null> = writable(null);
   const addNewUser: Writable<boolean> = writable(false);
+
+  const {
+    funcs: { grantAccessToUser, listFileAccess, searchUser }
+  } = getConnection();
 </script>
 
 {#snippet buttonContainer(view: Snippet)}
@@ -51,21 +46,19 @@
 
     if (toGrant != null) {
       try {
-        await grantAccessToUser(file, toGrant[0], toGrant[1]);
-      }
-      catch(error: unknown) {
+        await grantAccessToUser(getAuthentication(), file.id, toGrant[0].id, toGrant[1]);
+      } catch (error: unknown) {
         if (error instanceof ApiError) {
           $toGrantError = new Error('User has already been granted access.');
         } else {
           $toGrantError = error as Error;
         }
-
       }
 
       toGrant = null;
     }
 
-    return await listFileAccess(file);
+    return await listFileAccess(getAuthentication(), file.id);
   }}
 >
   {#snippet success({ result: list })}
@@ -79,7 +72,7 @@
       />
     {/each}
 
-    {#if (file.ownerUserId === getAuthentication()?.userId) || list.find((access: FileAccess) => access.accessLevel >= FileAccessLevel.Manage)}
+    {#if file.ownerUserId === getAuthentication()?.userId || list.find((access: FileAccessResource) => access.level >= FileAccessLevel.Manage)}
       {#if $addNewUser}
         <div class="form">
           <div class="input">
@@ -93,7 +86,7 @@
           {#if $userSearch.length}
             <Awaiter
               callback={async () => {
-                const users = await searchUser($userSearch);
+                const users = await searchUser(getAuthentication(), $userSearch);
                 return users;
               }}
             >
@@ -102,7 +95,7 @@
                   {#if list.find((access) => access.userId === user.id) === undefined}
                     <div class="user-result-entry">
                       <div class="link">
-                        <UserComponent {user} initials hyperlink={false} />
+                        <User {user} initials hyperlink={false} />
                       </div>
                       <Button
                         container={buttonContainer}

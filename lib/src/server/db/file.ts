@@ -286,7 +286,7 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
   public async scanFolder(folder: FileResource): Promise<FileResource[]> {
     const files = await this.read({
       where: [
-        ["id", "=", folder.id],
+        ["parentFileId", "=", folder.id],
         ["deleted", "=", false],
       ],
       orderBy: [["type", true]],

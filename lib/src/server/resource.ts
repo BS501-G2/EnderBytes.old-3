@@ -377,7 +377,7 @@ export abstract class ResourceManager<
 
   public async count(where?: (WhereClause<R, M> | null)[]): Promise<number> {
     let query = this.db
-      .fromRaw(
+      .from(
         this.db
           .table<R>(this.#DATA_TABLE)
           .select("*")
@@ -387,7 +387,6 @@ export abstract class ResourceManager<
             "=",
             this.#DATA_TABLE + ".id"
           )
-          .toQuery()
       )
       .where("nextDataId", "is", null)
       .where("deleted", "=", false)

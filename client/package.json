@@ -53,5 +53,8 @@
 		"vitest": "^1.2.0"
 	},
 	"type": "module",
-	"license": "MPL-2.0"
+	"license": "MPL-2.0",
+	"dependencies": {
+		"js-base64": "^3.7.7"
+	}
 }

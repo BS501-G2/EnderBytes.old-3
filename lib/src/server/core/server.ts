@@ -53,8 +53,8 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
       FileAccessManager,
       FileContentManager,
       FileSnapshotManager,
-      FileDataManager,
       FileBufferManager,
+      FileDataManager,
     ]);
 
     await new Promise<void>((resolve) => onReady(resolve));

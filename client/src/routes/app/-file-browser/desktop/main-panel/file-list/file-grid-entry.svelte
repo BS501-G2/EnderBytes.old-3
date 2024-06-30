@@ -1,14 +1,12 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import type { Writable } from 'svelte/store';
-  import {
-    type FileBrowserState,
-    fileClipboard
-  } from '../../../../file-browser.svelte';
-  import type { File } from '$lib/server/db/file';
-  import { FileType } from '$lib/shared/db';
+  import { type FileBrowserState, fileClipboard } from '../../../../file-browser.svelte';
   import { Awaiter, AwaiterResultType } from '@rizzzi/svelte-commons';
-  import { getFileMimeType, readFile } from '$lib/client/api-functions';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import { getConnection } from '@rizzzi/enderdrive-lib/client';
+  import { getAuthentication } from '$lib/client/auth';
+  import { FileType } from '@rizzzi/enderdrive-lib/shared';
 
   let {
     file,
@@ -17,16 +15,20 @@
     selection
   }: {
     fileBrowserState: Writable<FileBrowserState & { isLoading: false }>;
-    file: File;
+    file: FileResource;
     onClick: (
       fileBrowserState: FileBrowserState & { isLoading: false },
-      file: File,
+      file: FileResource,
       event: MouseEvent & {
         currentTarget: EventTarget & HTMLButtonElement;
       }
     ) => void;
-    selection: Writable<File[]>;
+    selection: Writable<FileResource[]>;
   } = $props();
+
+  const {
+    funcs: { readFile, getFileMimeType }
+  } = getConnection();
 </script>
 
 <button
@@ -48,16 +50,20 @@
 >
   <Awaiter
     callback={async () => {
-      const fileContent = await readFile(file);
+      const fileContent = await readFile(getAuthentication(), file.id);
       const url = URL.createObjectURL(
-        new Blob([fileContent], { type: await getFileMimeType(file) })
+        new Blob([fileContent], { type: await getFileMimeType(getAuthentication(), file.id) })
       );
 
       return url;
     }}
   >
     {#snippet children(state)}
-      <img class="thumbnail" alt="Thumbnail" src={state.status === AwaiterResultType.Success ? state.result : ''} />
+      <img
+        class="thumbnail"
+        alt="Thumbnail"
+        src={state.status === AwaiterResultType.Success ? state.result : ''}
+      />
     {/snippet}
   </Awaiter>
 

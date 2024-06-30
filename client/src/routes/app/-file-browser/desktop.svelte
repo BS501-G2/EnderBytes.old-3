@@ -3,17 +3,18 @@
   import type { FileBrowserState } from '../file-browser.svelte';
   import MainPanel from './desktop/main-panel.svelte';
   import SidePanel from './desktop/side-panel.svelte';
-  import type { File } from '$lib/server/db/file';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 
   const {
     fileBrowserState,
     selection
-  }: { fileBrowserState: Writable<FileBrowserState>; selection: Writable<File[]> } = $props();
+  }: { fileBrowserState: Writable<FileBrowserState>; selection: Writable<FileResource[]> } =
+    $props();
 </script>
 
 <div>
-  <MainPanel fileBrowserState={fileBrowserState} {selection} />
-  <SidePanel fileBrowserState={fileBrowserState} {selection} />
+  <MainPanel {fileBrowserState} {selection} />
+  <SidePanel {fileBrowserState} {selection} />
 </div>
 
 <style lang="scss">

@@ -11,8 +11,8 @@
     DialogClass
   } from '@rizzzi/svelte-commons';
   import { type Writable, writable } from 'svelte/store';
-  import { authenticateByPassword } from '$lib/client/api-functions';
   import { type Snippet } from 'svelte';
+  import { authenticateWithPassword } from '$lib/client/auth';
 
   const {}: {} = $props();
 
@@ -71,10 +71,8 @@
         buttonClass={ButtonClass.Primary}
         onClick={async () => {
           try {
-            await authenticateByPassword($username, $password);
-
-          }
-          catch (error: any) {
+            await authenticateWithPassword($username, $password);
+          } catch (error: any) {
             $errorStore = error;
           }
         }}

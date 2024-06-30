@@ -1,12 +1,12 @@
 <script lang="ts" context="module">
-  import type { User } from '$lib/server/db/user';
+  import type { UserResource } from '@rizzzi/enderdrive-lib/server'
 
   export enum UserClass {
     Link
   }
 
   export type UserProps = {
-    user: User;
+    user: UserResource;
   } & (
     | {
         class: UserClass.Link;

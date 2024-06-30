@@ -35,6 +35,7 @@
     "typescript-eslint": "^7.13.1"
   },
   "dependencies": {
+    "@msgpack/msgpack": "^3.0.0-beta2",
     "@types/mmmagic": "^0.4.33",
     "bson": "^6.7.0",
     "buffer": "^6.0.3",
@@ -42,6 +43,7 @@
     "mmmagic": "^0.5.3",
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
+    "socket.io-msgpack-parser": "^3.0.2",
     "sqlite3": "^5.1.7"
   }
 }

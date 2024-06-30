@@ -1,5 +1,4 @@
 <script lang="ts" context="module">
-  import { authentication } from '$lib/client/api-functions';
   import { writable, get, type Writable, type Readable, derived } from 'svelte/store';
 
   export type BackgroundTaskSetStatusFunction = (
@@ -286,6 +285,7 @@
   import { RefreshCwIcon, XIcon, PlayIcon } from 'svelte-feather-icons';
   import { onDestroy, onMount } from 'svelte';
   import { LoadingBar } from '@rizzzi/svelte-commons';
+  import { authentication } from './client/auth';
 
   export let maxCount: number = -1;
 

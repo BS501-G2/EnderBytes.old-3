@@ -21,7 +21,7 @@ export interface UserAuthentication
   iterations: number;
   salt: Uint8Array;
   iv: Uint8Array;
-  encryptedAuthTag: Uint8Array;
+  encryptedPrivateKeyAuthTag: Uint8Array;
 
   encryptedPrivateKey: Uint8Array;
   publicKey: Uint8Array;
@@ -58,8 +58,9 @@ export class UserAuthenticationManager extends ResourceManager<
       table.string("salt").notNullable();
       table.string("iv").notNullable();
 
+
       table.binary("encryptedPrivateKey").notNullable();
-      table.binary("authTag").notNullable();
+      table.binary("encryptedPrivateKeyAuthTag").notNullable();
       table.binary("publicKey").notNullable();
     }
   }
@@ -90,7 +91,7 @@ export class UserAuthenticationManager extends ResourceManager<
       iv,
 
       encryptedPrivateKey,
-      encryptedAuthTag,
+      encryptedPrivateKeyAuthTag: encryptedAuthTag,
       publicKey,
     });
 
@@ -139,7 +140,7 @@ export class UserAuthenticationManager extends ResourceManager<
 
       authentication.iv,
       authentication.encryptedPrivateKey,
-      authentication.encryptedAuthTag
+      authentication.encryptedPrivateKeyAuthTag
     );
 
     return {
@@ -179,7 +180,7 @@ export class UserAuthenticationManager extends ResourceManager<
 
       const newUserKey = await this.update(userAuthentication, {
         encryptedPrivateKey,
-        encryptedAuthTag,
+        encryptedPrivateKeyAuthTag: encryptedAuthTag,
       });
 
       return this.unlock(newUserKey, new TextEncoder().encode(newPassword));

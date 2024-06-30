@@ -2,12 +2,13 @@
   import { Button, ButtonClass, Tab, createTabId, type TabItem } from '@rizzzi/svelte-commons';
   import FileOverviewTab from './file-overview-tab.svelte';
   import FileHistoryTab from './file-history-tab.svelte';
-  import type { File } from '$lib/server/db/file';
   import FileAccessTab from './file-access-tab.svelte';
   import type { FileBrowserState } from '../../../../file-browser.svelte';
   import type { Writable } from 'svelte/store';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 
-  const { file, fileBrowserState }: { file: File; fileBrowserState: Writable<FileBrowserState> } = $props();
+  const { file }: { file: FileResource; fileBrowserState: Writable<FileBrowserState> } =
+    $props();
 
   const tabs: TabItem<{
     icon: string;

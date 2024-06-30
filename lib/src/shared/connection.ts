@@ -1,10 +1,4 @@
-import {
-  LogLevel,
-  Service,
-  ServiceGetDataCallback,
-  ServiceReadyCallback,
-  ServiceSetDataCallback,
-} from "./service.js";
+import { Buffer } from "buffer";
 
 import type * as SocketIOServer from "socket.io";
 import type * as SocketIOClient from "socket.io-client";
@@ -79,10 +73,16 @@ export function wrapSocket<
   FR extends ConnectionFunctions,
   FL extends ConnectionFunctions,
   S extends Socket
->(socket: S, map: FL) {
+>(
+  socket: S,
+  map: FL,
+  beforeCall?: (func: () => Promise<void>) => Promise<void>
+) {
   const pending: PendingRequestMap<FR> = {};
 
   const receive = (...message: Message<FR, FL>) => {
+    console.log("received:", message);
+
     if (message[0] === MessageType.ResponseOk) {
       const [, id, data] = message;
 
@@ -112,7 +112,17 @@ export function wrapSocket<
       const [, id, name, args] = message;
       const { [name]: func } = map;
 
-      (async () => func(...args))()
+      if (!(name in map)) {
+        send(
+          MessageType.ResponseError,
+          id,
+          "InvalidFunctionName",
+          `Function does not exist: ${name as string}`
+        );
+        return
+      }
+
+      (async () => (await beforeCall?.(() => func(...args))) ?? func(...args))()
         .then((data: Awaited<ReturnType<typeof func>>) =>
           send(MessageType.ResponseOk, id, data)
         )
@@ -134,7 +144,42 @@ export function wrapSocket<
       throw new Error("Destroyed");
     }
 
-    socket.send(...message);
+    const BufferC = (() => {
+      if (typeof (globalThis as any).Window === "function") {
+        return Buffer;
+      } else {
+        return globalThis.Buffer;
+      }
+    })();
+
+    const traverse = <T>(obj: T): T => {
+      if (BufferC.isBuffer(obj) || obj instanceof Uint8Array) {
+        return new Uint8Array(obj).buffer as T;
+      } else if (Array.isArray(obj)) {
+        for (let index = 0; index < obj.length; index++) {
+          const a = traverse(obj[index]);
+
+          if (a != obj[index]) {
+            obj[index] = a;
+          }
+        }
+      } else if (typeof obj === "object") {
+        for (const key in obj) {
+          const a = traverse(obj[key]);
+
+          if (obj[key] != a) {
+            obj[key] = a;
+          }
+        }
+      }
+
+      return obj;
+    };
+
+    const t = traverse(message);
+
+    console.log("sent:", t);
+    socket.send(...t);
   };
 
   socket.on("message", receive);

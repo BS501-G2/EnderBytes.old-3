@@ -4,8 +4,8 @@
   import { AnimationFrame, Button, ButtonClass } from '@rizzzi/svelte-commons';
   import { writable, type Writable } from 'svelte/store';
   import { type Snippet } from 'svelte';
-  import type { FileType } from '$lib/shared/db';
-  import type { File } from '$lib/server/db/file';
+    import type { FileType } from '@rizzzi/enderdrive-lib/shared';
+    import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 
   let {
     fileBrowserState,
@@ -13,10 +13,10 @@
   }: {
     fileBrowserState: Writable<
       FileBrowserState & {
-        file: File & { type: FileType.File };
+        file: FileResource & { type: FileType.File };
       }
     >;
-    selection: Writable<File[]>;
+    selection: Writable<FileResource[]>;
   } = $props();
 
   const viewState: Writable<[lastHover: number, currentTime: number]> = writable([

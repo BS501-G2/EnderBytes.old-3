@@ -1,32 +1,24 @@
-<script lang="ts" context="module">
-  export enum UserResolveType {
-    Username,
-    UserId
-  }
-  export type UserResolve =
-    | { type: UserResolveType.UserId; userId: number }
-    | { type: UserResolveType.Username; username: string };
-</script>
-
 <script lang="ts">
   import { Title, Awaiter, Button, ButtonClass } from '@rizzzi/svelte-commons';
   import { showSettingsDialog } from '../settings-dialog.svelte';
-  import { getUser } from '$lib/client/api-functions';
+  import { getConnection } from '@rizzzi/enderdrive-lib/client';
+    import { getAuthentication } from '$lib/client/auth';
+    import { UserResolveType, type UserResolvePayload } from '@rizzzi/enderdrive-lib/shared';
 
-  export let identifier: UserResolve;
+  const {
+    funcs: { getUser }
+  } = getConnection();
+
+  export let resolve: UserResolvePayload;
   let userPromise: Promise<any> | null;
 
-  async function resolve(): Promise<any | null> {
-    if (identifier.type == UserResolveType.Username) {
-      return await getUser(identifier.username);
-    } else {
-      return await getUser(identifier.userId);
-    }
+  async function load(): Promise<any | null> {
+    return await getUser(getAuthentication(), resolve)
   }
 </script>
 
 <svelte:head>
-  {#if identifier.type == UserResolveType.UserId}
+  {#if resolve[0] == UserResolveType.UserId}
     {#key userPromise}
       <Awaiter callback={() => userPromise}>
         {#snippet success({ result: user })}
@@ -38,7 +30,7 @@
 </svelte:head>
 
 <div class="user-page">
-  <Awaiter callback={() => (userPromise = resolve())}>
+  <Awaiter callback={() => (userPromise = load())}>
     {#snippet success({ result: user })}
       <Title
         title="{user.firstName}{user.middleName != null

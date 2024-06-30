@@ -1,8 +1,8 @@
 <script lang="ts">
   import { type Snippet } from 'svelte';
   import { type Writable, writable } from 'svelte/store';
-  import { authentication } from '$lib/client/api-functions';
   import { Dialog } from '@rizzzi/svelte-commons';
+  import { authentication } from '$lib/client/auth';
 
   const { children }: { children: Snippet } = $props();
 
@@ -17,9 +17,7 @@
       <h2>Login</h2>
     {/snippet}
 
-    {#snippet body()}
-
-    {/snippet}
+    {#snippet body()}{/snippet}
 
     {#snippet actions()}{/snippet}
   </Dialog>

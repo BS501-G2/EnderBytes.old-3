@@ -29,9 +29,9 @@ export class FileBufferManager extends ResourceManager<
 
   protected upgrade(table: Knex.AlterTableBuilder, version: number): void {
     if (version < 1) {
-      table.binary("buffer").notNullable().alter();
-      table.binary("bufferIv").notNullable().alter();
-      table.binary("bufferAuthTag").notNullable().alter();
+      table.binary("buffer").notNullable();
+      table.binary("bufferIv").notNullable();
+      table.binary("bufferAuthTag").notNullable();
     }
   }
 

@@ -1,38 +1,30 @@
 <script lang="ts">
   import { page } from '$app/stores';
-    import { authentication } from '$lib/client/api-functions';
+  import { authentication } from '$lib/client/auth';
+  import { UserResolveType, type UserResolvePayload } from '@rizzzi/enderdrive-lib/shared';
 
-  import ProfilePage, { type UserResolve, UserResolveType } from './profile-page.svelte';
+  import ProfilePage from './profile-page.svelte';
 
-  const parse = (): UserResolve | null => {
+  const parse = (): UserResolvePayload | null => {
     const idenfierString = $page.url.searchParams.get('id');
     if (idenfierString != null) {
       if (idenfierString.startsWith('@')) {
-        return {
-          type: UserResolveType.Username,
-          username: idenfierString.substring(1)
-        };
+        return [UserResolveType.Username, idenfierString.substring(1)];
       } else if (idenfierString.startsWith(':')) {
-        return {
-          type: UserResolveType.UserId,
-          userId: Number.parseInt(idenfierString.substring(1))
-        };
+        return [UserResolveType.UserId, Number.parseInt(idenfierString.substring(1))];
       } else if (idenfierString == '!me') {
-        return {
-          type: UserResolveType.UserId,
-          userId: $authentication!.userId
-        };
+        return [UserResolveType.UserId, $authentication!.userId];
       }
     }
     return null;
   };
 
-  let userIdentifier: UserResolve | null = $derived(parse());
+  let resolve: UserResolvePayload | null = $derived(parse());
 </script>
 
-{#key userIdentifier}
-  {#if userIdentifier != null}
-    <ProfilePage identifier={userIdentifier} />
+{#key resolve}
+  {#if resolve != null}
+    <ProfilePage {resolve} />
   {:else}
     <pre>
     // TODO: Add all users list

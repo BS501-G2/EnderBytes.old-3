@@ -10,11 +10,11 @@
     ButtonClass,
     InputType
   } from '@rizzzi/svelte-commons';
-  import { createAdminUser } from '$lib/client/api-functions';
 
   import { type Writable, writable } from 'svelte/store';
 
   import { goto } from '$app/navigation';
+    import { getConnection } from '@rizzzi/enderdrive-lib/client';
 
   const tabs: TabItem[] = [
     {
@@ -114,7 +114,7 @@
             if (currentTabIndex !== tabs.length - 1) {
               setTab(currentTabIndex + 1);
             } else {
-              await createAdminUser(
+              getConnection().funcs.createAdminUser(
                 $username,
                 $firstName,
                 $middleName || null,

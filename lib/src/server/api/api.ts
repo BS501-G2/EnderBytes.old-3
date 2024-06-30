@@ -26,7 +26,8 @@ export class ApiServer extends Service<ApiServerData, ApiServerOptions> {
   #wrapSocket(socket: SocketIO.Socket) {
     return wrapSocket<ClientFunctions, ApiServerFunctions, SocketIO.Socket>(
       socket,
-      getApiFunctions(this.#server)
+      getApiFunctions(this.#server),
+      (func) => this.#server.database.transact(func)
     );
   }
 
@@ -39,6 +40,7 @@ export class ApiServer extends Service<ApiServerData, ApiServerOptions> {
     this.log(LogLevel.Info, "HTTP initialized.");
     const sio = new SocketIO.Server({
       cors: { origin: "*", allowedHeaders: "*", methods: "*" },
+      maxHttpBufferSize: 1024 * 1024 * 256,
     });
     this.log(LogLevel.Info, "Socket.IO handler initialized.");
 

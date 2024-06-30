@@ -1,6 +1,11 @@
 import { goto } from '$app/navigation';
-import { getAndVerifyAuthentication, getAuthentication, getServerStatus, getUser } from '$lib/client/api-functions';
-import { UserRole } from '$lib/shared/db';
+import { getAndValidateAuthentication, getAuthentication } from '$lib/client/auth';
+import { getConnection } from '@rizzzi/enderdrive-lib/client';
+import { UserResolveType, UserRole } from '@rizzzi/enderdrive-lib/shared';
+
+const {
+  funcs: { getServerStatus, getUser }
+} = getConnection();
 
 export async function load(): Promise<void> {
   const status = await getServerStatus();
@@ -10,13 +15,16 @@ export async function load(): Promise<void> {
     return;
   }
 
-  const authentication = await getAndVerifyAuthentication();
+  const authentication = await getAndValidateAuthentication();
   if (authentication == null) {
     await goto('/login', { replaceState: true });
     return;
   }
 
-  const user = (await getUser(authentication.userId))!;
+  const user = (await getUser(getAuthentication(), [
+    UserResolveType.UserId,
+    authentication.userId
+  ]))!;
   if (user.role < UserRole.SiteAdmin) {
     await goto('/', { replaceState: true });
     return;

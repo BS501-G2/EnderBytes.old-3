@@ -2,19 +2,19 @@
 </script>
 
 <script lang="ts">
-  import type { QueryOptions } from '$lib/server/db';
-  import type { User, UserManager } from '$lib/server/db/user';
   import { writable, type Writable } from 'svelte/store';
+  import type { QueryOptions, UserManager, UserResource } from '@rizzzi/enderdrive-lib/server';
+  import { getConnection } from '@rizzzi/enderdrive-lib/client';
 
   import Page from '../+page.svelte';
-  import { listUsers } from '$lib/client/api-functions';
+  import { getAuthentication } from '$lib/client/auth';
 
-  const userQueryOptions: Writable<QueryOptions<UserManager, User>> = writable({
+  const userQueryOptions: Writable<QueryOptions<UserResource, UserManager>> = writable({
     limit: 10
   });
 
-  const list: Writable<User[]> = writable([]);
-  const addToList = (items: User[]) => {
+  const list: Writable<UserResource[]> = writable([]);
+  const addToList = (items: UserResource[]) => {
     list.update((value) => {
       value.push(...items);
       return value;
@@ -30,11 +30,15 @@
   let noMore: boolean = false;
 
   async function loadItems(): Promise<void> {
+    const {
+      funcs: { listUsers }
+    } = getConnection();
+
     if (noMore) {
       return;
     }
 
-    const items = await listUsers({
+    const items = await listUsers(getAuthentication(), {
       ...$userQueryOptions,
 
       offset: $list.length

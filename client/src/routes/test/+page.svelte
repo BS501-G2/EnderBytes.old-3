@@ -8,6 +8,7 @@
   } from '@rizzzi/svelte-commons';
   import { writable, type Writable } from 'svelte/store';
   import { testFunctions } from './test-functions';
+  import { getConnection } from '@rizzzi/enderdrive-lib/client'
 
   const returnedData: Writable<any> = writable(null);
   const messages: Writable<any[]> = writable([]);
@@ -54,7 +55,7 @@
   <h2>Buttons</h2>
 
   <div class="button-list">
-    {#each testFunctions as [label, callback]}
+    {#each testFunctions(getConnection()) as [label, callback]}
       {@render button(() => onClick(callback), label)}
     {/each}
   </div>

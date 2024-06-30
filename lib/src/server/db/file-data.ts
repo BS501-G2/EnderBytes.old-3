@@ -7,7 +7,7 @@ import { FileSnapshotManager, FileSnapshotResource } from "./file-snapshot.js";
 import { FileBufferManager, FileBufferResource } from "./file-buffer.js";
 import { fileBufferSize, FileType } from "../../shared/db/file.js";
 import { Database } from "../database.js";
-import mmm, { Magic } from 'mmmagic'
+import mmm, { Magic } from "mmmagic";
 
 const magic = new Magic();
 const magicMime = new Magic(mmm.MAGIC_MIME_TYPE | mmm.MAGIC_MIME_ENCODING);
@@ -25,8 +25,11 @@ export class FileDataManager extends ResourceManager<
   FileDataResource,
   FileDataManager
 > {
-  public constructor(db: Database, init: (init: (version?: number) => Promise<void>) => void) {
-    super(db, init, "FileData", 1)
+  public constructor(
+    db: Database,
+    init: (init: (version?: number) => Promise<void>) => void
+  ) {
+    super(db, init, "FileData", 1);
   }
 
   protected upgrade(table: Knex.AlterTableBuilder, version: number): void {
@@ -51,9 +54,17 @@ export class FileDataManager extends ResourceManager<
         .references("id")
         .inTable(this.getManager(FileSnapshotManager).recordTableName)
         .onDelete("cascade");
+
+      table
+        .integer("fileBufferId")
+        .notNullable()
+        .references("id")
+        .inTable(this.getManager(FileBufferManager).recordTableName)
+        .onDelete("cascade");
+
+      table.integer("index").notNullable();
     }
   }
-
 
   async #create(
     unlockedFile: UnlockedFileResource,
@@ -70,18 +81,22 @@ export class FileDataManager extends ResourceManager<
       fileContentId: fileContent.id,
       fileSnapshotId: fileSnapshot.id,
       fileBufferId: fileBuffer.id,
-      index: index
+      index: index,
     });
   }
 
-  async #update(unlockedFile: UnlockedFileResource, fileData: FileDataResource, buffer: Uint8Array): Promise<void> {
+  async #update(
+    unlockedFile: UnlockedFileResource,
+    fileData: FileDataResource,
+    buffer: Uint8Array
+  ): Promise<void> {
     const [fileBuffers] = this.getManagers(FileBufferManager);
 
     const oldFileBuffer = await fileBuffers.getById(fileData.fileBufferId);
     const newFileBuffer = await fileBuffers.create(unlockedFile, buffer);
 
     await this.update(fileData, {
-      fileBufferId: newFileBuffer.id
+      fileBufferId: newFileBuffer.id,
     });
 
     if (oldFileBuffer != null) {
@@ -99,11 +114,11 @@ export class FileDataManager extends ResourceManager<
       (
         await this.read({
           where: [
-            ['fileId', '=', unlockedFile.id],
-            ['fileContentId', '=', fileContent.id],
-            ['fileSnapshotId', '=', fileSnapshot.id],
-            ['index', '=', index]
-          ]
+            ["fileId", "=", unlockedFile.id],
+            ["fileContentId", "=", fileContent.id],
+            ["fileSnapshotId", "=", fileSnapshot.id],
+            ["index", "=", index],
+          ],
         })
       )[0] ?? null
     );
@@ -125,8 +140,8 @@ export class FileDataManager extends ResourceManager<
 
     if (
       (await this.count([
-        ['fileBufferId', '=', oldFileBuffer.id],
-        ['nextDataId', 'is', null]
+        ["fileBufferId", "=", oldFileBuffer.id],
+        ["nextDataId", "is", null],
       ])) === 0
     ) {
       await fileBuffers.purge(oldFileBuffer);
@@ -154,7 +169,12 @@ export class FileDataManager extends ResourceManager<
         continue;
       }
 
-      const fileData = await this.#getByIndex(unlockedFile, fileContent, fileSnapshot, index);
+      const fileData = await this.#getByIndex(
+        unlockedFile,
+        fileContent,
+        fileSnapshot,
+        index
+      );
       let buffer: Uint8Array;
       if (fileData == null) {
         buffer = new Uint8Array(fileBufferSize);
@@ -177,7 +197,13 @@ export class FileDataManager extends ResourceManager<
       written += toWrite;
 
       if (fileData == null) {
-        await this.#create(unlockedFile, fileContent, fileSnapshot, buffer, index);
+        await this.#create(
+          unlockedFile,
+          fileContent,
+          fileSnapshot,
+          buffer,
+          index
+        );
       } else {
         await this.#update(unlockedFile, fileData, buffer);
       }
@@ -198,7 +224,7 @@ export class FileDataManager extends ResourceManager<
     length: number = fileContent.size
   ): Promise<Uint8Array> {
     if (position >= fileContent.size) {
-      throw new Error('Position out of bounds');
+      throw new Error("Position out of bounds");
     }
 
     const [fileBuffers] = this.getManagers(FileBufferManager);
@@ -217,7 +243,12 @@ export class FileDataManager extends ResourceManager<
         continue;
       }
 
-      const fileData = await this.#getByIndex(unlockedFile, fileContent, fileSnapshot, index);
+      const fileData = await this.#getByIndex(
+        unlockedFile,
+        fileContent,
+        fileSnapshot,
+        index
+      );
       let buffer: Uint8Array;
 
       if (fileData == null) {
@@ -256,12 +287,17 @@ export class FileDataManager extends ResourceManager<
     const [fileBufferManager] = this.getManagers(FileBufferManager);
 
     if (unlockedFile.type === FileType.Folder) {
-      return mime ? 'inode/directory' : 'Folder';
+      return mime ? "inode/directory" : "Folder";
     }
 
-    const fileData = await this.#getByIndex(unlockedFile, fileContent, fileSnapshot, 0);
+    const fileData = await this.#getByIndex(
+      unlockedFile,
+      fileContent,
+      fileSnapshot,
+      0
+    );
     if (fileData == null) {
-      return mime ? 'application/empty' : 'Empty File';
+      return mime ? "application/empty" : "Empty File";
     } else {
       const buffer = fileBufferManager.unlock(
         unlockedFile,
@@ -275,7 +311,7 @@ export class FileDataManager extends ResourceManager<
             if (err) {
               reject(err);
             } else {
-              resolve(`${mime ? result : `${result}`.split(',')[0]}`);
+              resolve(`${mime ? result : `${result}`.split(",")[0]}`);
             }
           }
         );

@@ -34,7 +34,7 @@ export interface ServerStatus {
 }
 
 export interface ApiServerFunctions extends ConnectionFunctions {
-  authenticateWithPassword: (
+  authenticate: (
     username: string,
     payloadType: UserAuthenticationType,
     payload: Uint8Array
@@ -119,7 +119,7 @@ export interface ApiServerFunctions extends ConnectionFunctions {
     targetUserId: number
   ) => Promise<void>;
 
-  pathChain: (
+  listPathChain: (
     authentication: Authentication | null,
     fileId: number
   ) => Promise<FileResource[]>;
@@ -172,6 +172,11 @@ export interface ApiServerFunctions extends ConnectionFunctions {
     authentication: Authentication | null,
     searchString: string
   ) => Promise<UserResource[]>;
+
+  getFileSize: (
+    authentication: Authentication | null,
+    fileId: number
+  ) => Promise<number>;
 }
 
 export interface Authentication {
@@ -252,7 +257,8 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
   const functions: ApiServerFunctions = {
     ...baseConnectionFunctions,
 
-    authenticateWithPassword: async (username, type, payload) => {
+    authenticate: async (username, type, payload) => {
+      console.log([username, type, payload]);
       const [users, userSessions, userAuthentications] = database.getManagers(
         UserManager,
         UserSessionManager,
@@ -287,6 +293,7 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
 
       const unlockedSession = await userSessions.create(unlockedUserKey);
 
+      console.log(unlockedSession.unlockedKey);
       return {
         userId: user.id,
         userSessionId: unlockedSession.id,
@@ -300,7 +307,8 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
       try {
         await requireAuthentication(authentication);
         return true;
-      } catch {
+      } catch (error) {
+        console.log(error);
         return false;
       }
     },
@@ -626,7 +634,7 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
       await fileAccessManager.delete(accesses[0]);
     },
 
-    pathChain: async (authentication, fileId) => {
+    listPathChain: async (authentication, fileId) => {
       const unlockedUserKey = await requireAuthentication(authentication);
       const [fileManager] = await database.getManagers(
         FileManager,
@@ -902,6 +910,20 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
       });
 
       return result;
+    },
+
+    getFileSize: async (authentication, fileId) => {
+      const file = await functions.getFile(authentication, fileId);
+      const unlockedUserKey = await requireAuthentication(authentication);
+      const [fileManager, fileContentManager] = database.getManagers(
+        FileManager,
+        FileContentManager
+      );
+
+      const unlockedFile = await fileManager.unlock(file, unlockedUserKey);
+      const mainFilecontent = await fileContentManager.getMain(unlockedFile);
+
+      return mainFilecontent.size;
     },
   };
 

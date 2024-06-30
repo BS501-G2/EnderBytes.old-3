@@ -1,12 +1,17 @@
 <script lang="ts">
   import UserName from '$lib/client/user.svelte';
   import { Awaiter, LoadingSpinner } from '@rizzzi/svelte-commons';
-  import { getFileMimeType, getFileSize, getUser } from '$lib/client/api-functions';
-  import type { File } from '$lib/server/db/file';
-  import { FileType } from '$lib/shared/db';
   import { byteUnit } from '$lib/shared/utils';
+  import { getConnection } from '@rizzzi/enderdrive-lib/client';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import { authentication, getAuthentication } from '$lib/client/auth';
+  import { FileType, UserResolveType } from '@rizzzi/enderdrive-lib/shared';
 
-  const { file }: { file: File } = $props();
+  const { file }: { file: FileResource } = $props();
+
+  const {
+    funcs: { getUser, getFile, getFileSize, getFileMimeType }
+  } = getConnection();
 </script>
 
 <div class="container">
@@ -22,10 +27,10 @@
       <p class="value">{new Date(file.createTime).toLocaleString()}</p>
     </div>
 
-    {#if file.createTime != file.updateTime}
+    {#if file.createTime != file.createTime}
       <div class="details-row">
         <p class="label">Modified On</p>
-        <p class="value">{new Date(file.updateTime).toLocaleString()}</p>
+        <p class="value">{new Date(file.createTime).toLocaleString()}</p>
       </div>
     {/if}
 
@@ -35,7 +40,10 @@
         {#key file.id}
           <Awaiter
             callback={async () => {
-              const user = await getUser(file.ownerUserId);
+              const user = await getUser($authentication, [
+                UserResolveType.UserId,
+                file.ownerUserId
+              ]);
 
               return user;
             }}
@@ -56,7 +64,7 @@
         <p class="label">Size</p>
         <p class="value">
           {#key file.id}
-            <Awaiter callback={async () => getFileSize(file)}>
+            <Awaiter callback={async () => getFileSize(getAuthentication(), file.id)}>
               {#snippet loading()}
                 <LoadingSpinner size="1em" />
               {/snippet}
@@ -71,7 +79,7 @@
         <p class="label">Type</p>
         <p class="value">
           {#key file.id}
-            <Awaiter callback={async () =>await getFileMimeType(file, false)}>
+            <Awaiter callback={async () => await getFileMimeType($authentication, file.id, false)}>
               {#snippet loading()}
                 <LoadingSpinner size="1em" />
               {/snippet}
@@ -91,7 +99,10 @@
           {#key file.id}
             <Awaiter
               callback={async () => {
-                const user = await getUser(file.creatorUserId);
+                const user = await getUser($authentication, [
+                  UserResolveType.UserId,
+                  file.creatorUserId
+                ]);
 
                 return user;
               }}

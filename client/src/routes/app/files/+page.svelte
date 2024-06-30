@@ -20,18 +20,22 @@
   import { writable, type Writable } from 'svelte/store';
   import NewDialog, { newDialogState } from './new-dialog.svelte';
   import { goto } from '$app/navigation';
-  import type { File } from '$lib/server/db/file';
-  import { FileAccessLevel, FileType } from '$lib/shared/db';
-  import {
-    getAuthentication,
-    getFile,
-    listPathChain,
-    scanFolder,
-    listFileAccess,
-    readFile,
-    getFileMimeType,
-    moveFile
-  } from '$lib/client/api-functions';
+  import { FileAccessLevel, FileType } from '@rizzzi/enderdrive-lib/shared';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import { getConnection } from '@rizzzi/enderdrive-lib/client';
+  import { getAuthentication } from '$lib/client/auth';
+
+  const {
+    funcs: {
+      readFile,
+      getFileMimeType,
+      moveFile,
+      getFile,
+      scanFolder,
+      listFileAccess,
+      listPathChain
+    }
+  } = getConnection();
 
   function parseId(id: string | null) {
     if (id == null) {
@@ -42,7 +46,7 @@
   }
 
   const id = $derived(parseId($page.url.searchParams.get('id')));
-  const selection: Writable<File[]> = writable([]);
+  const selection: Writable<FileResource[]> = writable([]);
 
   let refresh: Writable<AwaiterResetFunction<null>> = writable();
   let title: string | null = $state(null);
@@ -99,8 +103,8 @@
           return;
         }
 
-        const ro = await readFile(file);
-        const blob = new Blob([ro], { type: await getFileMimeType(file) });
+        const ro = await readFile(getAuthentication(), file.id);
+        const blob = new Blob([ro], { type: await getFileMimeType(getAuthentication(), file.id) });
         const url = URL.createObjectURL(blob);
 
         window.open(url, '_blank');
@@ -182,7 +186,11 @@
           }
 
           if ($fileClipboard.isCut) {
-            await moveFile($fileClipboard.files, $fileBrowserState.file);
+            await moveFile(
+              getAuthentication(),
+              $fileClipboard.files.map((file) => file.id),
+              $fileBrowserState.file.id
+            );
           }
 
           set(`${$fileClipboard.files.length} file(s) pasted.`);
@@ -234,17 +242,17 @@
       $fileBrowserState = { isLoading: true, controlBarActions: [] };
 
       try {
-        const file = await getFile(id ?? null);
+        const file = await getFile(getAuthentication(), id ?? null);
 
         const [files, pathChain, accesses] = await Promise.all([
-          file.type === FileType.Folder ? scanFolder(file) : [],
-          listPathChain(file),
-          listFileAccess(file),
-        ])
+          file.type === FileType.Folder ? scanFolder(getAuthentication(), file.id) : [],
+          listPathChain(getAuthentication(), file.id),
+          listFileAccess(getAuthentication(), file.id)
+        ]);
 
         files.sort((file1, file2) => file2.type - file1.type);
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 250))
+        await new Promise<void>((resolve) => setTimeout(resolve, 250));
 
         $fileBrowserState = {
           isLoading: false,
@@ -255,21 +263,24 @@
             chain: pathChain.slice(1),
             isForeign: pathChain[0].ownerUserId === getAuthentication()!.userId
           },
-          access: file.ownerUserId === getAuthentication()!.userId ? undefined : {
-            highestLevel: accesses[0].accessLevel,
-            accessPoint:  accesses[0],
-            list: accesses
-          },
+          access:
+            file.ownerUserId === getAuthentication()!.userId
+              ? undefined
+              : {
+                  highestLevel: accesses[0].level,
+                  accessPoint: accesses[0],
+                  list: accesses
+                },
           file,
           title: 'My Files',
 
           controlBarActions: actions
-        }
+        };
 
-        title = id != null ? $fileBrowserState.file?.name ?? null : null
+        title = id != null ? $fileBrowserState.file?.name ?? null : null;
       } catch (errorData: any) {
-        $errorStore = errorData
-        throw $errorStore
+        $errorStore = errorData;
+        throw $errorStore;
       }
     }}
   >

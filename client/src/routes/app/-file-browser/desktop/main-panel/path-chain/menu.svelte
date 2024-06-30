@@ -13,8 +13,13 @@
 
   import { fly } from 'svelte/transition';
   import PathChainEntry from './entry.svelte';
-  import { getFile, scanFolder } from '$lib/client/api-functions';
-  import type { File } from '$lib/server/db/file';
+  import { getConnection } from '@rizzzi/enderdrive-lib/client';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import { getAuthentication } from '$lib/client/auth';
+
+  const {
+    funcs: { getFile, scanFolder }
+  } = getConnection();
 
   const {
     pathChainMenu,
@@ -42,10 +47,10 @@
 >
   <div class="path-chain-menu" transition:fly|global={{ duration: 200, x: -32 }}>
     <Awaiter
-      callback={async (): Promise<File[]> => {
-        const parentFolder = await getFile(pathChainMenu.fileId);
+      callback={async (): Promise<FileResource[]> => {
+        const parentFolder = await getFile(getAuthentication(), pathChainMenu.fileId);
 
-        return await scanFolder(parentFolder);
+        return await scanFolder(getAuthentication(), parentFolder.id);
       }}
     >
       {#snippet loading()}
@@ -63,12 +68,16 @@
             {file}
             forward={pathChainMenu.forward}
             onMenu={({ currentTarget }) => {
-                if (currentTarget == null || file.parentFileId == null) {
-                  return
-                }
+              if (currentTarget == null || file.parentFileId == null) {
+                return;
+              }
 
-                pathChainMenus.push({ forward: true, fileId: file.id, currentTarget: currentTarget as HTMLElement })
-              }}
+              pathChainMenus.push({
+                forward: true,
+                fileId: file.id,
+                currentTarget: currentTarget as HTMLElement
+              });
+            }}
             onClick={() => {
               goto(`/app/files?id=${file.id}`);
               pathChainMenus.splice(0, pathChainMenus.length);

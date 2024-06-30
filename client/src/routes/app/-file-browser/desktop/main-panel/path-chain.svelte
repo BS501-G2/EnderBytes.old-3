@@ -7,7 +7,7 @@
   import PathChainMenuElement, { type PathChainMenu } from './path-chain/menu.svelte';
 
   import { LoadingSpinner } from '@rizzzi/svelte-commons';
-  import { FileType } from '$lib/shared/db';
+    import { FileType } from '@rizzzi/enderdrive-lib/shared';
 
   const { fileBrowserState }: { fileBrowserState: Writable<FileBrowserState> } = $props();
 

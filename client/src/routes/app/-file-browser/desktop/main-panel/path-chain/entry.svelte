@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { File } from '$lib/server/db/file';
-    import { FileType } from '$lib/shared/db';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import { FileType } from '@rizzzi/enderdrive-lib/shared';
 
   const {
     file,
@@ -8,7 +8,7 @@
     onMenu,
     onClick
   }: {
-    file: File;
+    file: FileResource;
     forward?: boolean;
     onMenu: (event: MouseEvent) => void;
     onClick: (event: MouseEvent) => void;

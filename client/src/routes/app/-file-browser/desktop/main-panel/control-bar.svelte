@@ -6,7 +6,7 @@
     icon: string;
     group: ControlBarItemGroup;
     action: (event: MouseEvent) => Promise<void> | void;
-    isVisible: (selection: File[]) => boolean;
+    isVisible: (selection: FileResource[]) => boolean;
   }
 </script>
 
@@ -15,13 +15,13 @@
   import { scale } from 'svelte/transition';
   import type { FileBrowserState } from '../../../file-browser.svelte';
   import type { Writable } from 'svelte/store';
-  import type { File } from '$lib/server/db/file';
-  import { ApiError } from '$lib/shared/api';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 
   let {
     fileBrowserState,
     selection = $bindable()
-  }: { fileBrowserState: Writable<FileBrowserState>; selection: Writable<File[]> } = $props();
+  }: { fileBrowserState: Writable<FileBrowserState>; selection: Writable<FileResource[]> } =
+    $props();
 </script>
 
 {#snippet buttons(actions: ControlBarItem[])}

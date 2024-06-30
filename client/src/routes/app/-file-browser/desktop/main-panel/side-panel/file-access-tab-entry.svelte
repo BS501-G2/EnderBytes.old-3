@@ -1,18 +1,27 @@
 <script lang="ts">
-  import { getUser, grantAccessToUser, revokeAccessFromUser } from '$lib/client/api-functions';
   import { Awaiter, Button, LoadingSpinner } from '@rizzzi/svelte-commons';
   import UserComponent from '$lib/client/user.svelte';
-  import type { File } from '$lib/server/db/file';
-  import { FileAccessLevel } from '$lib/shared/db';
   import type { Snippet } from 'svelte';
-  import type { FileAccess } from '$lib/server/db/file-access';
 
-  const { file, access, reload }: { file: File; access: FileAccess; reload: () => void } = $props();
+  import type { FileAccessResource, FileResource } from '@rizzzi/enderdrive-lib/server';
+  import { getConnection } from '@rizzzi/enderdrive-lib/client';
+  import { getAuthentication } from '$lib/client/auth';
+  import { FileAccessLevel, UserResolveType } from '@rizzzi/enderdrive-lib/shared';
+
+  const {
+    file,
+    access,
+    reload
+  }: { file: FileResource; access: FileAccessResource; reload: () => void } = $props();
 </script>
 
 <Awaiter
   callback={async () => {
-    return await getUser(access.userId);
+    const {
+      funcs: { getUser }
+    } = getConnection();
+
+    return await getUser(getAuthentication(), [UserResolveType.UserId, access.userId]);
   }}
 >
   {#snippet success({ result: user })}
@@ -23,35 +32,42 @@
       <div class="user-actions">
         <select
           onchange={async ({ currentTarget }) => {
-            await grantAccessToUser(file, user!, Number.parseInt(currentTarget.value) as FileAccessLevel);
-            reload()
+            const {
+              funcs: { grantAccessToUser }
+            } = getConnection();
+
+            await grantAccessToUser(
+              getAuthentication(),
+              file.id,
+              user!.id,
+              Number.parseInt(currentTarget.value) as FileAccessLevel
+            );
+            reload();
           }}
         >
-          <option
-            selected={access.accessLevel === FileAccessLevel.Read}
-            value={FileAccessLevel.Read}
-          >
+          <option selected={access.level === FileAccessLevel.Read} value={FileAccessLevel.Read}>
             Read
           </option>
           <option
-            selected={access.accessLevel === FileAccessLevel.ReadWrite}
+            selected={access.level === FileAccessLevel.ReadWrite}
             value={FileAccessLevel.ReadWrite}
           >
             Read & Write
           </option>
-          <option
-            selected={access.accessLevel === FileAccessLevel.Manage}
-            value={FileAccessLevel.Manage}
-          >
+          <option selected={access.level === FileAccessLevel.Manage} value={FileAccessLevel.Manage}>
             Manage
           </option>
         </select>
         <Button
           container={buttonContainer}
           onClick={() => {
-          revokeAccessFromUser(file, user!);
-          reload()
-        }}
+            const {
+              funcs: { revokeAccessFromUser }
+            } = getConnection();
+
+            revokeAccessFromUser(getAuthentication(), file.id, user!.id);
+            reload();
+          }}
           hint="Revoke"
         >
           <i class="icon fa-solid fa-trash"></i>

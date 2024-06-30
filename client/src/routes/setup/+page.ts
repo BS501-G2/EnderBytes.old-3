@@ -1,7 +1,11 @@
 import { goto } from '$app/navigation';
-import { getServerStatus } from '$lib/client/api-functions';
+import { getConnection } from '@rizzzi/enderdrive-lib/client';
 
 export async function load() {
+  const {
+    funcs: { getServerStatus }
+  } = getConnection();
+
   const status = await getServerStatus();
 
   if (!status.setupRequired) {

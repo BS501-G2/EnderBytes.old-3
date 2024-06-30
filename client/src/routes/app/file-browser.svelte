@@ -1,16 +1,18 @@
 <script lang="ts" context="module">
   import { ResponsiveLayout } from '@rizzzi/svelte-commons';
   import type { ControlBarItem } from './-file-browser/desktop/main-panel/control-bar.svelte';
+  import type { FileAccessResource } from '@rizzzi/enderdrive-lib/server';
+  import { type FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
 
   export interface FileAccessListInfo {
     highestLevel: FileAccessLevel;
-    accessPoint: FileAccess;
-    list: FileAccess[];
+    accessPoint: FileAccessResource;
+    list: FileAccessResource[];
   }
 
   export interface FilePathChainInfo {
-    root: File;
-    chain: File[];
+    root: FileResource;
+    chain: FileResource[];
 
     isForeign: boolean;
   }
@@ -18,7 +20,7 @@
   export interface FileClipboard {
     ownerUserId: number;
 
-    files: File[];
+    files: FileResource[];
     isCut: boolean;
   }
 
@@ -27,10 +29,10 @@
     controlBarActions?: ControlBarItem[];
 
     isLoading: boolean;
-    file?: File;
+    file?: FileResource;
     access?: FileAccessListInfo;
     pathChain?: FilePathChainInfo;
-    files?: File[];
+    files?: FileResource[];
   };
 
   export const fileClipboard: Writable<FileClipboard | null> = writable(null);
@@ -40,14 +42,13 @@
   import DesktopLayout from './-file-browser/desktop.svelte';
   import MobileLayout from './-file-browser/mobile.svelte';
   import { writable, type Writable } from 'svelte/store';
-  import type { File } from '$lib/server/db/file';
-  import type { FileAccessLevel } from '$lib/shared/db';
-  import type { FileAccess } from '$lib/server/db/file-access';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 
   const {
     fileBrowserState,
     selection = writable([])
-  }: { fileBrowserState: Writable<FileBrowserState>; selection?: Writable<File[]> } = $props();
+  }: { fileBrowserState: Writable<FileBrowserState>; selection?: Writable<FileResource[]> } =
+    $props();
 </script>
 
 {#key $fileBrowserState}

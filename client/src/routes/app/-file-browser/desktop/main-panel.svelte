@@ -5,13 +5,14 @@
   import FileList from './main-panel/file-list.svelte';
   import FileView from './main-panel/file-view.svelte';
   import PathChain from './main-panel/path-chain.svelte';
-  import type { File } from '$lib/server/db/file';
-  import { FileType } from '$lib/shared/db';
+  import { FileType } from '@rizzzi/enderdrive-lib/shared';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 
   let {
     fileBrowserState,
     selection
-  }: { fileBrowserState: Writable<FileBrowserState>; selection: Writable<File[]> } = $props();
+  }: { fileBrowserState: Writable<FileBrowserState>; selection: Writable<FileResource[]> } =
+    $props();
 </script>
 
 <div class="main-panel">

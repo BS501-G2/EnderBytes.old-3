@@ -1,13 +1,7 @@
-import { clientSideInvoke } from '$lib/client/api';
-import {
-  authenticateByPassword,
-  createAdminUser,
-  getAuthentication,
-  getServerStatus,
-  listUsers,
-  updateUser
-} from '$lib/client/api-functions';
-import { Client } from '@rizzzi/enderdrive-lib/client'
+import { authenticateWithPassword, authentication, getAuthentication } from '$lib/client/auth';
+import { type Client } from '@rizzzi/enderdrive-lib/client';
+import { UserAuthenticationType } from '@rizzzi/enderdrive-lib/shared';
+import { Buffer } from 'buffer';
 
 type TestFunctions = [string, (log: (data: any) => void) => any | Promise<any>][];
 
@@ -17,7 +11,17 @@ const adminFirstName = 'Hugh';
 const adminMiddleName = 'G';
 const adminLastName = 'Rection';
 
-export const testFunctions: TestFunctions = [
+export const testFunctions = ({
+  funcs: {
+    echo,
+    getServerStatus,
+    createAdminUser,
+    authenticate,
+    updateUser,
+    listUsers,
+    isAuthenticationValid
+  }
+}: Client): TestFunctions => [
   ['Hello', () => 'hello'],
   ['World', () => 'world'],
   [
@@ -30,10 +34,9 @@ export const testFunctions: TestFunctions = [
         bytes[i] = Math.floor(Math.random() * 256);
       }
 
-      log(await clientSideInvoke('echo', bytes));
+      log(await echo(bytes));
     }
   ],
-  ['Random Bytes', async (log) => log(await clientSideInvoke('random', 1024 * 1024 * 8))],
   ['Get Server Status', () => getServerStatus()],
   [
     'Get Admin User Credentials',
@@ -59,7 +62,9 @@ export const testFunctions: TestFunctions = [
   [
     'Login As Admin',
     async () => {
-      const result = await authenticateByPassword(adminUser, adminPassword);
+      const result = await authenticateWithPassword(adminUser, adminPassword);
+
+      console.log(result);
 
       return result;
     }
@@ -69,13 +74,11 @@ export const testFunctions: TestFunctions = [
     async () => {
       const authentication = getAuthentication();
 
-      return await updateUser(authentication!.userId, { firstName: 'Test' + Date.now() });
+      return await updateUser(getAuthentication(), authentication!.userId, {
+        firstName: 'Test' + Date.now()
+      });
     }
   ],
-  ['List Users', () => listUsers()],
-  ['Asd', async () => {
-    const client = await Client.getInstance('10.1.0.58', 8082)
-
-    console.log(client)
-  }]
+  ['List Users', () => listUsers(getAuthentication())],
+  ['Is Authentication Valid?', () => isAuthenticationValid(getAuthentication()!)]
 ];

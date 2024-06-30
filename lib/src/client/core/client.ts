@@ -6,16 +6,14 @@ import {
   wrapSocket,
 } from "../../shared/connection.js";
 import { io, Socket } from "socket.io-client";
+import SocketIOCustomParser from "socket.io-msgpack-parser";
 
 export interface ClientFunctions extends ConnectionFunctions {}
+export type Client = SocketWrapper<ApiServerFunctions, ClientFunctions, Socket>;
 
-let connection: SocketWrapper<
-  ApiServerFunctions,
-  ClientFunctions,
-  Socket
-> | null = null;
+let connection: Client | null = null;
 
-export const getConnection = () =>
-  (connection ??= wrapSocket(io("http://10.1.0.58:8082"), {
+export const getConnection = (): Client =>
+  (connection ??= wrapSocket(io("/", {}), {
     ...baseConnectionFunctions,
   }));

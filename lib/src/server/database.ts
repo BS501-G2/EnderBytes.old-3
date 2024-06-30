@@ -242,14 +242,14 @@ export class Database extends Service<
     level: LogLevel,
     query: T
   ): T {
-    for (let queryEntry of query.toQuery().split("\n")) {
-      queryEntry = queryEntry.trim();
+    const a = query.toSQL();
 
-      if (queryEntry.length === 0) {
+    for (const { sql } of (Array.isArray(a) ? a : [a])) {
+      if (sql.length === 0) {
         continue;
       }
 
-      this.log(level, queryEntry);
+      this.log(level, sql);
     }
 
     return query;

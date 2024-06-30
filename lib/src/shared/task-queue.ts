@@ -43,12 +43,7 @@ export const createTaskQueue = (): TaskQueue => {
           }
         });
 
-        promise
-          .then(item.resolve)
-          .catch((error) =>
-            item.reject(new AggregateError([error, item.stack]) as never)
-          )
-          .finally(run);
+        promise.then(item.resolve).catch(item.reject).finally(run);
       };
 
       if (!isRunning) {

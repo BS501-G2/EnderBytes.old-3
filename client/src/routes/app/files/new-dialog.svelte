@@ -34,9 +34,10 @@
   import { writable, type Writable } from 'svelte/store';
   import { fly } from 'svelte/transition';
   import { type FileBrowserState } from '../file-browser.svelte';
-  import { createFile, createFolder } from '$lib/client/api-functions';
-  import type { File as DbFile } from '$lib/server/db/file';
-  import { FileType } from '$lib/shared/db';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import { FileType } from '@rizzzi/enderdrive-lib/shared';
+  import { getAuthentication } from '$lib/client/auth';
+  import { getConnection } from '@rizzzi/enderdrive-lib/client';
 
   const {
     fileBrowserState,
@@ -54,6 +55,10 @@
   function onDismiss() {
     $newDialogState = null;
   }
+
+  const {
+    funcs: { createFile, createFolder }
+  } = getConnection();
 
   const tabs: [type: 'file' | 'folder', name: string, icon: string, description: string][] = [
     ['file', 'File', 'fa-solid fa-file', 'Create a new file.'],
@@ -122,18 +127,23 @@
       {#if state.type == 'file'}
         {@const onCreate = async (files: File[]) => {
           if ($fileBrowserState.isLoading) {
-            return
+            return;
           }
-          const newFiles: DbFile[] = []
+          const newFiles: FileResource[] = [];
 
           for (const file of files) {
             const blob = new Blob([file], { type: file.type });
-            const newFile = await createFile($fileBrowserState.file! as DbFile & { type: FileType.Folder }, file.name, new Uint8Array(await blob.arrayBuffer()));
+            const newFile = await createFile(
+              getAuthentication(),
+              $fileBrowserState.file!.id,
+              file.name,
+              new Uint8Array(await blob.arrayBuffer())
+            );
 
-            newFiles.push(newFile)
+            newFiles.push(newFile);
           }
 
-          onNewFiles(...newFiles.map(file => file.id));
+          onNewFiles(...newFiles.map((file) => file.id));
         }}
 
         <div class="input-group">
@@ -191,13 +201,17 @@
       {:else if state.type == 'folder'}
         {@const onCreate = async () => {
           if ($fileBrowserState.isLoading) {
-            return
+            return;
           }
 
-          const folder = await createFolder($fileBrowserState.file! as DbFile & { type: FileType.Folder }, $newFolderName);
+          const folder = await createFolder(
+            getAuthentication(),
+            $fileBrowserState.file!.id,
+            $newFolderName
+          );
           onDismiss();
-          onNewFolder(folder.id)
-          $newFolderName = ''
+          onNewFolder(folder.id);
+          $newFolderName = '';
         }}
 
         <div class="input-group">

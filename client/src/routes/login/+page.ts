@@ -1,8 +1,13 @@
 import { goto } from '$app/navigation';
-import { getAndVerifyAuthentication, getAuthentication, getServerStatus } from '$lib/client/api-functions';
+import { getAndValidateAuthentication } from '$lib/client/auth';
+import { getConnection } from '@rizzzi/enderdrive-lib/client';
 
 export async function load(): Promise<void> {
-  const serverStatus = await getServerStatus()
+  const {
+    funcs: { getServerStatus }
+  } = getConnection();
+
+  const serverStatus = await getServerStatus();
 
   if (serverStatus.setupRequired) {
     return await goto('/setup', { replaceState: true });
@@ -10,7 +15,7 @@ export async function load(): Promise<void> {
 
   const { searchParams } = new URL(window.location.href);
 
-  const authentication = await getAndVerifyAuthentication();
+  const authentication = await getAndValidateAuthentication();
 
   if (authentication != null) {
     return await goto(searchParams.get('return') ?? '/app', { replaceState: true });

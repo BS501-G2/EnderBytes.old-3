@@ -31,14 +31,14 @@
 
   import { hasKeys, AnimationFrame, LoadingSpinnerPage } from '@rizzzi/svelte-commons';
   import { writable, type Writable } from 'svelte/store';
-  import type { File } from '$lib/server/db/file';
+    import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 
   let {
     fileBrowserState,
     selection
-  }: { fileBrowserState: Writable<FileBrowserState>; selection: Writable<File[]> } = $props();
+  }: { fileBrowserState: Writable<FileBrowserState>; selection: Writable<FileResource[]> } = $props();
 
-  function click(fileBrowserState: FileBrowserState & { isLoading: false }, file: File) {
+  function click(fileBrowserState: FileBrowserState & { isLoading: false }, file: FileResource) {
     if (hasKeys('control')) {
       $selection = !$selection.includes(file)
         ? [...$selection, file]
@@ -73,7 +73,7 @@
     clientX: number;
     clientY: number;
 
-    capturedSelection: File[];
+    capturedSelection: FileResource[];
   }
 
   const selectionBox: Writable<SelectionRectangle | null> = writable(null);

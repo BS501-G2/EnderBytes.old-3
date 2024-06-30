@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { File } from '$lib/server/db/file';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 
-  const { file }: { file: File } = $props();
+  const { file }: { file: FileResource } = $props();
 </script>

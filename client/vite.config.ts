@@ -6,7 +6,16 @@ export default defineConfig({
   test: {
     include: ['src/**/*.{test,spec}.{js,ts}']
   },
-  server: {},
+  server: {
+    proxy: {
+      '/socket.io/': {
+        target: 'http://localhost:8082',
+        changeOrigin: true,
+        secure: false,
+        ws: true
+      }
+    }
+  },
   optimizeDeps: {
     esbuildOptions: {
       target: 'esnext'

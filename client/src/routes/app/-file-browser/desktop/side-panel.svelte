@@ -2,15 +2,15 @@
   import { type Writable, type Readable, derived } from 'svelte/store';
   import type { FileBrowserState } from '../../file-browser.svelte';
   import FileDetails from './main-panel/side-panel/file-details.svelte';
-  import type { File } from '$lib/server/db/file';
-  import { FileType } from '$lib/shared/db';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import { FileType } from '@rizzzi/enderdrive-lib/shared';
 
   let {
     fileBrowserState,
     selection
-  }: { fileBrowserState: Writable<FileBrowserState>; selection: Writable<File[]> } = $props();
+  }: { fileBrowserState: Writable<FileBrowserState>; selection: Writable<FileResource[]> } = $props();
 
-  const selected: Readable<File | null> = derived(
+  const selected: Readable<FileResource | null> = derived(
     [fileBrowserState, selection],
     ([fileBrowserState, selection]) =>
       selection.length === 1
