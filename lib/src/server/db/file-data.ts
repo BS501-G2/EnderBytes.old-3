@@ -1,6 +1,5 @@
 import { Knex } from "knex";
-import { Resource } from "../../shared/db.js";
-import { ResourceManager } from "../resource.js";
+import { ResourceManager, Resource } from "../resource.js";
 import { FileManager, UnlockedFileResource } from "./file.js";
 import { FileContentManager, FileContentResource } from "./file-content.js";
 import { FileSnapshotManager, FileSnapshotResource } from "./file-snapshot.js";
@@ -8,6 +7,7 @@ import { FileBufferManager, FileBufferResource } from "./file-buffer.js";
 import { fileBufferSize, FileType } from "../../shared/db/file.js";
 import { Database } from "../database.js";
 import mmm, { Magic } from "mmmagic";
+import { Readable } from "stream";
 
 const magic = new Magic();
 const magicMime = new Magic(mmm.MAGIC_MIME_TYPE | mmm.MAGIC_MIME_ENCODING);
@@ -229,6 +229,11 @@ export class FileDataManager extends ResourceManager<
 
     const [fileBuffers] = this.getManagers(FileBufferManager);
     length = Math.min(length, fileContent.size - position);
+
+    if (length <= 0) {
+      return new Uint8Array(0);
+    }
+
     const positionEnd = position + length;
 
     const output: Uint8Array[] = [];
@@ -275,6 +280,57 @@ export class FileDataManager extends ResourceManager<
     }
 
     return Buffer.concat(output);
+  }
+
+  public async readDataStream(
+    file: UnlockedFileResource,
+    fileContent: FileContentResource,
+    fileSnapshot: FileSnapshotResource,
+    offset: number = 0
+  ): Promise<Readable> {
+    const getCurrentTransaction: () => Knex | null = () =>
+      this.transacting ? this.db : null;
+    const transaction = getCurrentTransaction();
+
+    let position: number = offset;
+
+    const stream = new Readable({
+      autoDestroy: true,
+
+      read: async (size) => {
+        const read = async (): Promise<Buffer> => {
+          const buffer = await this.readData(
+            file,
+            fileContent,
+            fileSnapshot,
+            position,
+            size
+          );
+
+          position += buffer.length;
+          return Buffer.from(buffer);
+        };
+
+        const push = (buffer: Buffer) => {
+          stream.push(stream);
+          if (buffer.length <= size) {
+            stream.push(null);
+          }
+        };
+
+        try {
+          if (transaction == null || getCurrentTransaction() !== transaction) {
+            push(await this.transact(() => read()));
+          } else {
+            push(await read());
+          }
+        } catch (error: unknown) {
+          stream.destroy(error as Error);
+        }
+      },
+    });
+
+    return stream;
   }
 
   public async getMime(

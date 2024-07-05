@@ -2,8 +2,7 @@ import { LogLevel, Service, ServiceGetDataCallback } from "../shared/service.js"
 import knex, { Knex } from "knex";
 import FS from "fs";
 import { TaskQueue, createTaskQueue } from "../shared/task-queue.js";
-import { ResourceManager } from "./resource.js";
-import { Resource } from "../shared/db.js";
+import { Resource, ResourceManager } from "./resource.js";
 import { Server } from "./core/server.js";
 
 interface VersionTable {

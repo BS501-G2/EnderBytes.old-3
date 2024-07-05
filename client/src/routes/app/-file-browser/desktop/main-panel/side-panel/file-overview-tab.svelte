@@ -1,18 +1,22 @@
 <script lang="ts">
   import UserName from '$lib/client/user.svelte';
-  import { Awaiter, LoadingSpinner } from '@rizzzi/svelte-commons';
+  import { Awaiter, Button, ButtonClass, LoadingSpinner } from '@rizzzi/svelte-commons';
   import { byteUnit } from '$lib/shared/utils';
   import { getConnection } from '@rizzzi/enderdrive-lib/client';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
   import { authentication, getAuthentication } from '$lib/client/auth';
   import { FileType, UserResolveType } from '@rizzzi/enderdrive-lib/shared';
+  import type { Snippet } from 'svelte';
+  import VirusScanReportDialog, { pushVirusDialog } from './virus-scan-report-dialog.svelte';
 
   const { file }: { file: FileResource } = $props();
 
   const {
-    funcs: { getUser, getFile, getFileSize, getFileMimeType }
+    funcs: { getUser, scanFile, getFileSize, getFileMimeType }
   } = getConnection();
 </script>
+
+<VirusScanReportDialog />
 
 <div class="container">
   <div class="thumbnail">
@@ -84,11 +88,42 @@
                 <LoadingSpinner size="1em" />
               {/snippet}
               {#snippet success({ result })}
-                {result}
+                <span title={result}>
+                  {result}
+                </span>
               {/snippet}
             </Awaiter>
           {/key}
         </p>
+      </div>
+      <div class="details-row">
+        <p class="label">Virus Scan</p>
+        {#key file.id}
+          <Awaiter callback={async () => await scanFile($authentication, file.id)}>
+            {#snippet loading()}
+              <p class="value">
+                <LoadingSpinner size="1em" />
+              </p>
+            {/snippet}
+            {#snippet success({ result })}
+              <div class="virus-badge" class:bad={result.length !== 0}>
+                <Button
+                  onClick={() => pushVirusDialog(result)}
+                  buttonClass={ButtonClass.Transparent}
+                  outline={false}
+                >
+                  {#if result.length !== 0}
+                    <i class="fa-solid fa-bug"></i>
+                    <span>Suspicious</span>
+                  {:else}
+                    <i class="fa-solid fa-question"></i>
+                    <span>Undetected</span>
+                  {/if}
+                </Button>
+              </div>
+            {/snippet}
+          </Awaiter>
+        {/key}
       </div>
     {/if}
 
@@ -154,6 +189,7 @@
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
+        min-height: 20px;
 
         > p {
           min-width: 0px;
@@ -166,7 +202,8 @@
         > p.label {
           font-weight: bolder;
         }
-        p.label::after {
+
+        > p.label::after {
           content: ':';
         }
 
@@ -181,6 +218,24 @@
     > p.file-name {
       font-weight: bolder;
       text-align: center;
+
+      word-break: break-all;
     }
+  }
+
+  div.virus-badge {
+    border-radius: 8px;
+
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+
+    background-color: var(--primary);
+    color: var(--backgroundVariant);
+  }
+
+  div.virus-badge.bad {
+    background-color: var(--error);
+    color: var(--onError);
   }
 </style>

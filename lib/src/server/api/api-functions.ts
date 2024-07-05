@@ -1,182 +1,24 @@
-import {
-  ApiError,
-  ApiErrorType,
-  UserResolvePayload,
-  UserResolveType,
-} from "../../shared/api.js";
-import {
-  baseConnectionFunctions,
-  ConnectionFunctions,
-} from "../../shared/connection.js";
+import { ApiError, ApiErrorType, UserResolveType } from "../../shared/api.js";
+import { baseConnectionFunctions } from "../../shared/connection.js";
 import { FileAccessLevel } from "../../shared/db/file-access.js";
 import { FileType } from "../../shared/db/file.js";
-import { UserAuthenticationType } from "../../shared/db/user-authentication.js";
 import { UserRole } from "../../shared/db/user.js";
 import { Server } from "../core/server.js";
 import { FileAccessManager, FileAccessResource } from "../db/file-access.js";
 import { FileContentManager } from "../db/file-content.js";
 import { FileDataManager } from "../db/file-data.js";
-import {
-  FileSnapshotManager,
-  FileSnapshotResource,
-} from "../db/file-snapshot.js";
+import { FileSnapshotManager } from "../db/file-snapshot.js";
 import { FileManager, FileResource, UnlockedFileResource } from "../db/file.js";
 import {
   UnlockedUserAuthentication,
   UserAuthenticationManager,
 } from "../db/user-authentication.js";
 import { UserSessionManager } from "../db/user-session.js";
-import { UpdateUserOptions, UserManager, UserResource } from "../db/user.js";
-import { QueryOptions } from "../resource.js";
+import { UserManager } from "../db/user.js";
+import { ApiServerFunctions } from "./api.js";
 
 export interface ServerStatus {
   setupRequired: boolean;
-}
-
-export interface ApiServerFunctions extends ConnectionFunctions {
-  authenticate: (
-    username: string,
-    payloadType: UserAuthenticationType,
-    payload: Uint8Array
-  ) => Promise<Authentication>;
-
-  isAuthenticationValid: (authentication: Authentication) => Promise<boolean>;
-
-  getServerStatus: () => Promise<ServerStatus>;
-
-  createAdminUser: (
-    username: string,
-    firstName: string,
-    middleName: string | null,
-    lastName: string,
-    password: string
-  ) => Promise<UserResource>;
-
-  getUser: (
-    authentication: Authentication | null,
-    user: UserResolvePayload
-  ) => Promise<UserResource | null>;
-
-  listUsers: (
-    authentication: Authentication | null,
-    options?: QueryOptions<UserResource, UserManager>
-  ) => Promise<UserResource[]>;
-
-  createUser: (
-    authentication: Authentication | null,
-    username: string,
-    firstName: string,
-    middleName: string | null,
-    lastName: string,
-    role: UserRole
-  ) => Promise<
-    [
-      user: UserResource,
-      UnlockedUserAuthentication: UnlockedUserAuthentication,
-      password: string
-    ]
-  >;
-
-  updateUser: (
-    authentication: Authentication | null,
-    id: number,
-    newData: UpdateUserOptions
-  ) => Promise<UserResource>;
-
-  suspendUser: (
-    authentication: Authentication | null,
-    id: number
-  ) => Promise<UserResource>;
-
-  createFile: (
-    authentication: Authentication | null,
-    parentFolderId: number,
-    name: string,
-    content: Uint8Array
-  ) => Promise<FileResource>;
-
-  createFolder: (
-    authentication: Authentication | null,
-    parentFolderId: number,
-    name: string
-  ) => Promise<FileResource>;
-
-  scanFolder: (
-    authentication: Authentication | null,
-    folderId: number
-  ) => Promise<FileResource[]>;
-
-  grantAccessToUser: (
-    authentication: Authentication | null,
-    fileId: number,
-    targetUserId: number,
-    type: FileAccessLevel
-  ) => Promise<FileAccessResource>;
-
-  revokeAccessFromUser: (
-    authentication: Authentication | null,
-    fileId: number,
-    targetUserId: number
-  ) => Promise<void>;
-
-  listPathChain: (
-    authentication: Authentication | null,
-    fileId: number
-  ) => Promise<FileResource[]>;
-
-  listFileAccess: (
-    authentication: Authentication | null,
-    fileId: number
-  ) => Promise<FileAccessResource[]>;
-
-  listSharedFiles: (
-    authentication: Authentication | null
-  ) => Promise<FileAccessResource[]>;
-
-  getFile: (
-    authentication: Authentication | null,
-    fileId: number | null
-  ) => Promise<FileResource>;
-
-  listFileSnapshots: (
-    authentication: Authentication | null,
-    fileId: number
-  ) => Promise<FileSnapshotResource[]>;
-
-  readFile: (
-    authentication: Authentication | null,
-    fileId: number,
-    offset?: number,
-    length?: number
-  ) => Promise<Uint8Array>;
-
-  moveFile: (
-    authentication: Authentication | null,
-    fileIds: number[],
-    newParentFolderId: number
-  ) => Promise<void>;
-
-  getFileMimeType: (
-    authentication: Authentication | null,
-    fileId: number,
-    mime?: boolean
-  ) => Promise<string>;
-
-  copyFile: (
-    authentication: Authentication | null,
-    fileId: number,
-    destinationId: number
-  ) => Promise<void>;
-
-  searchUser: (
-    authentication: Authentication | null,
-    searchString: string
-  ) => Promise<UserResource[]>;
-
-  getFileSize: (
-    authentication: Authentication | null,
-    fileId: number
-  ) => Promise<number>;
 }
 
 export interface Authentication {
@@ -187,7 +29,7 @@ export interface Authentication {
 }
 
 export function getApiFunctions(server: Server): ApiServerFunctions {
-  const { database } = server;
+  const { database, virusScanner } = server;
 
   const requireAuthentication = async (
     authentication: Authentication | null
@@ -924,6 +766,20 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
       const mainFilecontent = await fileContentManager.getMain(unlockedFile);
 
       return mainFilecontent.size;
+    },
+
+    scanFile: async (authentication, fileId) => {
+      const file = await functions.getFile(authentication, fileId);
+      if (file.type !== FileType.File) {
+        ApiError.throw(ApiErrorType.InvalidRequest, "Not a type of file");
+      }
+
+      const unlockedUserKey = await requireAuthentication(authentication);
+      const [fileManager] = database.getManagers(FileManager);
+
+      const unlockedFile = await fileManager.unlock(file, unlockedUserKey);
+
+      return await virusScanner.scan(unlockedFile);
     },
   };
 

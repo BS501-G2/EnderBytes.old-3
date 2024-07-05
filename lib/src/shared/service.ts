@@ -4,7 +4,7 @@ export interface ServiceRuntime<T = unknown> {
   resolve: () => void;
   reject: () => void;
 
-  instance: [T] | null;
+  data: [T] | null;
 }
 
 export type ServiceGetDataCallback<T = unknown> = () => T;
@@ -18,26 +18,25 @@ export type ServiceStopCallback = () => Promise<void> | void;
 export abstract class Service<T = unknown, A extends unknown[] = never[]> {
   public constructor(
     onData?: ServiceOnGetDataCallback<T> | null,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     downstream?: Service<any, any[]> | null
   ) {
-    this.#runtime = null;
+    this.#instance = null;
     this.#downstream = downstream ?? null;
 
     onData?.(() => this.#instanceData);
   }
 
   readonly #downstream: Service | null;
-  #runtime: ServiceRuntime<T> | null;
+  #instance: ServiceRuntime<T> | null;
 
   get #instanceData(): T {
-    if (this.#runtime == null) {
+    if (this.#instance == null) {
       throw new Error("Not started");
-    } else if (this.#runtime.instance == null) {
+    } else if (this.#instance.data == null) {
       throw new Error("Not initialized");
     }
 
-    return this.#runtime.instance[0];
+    return this.#instance.data[0];
   }
 
   abstract run(
@@ -47,30 +46,30 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
   ): Promise<void> | void;
 
   public async stop(): Promise<void> {
-    if (this.#runtime) {
+    if (this.#instance) {
       this.log(LogLevel.Info, "Stopping...");
-      await this.#runtime.onStop?.();
+      await this.#instance.onStop?.();
       this.log(LogLevel.Info, "Service has stopped.");
     }
   }
 
   public start(...args: A): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      if (this.#runtime != null) {
+      if (this.#instance != null) {
         throw new Error("Already running.");
       }
 
-      const runtime: ServiceRuntime = (this.#runtime = {
+      const runtime: ServiceRuntime = (this.#instance = {
         resolve: null as never,
         reject: null as never,
         onStop: null as never,
 
-        instance: null,
+        data: null,
       });
       this.log(LogLevel.Debug, "Runtime data has been set.");
 
       const setInstance: ServiceSetDataCallback<T> = (data: T) => {
-        runtime.instance = [data];
+        runtime.data = [data];
         return data;
       };
 
@@ -96,13 +95,13 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
           if (!isReady) {
             this.log(
               LogLevel.Debug,
-              "Service has stopped initializing with an error."
+              "Service has stopped initializing with an error: " + (error instanceof Error ? error.stack : `${error as string}`)
             );
             reject(error);
           }
         })
         .finally(() => {
-          this.#runtime = null;
+          this.#instance = null;
           this.log(LogLevel.Debug, "Service runtime data has been cleaned up.");
         });
     });

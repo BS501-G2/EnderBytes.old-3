@@ -1,4 +1,3 @@
-import { ApiServerFunctions } from "../../server/api/api-functions.js";
 import {
   baseConnectionFunctions,
   ConnectionFunctions,
@@ -6,7 +5,7 @@ import {
   wrapSocket,
 } from "../../shared/connection.js";
 import { io, Socket } from "socket.io-client";
-import SocketIOCustomParser from "socket.io-msgpack-parser";
+import { ApiServerFunctions } from "../../server.js";
 
 export interface ClientFunctions extends ConnectionFunctions {}
 export type Client = SocketWrapper<ApiServerFunctions, ClientFunctions, Socket>;

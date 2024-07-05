@@ -5,8 +5,7 @@ import {
   usernameLength,
   usernameValidCharacters,
 } from "../../shared/db/user.js";
-import { Resource } from "../../shared/db.js";
-import { ResourceManager } from "../resource.js";
+import { Resource, ResourceManager } from "../resource.js";
 import {
   UnlockedUserAuthentication,
   UserAuthenticationManager,

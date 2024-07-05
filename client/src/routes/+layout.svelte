@@ -1,7 +1,14 @@
 <script lang="ts">
   import '@fortawesome/fontawesome-free/css/all.min.css';
   import Locale, { LocaleKey } from '$lib/locale.svelte';
-  import { ColorKey, ResetCSS, Title, titleString, ColorScheme, getColorHex } from '@rizzzi/svelte-commons';
+  import {
+    ColorKey,
+    ResetCSS,
+    Title,
+    titleString,
+    ColorScheme,
+    getColorHex
+  } from '@rizzzi/svelte-commons';
 </script>
 
 <svelte:head>

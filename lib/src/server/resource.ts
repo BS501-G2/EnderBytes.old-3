@@ -1,7 +1,28 @@
 import { Knex } from "knex";
-import { Resource } from "../shared/db.js";
 import { Database, ResourceManagerConstructor } from "./database.js";
 import { LogLevel } from "../shared/service.js";
+
+export interface ResourceHolder {
+  id: number;
+}
+
+export interface Resource<
+  R extends Resource<R, M> = never,
+  M extends ResourceManager<R, M> = never
+> {
+  dataId: number;
+  id: number;
+  createTime: number;
+
+  previousDataId: number | null;
+  nextDataId: number | null;
+}
+
+export interface ResourceRecordStats {
+  id: number;
+  createTime: number;
+  updateTime: number;
+}
 
 export abstract class ResourceManager<
   R extends Resource<R, M>,
@@ -22,6 +43,7 @@ export abstract class ResourceManager<
       throw new Error("Invalid version");
     }
     this.#version = version;
+    this.#transact = db.transact.bind(db)
 
     init((version) => this.#init(version));
   }
@@ -30,6 +52,9 @@ export abstract class ResourceManager<
   readonly #name: string;
   readonly #version: number;
   readonly #searchableColumns: string[];
+  readonly #transact: Database['transact']
+
+  get transact() { return this.#transact }
 
   get #RECORD_TABLE() {
     return `${this.#name}_Record`;
@@ -43,16 +68,20 @@ export abstract class ResourceManager<
     return this.#db.db;
   }
 
+  get transacting() {
+    return this.#db.transacting
+  }
+
   get name() {
     return this.#name;
   }
 
   get dataTableName() {
-    return this.#DATA_TABLE
+    return this.#DATA_TABLE;
   }
 
   get recordTableName() {
-    return this.#RECORD_TABLE
+    return this.#RECORD_TABLE;
   }
 
   get version() {
@@ -100,11 +129,29 @@ export abstract class ResourceManager<
     return this.#db.getManager<R, M>(init);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public getManagers<R extends ResourceManagerConstructor<any, any>[]>(
     ...constructors: R
   ) {
     return this.#db.getManagers(...constructors);
+  }
+
+  public insertMany(data: Omit<R, keyof Resource>[]): Promise<R[]> {
+    return Promise.all(data.map((entry) => this.insert(entry)));
+  }
+
+  public async getStats(id: number): Promise<ResourceRecordStats | null> {
+    const earliest = await this.db
+      .table<R, R[]>(this.dataTableName)
+      .select("*")
+      .where("id", "=", id)
+      .where("previousDataId", "is", "null")
+      .first();
+
+    if (earliest == null) {
+      return null;
+    }
+
+    return null;
   }
 
   public async insert(data: Omit<R, keyof Resource>): Promise<R> {
@@ -283,9 +330,7 @@ export abstract class ResourceManager<
   }
 
   public async deleteWhere(where: (WhereClause<R, M> | null)[]): Promise<void> {
-    let query = this.db
-      .table<R, R[]>(this.#DATA_TABLE)
-      .select(["id as id"]);
+    let query = this.db.table<R, R[]>(this.#DATA_TABLE).select(["id as id"]);
     query = where.reduce((query, where) => {
       if (where == null) {
         return query;
@@ -308,9 +353,7 @@ export abstract class ResourceManager<
   public async restoreWhere(
     where: (WhereClause<R, M> | null)[]
   ): Promise<void> {
-    let query = this.db
-      .table<R, R[]>(this.#DATA_TABLE)
-      .select(["id as id"]);
+    let query = this.db.table<R, R[]>(this.#DATA_TABLE).select(["id as id"]);
     query = where.reduce((query, where) => {
       if (where == null) {
         return query;
@@ -360,10 +403,7 @@ export abstract class ResourceManager<
   public async purge(data: R): Promise<void> {
     await this.logSql(
       LogLevel.Debug,
-      this.db
-        .table<R, R[]>(this.#DATA_TABLE)
-        .where("id", "=", data.id)
-        .delete()
+      this.db.table<R, R[]>(this.#DATA_TABLE).where("id", "=", data.id).delete()
     );
 
     await this.logSql(
@@ -415,6 +455,16 @@ export abstract class ResourceManager<
     }
 
     return result;
+  }
+
+  public async first(
+    options?: Omit<QueryOptions<R, M>, "limit">
+  ): Promise<R | null> {
+    for await (const resource of this.readStream({ ...options, limit: 1 })) {
+      return resource;
+    }
+
+    return null;
   }
 
   public async *readStream(options?: QueryOptions<R, M>): AsyncGenerator<R> {

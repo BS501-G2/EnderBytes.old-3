@@ -1,8 +1,7 @@
 import { Knex } from "knex";
-import { Resource } from "../../shared/db.js";
 import { UserAuthenticationType } from "../../shared/db/user-authentication.js";
 import { Database } from "../database.js";
-import { ResourceManager } from "../resource.js";
+import { Resource, ResourceManager } from "../resource.js";
 import {
   decryptAsymmetric,
   decryptSymmetric,

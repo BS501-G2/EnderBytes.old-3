@@ -5,5 +5,5 @@ export function byteUnit(size: number): string {
     size /= 1024;
     i++;
   }
-  return `${size.toFixed(2)} ${byteUnitDictionary[i]}iB`;
+  return `${size.toFixed(2)} ${byteUnitDictionary[i]}${i === 0 ? '' : 'i'}B`;
 }

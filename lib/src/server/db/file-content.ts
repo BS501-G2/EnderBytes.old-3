@@ -1,7 +1,6 @@
 import { Knex } from "knex";
-import { Resource } from "../../shared/db.js";
 import { Database } from "../database.js";
-import { ResourceManager } from "../resource.js";
+import { ResourceManager, Resource } from "../resource.js";
 import { FileManager, UnlockedFileResource } from "./file.js";
 import { FileType } from "../../shared/db/file.js";
 

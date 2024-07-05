@@ -6,7 +6,6 @@ export * from "./shared/db/user.js";
 export * from "./shared/api.js";
 export * from "./shared/bytes.js";
 export * from "./shared/connection.js";
-export * from "./shared/db.js";
 export * from "./shared/logger.js";
 export * from "./shared/serializer.js";
 export * from "./shared/service.js";

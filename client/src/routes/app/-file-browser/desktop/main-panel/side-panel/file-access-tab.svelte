@@ -12,11 +12,15 @@
   import { writable, type Writable } from 'svelte/store';
   import { type Snippet } from 'svelte';
   import FileAccessTabEntry from './file-access-tab-entry.svelte';
-  import type { FileAccessResource, FileResource, UserResource } from '@rizzzi/enderdrive-lib/server';
+  import type {
+    FileAccessResource,
+    FileResource,
+    UserResource
+  } from '@rizzzi/enderdrive-lib/server';
   import { ApiError, FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
   import { getConnection } from '@rizzzi/enderdrive-lib/client';
   import { getAuthentication } from '$lib/client/auth';
-    import User from '$lib/client/user.svelte';
+  import User from '$lib/client/user.svelte';
 
   const { file }: { file: FileResource } = $props();
 

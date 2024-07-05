@@ -1,9 +1,8 @@
 import { Knex } from "knex";
-import { Resource } from "../../shared/db.js";
 import { userSessionExpiryDuration } from "../../shared/db/user-session.js";
 import { decryptSymmetric, encryptSymmetric, randomBytes } from "../crypto.js";
 import { Database } from "../database.js";
-import { ResourceManager } from "../resource.js";
+import { Resource, ResourceManager } from "../resource.js";
 import {
   UnlockedUserAuthentication,
   UserAuthentication,
