@@ -27,24 +27,26 @@ export class FileMimeManager extends ResourceManager<
   }
 
   protected upgrade(table: Knex.AlterTableBuilder, version: number): void {
-    table
-      .integer("fileId")
-      .references("id")
-      .inTable(this.getManager(FileManager).dataTableName)
-      .onDelete("cascade");
-    table
-      .integer("fileContentId")
-      .references("id")
-      .inTable(this.getManager(FileContentManager).dataTableName)
-      .onDelete("cascade");
-    table
-      .integer("fileSnapshotId")
-      .references("id")
-      .inTable(this.getManager(FileSnapshotManager).dataTableName)
-      .onDelete("cascade");
+    if (version < 1) {
+      table
+        .integer("fileId")
+        .references("id")
+        .inTable(this.getManager(FileManager).recordTableName)
+        .onDelete("cascade");
+      table
+        .integer("fileContentId")
+        .references("id")
+        .inTable(this.getManager(FileContentManager).recordTableName)
+        .onDelete("cascade");
+      table
+        .integer("fileSnapshotId")
+        .references("id")
+        .inTable(this.getManager(FileSnapshotManager).recordTableName)
+        .onDelete("cascade");
 
-    table.string("mime").notNullable();
-    table.string("description").notNullable();
+      table.string("mime").notNullable();
+      table.string("description").notNullable();
+    }
   }
 
   public async setMime(

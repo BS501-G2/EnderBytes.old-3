@@ -56,8 +56,8 @@ export class MimeDetector extends Service<
     setData: ServiceSetDataCallback<MimeDetectorData>,
     onReady: ServiceReadyCallback
   ): Promise<void> {
-    const mimeDetector = new Magic();
-    const descriptionDetector = new Magic(
+    const descriptionDetector = new Magic();
+    const mimeDetector = new Magic(
       mmm.MAGIC_MIME_TYPE | mmm.MAGIC_MIME_ENCODING
     );
 
@@ -111,8 +111,12 @@ export class MimeDetector extends Service<
     );
 
     mime = await Promise.all([
-      this.#getBufferMime(firstBuffer, false),
-      this.#getBufferMime(firstBuffer, true),
+      this.#getBufferMime(firstBuffer, false).then(
+        (mime) => mime.split(";")[0]
+      ),
+      this.#getBufferMime(firstBuffer, true).then((description) =>
+        description.split(",")[0].trim()
+      ),
     ] as [mime: Promise<string>, description: Promise<string>]);
 
     return await fileMimeManager.setMime(

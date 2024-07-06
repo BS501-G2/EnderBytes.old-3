@@ -203,7 +203,7 @@ export interface ApiServerFunctions extends ConnectionFunctions {
     authentication: Authentication | null,
     fileId: number,
     mime?: boolean
-  ) => Promise<string>;
+  ) => Promise<[mime: string, description: string]>;
 
   copyFile: (
     authentication: Authentication | null,

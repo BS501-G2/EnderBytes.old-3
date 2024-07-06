@@ -104,7 +104,9 @@
         }
 
         const ro = await readFile(getAuthentication(), file.id);
-        const blob = new Blob([ro], { type: await getFileMimeType(getAuthentication(), file.id) });
+        const blob = new Blob([ro], {
+          type: (await getFileMimeType(getAuthentication(), file.id))[0]
+        });
         const url = URL.createObjectURL(blob);
 
         window.open(url, '_blank');

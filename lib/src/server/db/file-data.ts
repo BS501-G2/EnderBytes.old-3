@@ -6,11 +6,7 @@ import { FileSnapshotManager, FileSnapshotResource } from "./file-snapshot.js";
 import { FileBufferManager, FileBufferResource } from "./file-buffer.js";
 import { fileBufferSize, FileType } from "../../shared/db/file.js";
 import { Database } from "../database.js";
-import mmm, { Magic } from "mmmagic";
 import { Readable } from "stream";
-
-const magic = new Magic();
-const magicMime = new Magic(mmm.MAGIC_MIME_TYPE | mmm.MAGIC_MIME_ENCODING);
 
 export interface FileDataResource
   extends Resource<FileDataResource, FileDataManager> {
@@ -331,47 +327,5 @@ export class FileDataManager extends ResourceManager<
     });
 
     return stream;
-  }
-
-  public async getMime(
-    unlockedFile: UnlockedFileResource,
-    fileContent: FileContentResource,
-    fileSnapshot: FileSnapshotResource,
-    mime: boolean = true
-  ): Promise<string> {
-    mime ??= true;
-    const [fileBufferManager] = this.getManagers(FileBufferManager);
-
-    if (unlockedFile.type === FileType.Folder) {
-      return mime ? "inode/directory" : "Folder";
-    }
-
-    const fileData = await this.#getByIndex(
-      unlockedFile,
-      fileContent,
-      fileSnapshot,
-      0
-    );
-    if (fileData == null) {
-      return mime ? "application/empty" : "Empty File";
-    } else {
-      const buffer = fileBufferManager.unlock(
-        unlockedFile,
-        (await fileBufferManager.getById(fileData.fileBufferId))!
-      );
-
-      return await new Promise((resolve, reject) => {
-        (mime ? magicMime : magic).detect(
-          Buffer.from(buffer.unlockedBuffer),
-          (err, result) => {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(`${mime ? result : `${result}`.split(",")[0]}`);
-            }
-          }
-        );
-      });
-    }
   }
 }

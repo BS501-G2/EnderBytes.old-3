@@ -87,9 +87,9 @@
               {#snippet loading()}
                 <LoadingSpinner size="1em" />
               {/snippet}
-              {#snippet success({ result })}
-                <span title={result}>
-                  {result}
+              {#snippet success({ result: [, description] })}
+                <span title={description}>
+                  {description}
                 </span>
               {/snippet}
             </Awaiter>
@@ -190,6 +190,7 @@
         align-items: center;
         justify-content: space-between;
         min-height: 20px;
+        gap: 8px;
 
         > p {
           min-width: 0px;
@@ -201,6 +202,8 @@
 
         > p.label {
           font-weight: bolder;
+
+          min-width: min-content;
         }
 
         > p.label::after {

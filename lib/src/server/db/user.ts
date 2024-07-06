@@ -31,7 +31,7 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
   }
 
   get searchableColumns(): (keyof UserResource)[] {
-    return [];
+    return ["lastName", "middleName", "firstName", "username"];
   }
 
   protected async upgrade(
@@ -95,7 +95,11 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
     password: string = this.generateRandomPassword(16),
     role: UserRole = UserRole.Member
   ): Promise<
-    [user: UserResource, unlockedUserKey: UnlockedUserAuthentication, password: string]
+    [
+      user: UserResource,
+      unlockedUserKey: UnlockedUserAuthentication,
+      password: string
+    ]
   > {
     if ((await this.verify(username)) !== UsernameVerificationFlag.OK) {
       throw new Error("Invalid username");

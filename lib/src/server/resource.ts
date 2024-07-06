@@ -37,13 +37,12 @@ export abstract class ResourceManager<
   ) {
     this.#db = db;
     this.#name = name;
-    this.#searchableColumns = searchableColumns;
 
     if (version <= 0) {
       throw new Error("Invalid version");
     }
     this.#version = version;
-    this.#transact = db.transact.bind(db)
+    this.#transact = db.transact.bind(db);
 
     init((version) => this.#init(version));
   }
@@ -51,10 +50,11 @@ export abstract class ResourceManager<
   readonly #db: Database;
   readonly #name: string;
   readonly #version: number;
-  readonly #searchableColumns: string[];
-  readonly #transact: Database['transact']
+  readonly #transact: Database["transact"];
 
-  get transact() { return this.#transact }
+  get transact() {
+    return this.#transact;
+  }
 
   get #RECORD_TABLE() {
     return `${this.#name}_Record`;
@@ -69,7 +69,7 @@ export abstract class ResourceManager<
   }
 
   get transacting() {
-    return this.#db.transacting
+    return this.#db.transacting;
   }
 
   get name() {
@@ -89,7 +89,7 @@ export abstract class ResourceManager<
   }
 
   get searchableColumns(): string[] {
-    return [...this.#searchableColumns];
+    return [];
   }
 
   async #init(version: number = 0): Promise<void> {
@@ -486,7 +486,7 @@ export abstract class ResourceManager<
       }
 
       if (options?.search != null) {
-        for (const searchableColumn of this.#searchableColumns) {
+        for (const searchableColumn of this.searchableColumns) {
           query = query.orWhere(
             searchableColumn,
             "like",

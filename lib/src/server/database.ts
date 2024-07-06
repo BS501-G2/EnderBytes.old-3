@@ -1,4 +1,8 @@
-import { LogLevel, Service, ServiceGetDataCallback } from "../shared/service.js";
+import {
+  LogLevel,
+  Service,
+  ServiceGetDataCallback,
+} from "../shared/service.js";
 import knex, { Knex } from "knex";
 import FS from "fs";
 import { TaskQueue, createTaskQueue } from "../shared/task-queue.js";
@@ -42,7 +46,8 @@ export class Database extends Service<
   [managers: ResourceManagerConstructor<any, any>[]]
 > {
   public constructor(server: Server) {
-    let getInstanceData: ServiceGetDataCallback<DatabaseInstance> = null as never;
+    let getInstanceData: ServiceGetDataCallback<DatabaseInstance> =
+      null as never;
 
     super((func) => {
       getInstanceData = func;
@@ -207,7 +212,7 @@ export class Database extends Service<
     callback: (db: Knex.Transaction, ...args: A) => T | Promise<T>,
     ...args: A
   ): Promise<T> {
-    this.log(LogLevel.Debug, "Creating transaction queue...");
+    const instance = this.#instanceData;
 
     const transaction = await this.#taskQueue.pushQueue<T, A>(
       async (...args: A) => {
@@ -220,7 +225,6 @@ export class Database extends Service<
 
           this.log(LogLevel.Debug, `Starting transaction #${transactionId}...`);
           this.#transactions.set(transaction, ++this.#nextTransactionId);
-          const instance = this.#instanceData;
 
           instance.currentTransaction = transaction;
           try {
@@ -243,7 +247,7 @@ export class Database extends Service<
   ): T {
     const a = query.toSQL();
 
-    for (const { sql } of (Array.isArray(a) ? a : [a])) {
+    for (const { sql } of Array.isArray(a) ? a : [a]) {
       if (sql.length === 0) {
         continue;
       }

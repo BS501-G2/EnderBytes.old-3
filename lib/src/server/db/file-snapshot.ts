@@ -3,11 +3,15 @@ import { Resource, ResourceManager } from "../resource.js";
 import { Database } from "../database.js";
 import { FileManager, UnlockedFileResource } from "./file.js";
 import { FileContentManager, FileContentResource } from "./file-content.js";
+import { UserManager, UserResource } from "./user.js";
+import { UnlockedUserAuthentication } from "./user-authentication.js";
 
 export interface FileSnapshotResource extends Resource {
   fileId: number;
   fileContentId: number;
   baseFileSnapshotId: number | null;
+
+  creatorUserId: number;
 }
 
 export class FileSnapshotManager extends ResourceManager<
@@ -43,18 +47,27 @@ export class FileSnapshotManager extends ResourceManager<
         .references("id")
         .inTable(this.recordTableName)
         .onDelete("cascade");
+
+      table
+        .integer("creatorUserId")
+        .nullable()
+        .references("id")
+        .inTable(this.getManager(UserManager).recordTableName)
+        .onDelete("cascade");
     }
   }
 
   public async create(
     unlockedFile: UnlockedFileResource,
     fileContent: FileContentResource,
-    baseFileSnapshot: FileSnapshotResource
+    baseFileSnapshot: FileSnapshotResource,
+    authorUser: UserResource
   ): Promise<FileSnapshotResource> {
     return this.insert({
       fileId: unlockedFile.id,
       fileContentId: fileContent.id,
       baseFileSnapshotId: baseFileSnapshot.id,
+      creatorUserId: authorUser.id,
     });
   }
 
@@ -76,6 +89,7 @@ export class FileSnapshotManager extends ResourceManager<
         fileId: unlockedFile.id,
         fileContentId: fileContent.id,
         baseFileSnapshotId: null,
+        creatorUserId: unlockedFile.creatorUserId,
       }))
     );
   }

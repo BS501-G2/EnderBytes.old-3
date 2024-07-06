@@ -13,11 +13,13 @@ import { UserSessionManager } from "../db/user-session.js";
 import { UserManager } from "../db/user.js";
 import { VirusReportEntryManager } from "../db/virus-report-entry.js";
 import { VirusReportManager } from "../db/virus-report.js";
+import { MimeDetector } from "./mime-detector.js";
 import { VirusScanner } from "./virus-scanner.js";
 
 export interface ServerInstanceData {
   database: Database;
   virusScanner: VirusScanner;
+  mimeDetector: MimeDetector;
 }
 
 export type ServerOptions = [port: number];
@@ -43,6 +45,10 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
     return this.#data.virusScanner;
   }
 
+  get mimeDetector() {
+    return this.#data.mimeDetector;
+  }
+
   async run(
     setData: (instance: ServerInstanceData) => void,
     onReady: (onStop: () => void) => void,
@@ -51,8 +57,9 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
     const apiServer = new ApiServer(this);
     const database = new Database(this);
     const virusScanner = new VirusScanner(this);
+    const mimeDetector = new MimeDetector(this);
 
-    setData({ database, virusScanner });
+    setData({ database, virusScanner, mimeDetector });
 
     await database.start([
       UserManager,
@@ -69,11 +76,13 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
       FileMimeManager,
     ]);
     await virusScanner.start("/run/clamav/clamd.ctl");
+    await mimeDetector.start();
     await apiServer.start(port);
 
     await new Promise<void>((resolve) => onReady(resolve));
 
     await apiServer.stop();
+    await mimeDetector.stop();
     await virusScanner.stop();
     await database.stop();
   }

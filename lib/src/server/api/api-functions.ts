@@ -191,7 +191,7 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
     },
 
     getUser: async (authentication, user) => {
-      await requireAuthentication(authentication);
+      const unlockedUserKey = await requireAuthentication(authentication);
 
       const [users] = database.getManagers(UserManager);
 
@@ -695,20 +695,15 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
         await fileManager.move(unlockedFile, unlockedNewParentFolder);
       }
     },
-    getFileMimeType: async (authentication, fileId, mime = true) => {
+    getFileMimeType: async (authentication, fileId) => {
       const unlockedUserKey = await requireAuthentication(authentication);
 
-      const [
-        fileManager,
-        fileContentManager,
-        fileSnapshotManager,
-        fileDataManager,
-      ] = database.getManagers(
-        FileManager,
-        FileContentManager,
-        FileSnapshotManager,
-        FileDataManager
-      );
+      const [fileManager, fileContentManager, fileSnapshotManager] =
+        database.getManagers(
+          FileManager,
+          FileContentManager,
+          FileSnapshotManager
+        );
       const file = await fileManager.getById(fileId);
       if (file == null) {
         ApiError.throw(ApiErrorType.NotFound);
@@ -733,22 +728,22 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
         unlockedFile,
         mainFilecontent
       );
-      return fileDataManager.getMime(
+
+      return server.mimeDetector.getFileMime(
         unlockedFile,
         mainFilecontent,
-        fileSnapshot,
-        mime
+        fileSnapshot
       );
     },
 
     copyFile: async (authentication, fileId, destinationId) => {},
 
     searchUser: async (authentication, searchString) => {
-      const unlockedUserKey = await requireAuthentication(authentication);
+      await requireAuthentication(authentication);
 
       const [userManager] = database.getManagers(UserManager);
       const result = await userManager.read({
-        where: [["username", "like", `%${searchString}%`]],
+        search: searchString,
       });
 
       return result;
@@ -763,9 +758,9 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
       );
 
       const unlockedFile = await fileManager.unlock(file, unlockedUserKey);
-      const mainFilecontent = await fileContentManager.getMain(unlockedFile);
+      const mainFileContent = await fileContentManager.getMain(unlockedFile);
 
-      return mainFilecontent.size;
+      return mainFileContent.size;
     },
 
     scanFile: async (authentication, fileId) => {
