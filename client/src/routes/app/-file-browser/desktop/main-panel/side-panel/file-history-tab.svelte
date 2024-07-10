@@ -3,23 +3,32 @@
   import User from '$lib/client/user.svelte';
   import { getConnection } from '@rizzzi/enderdrive-lib/client';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
-  import { UserResolveType } from '@rizzzi/enderdrive-lib/shared';
+  import { FileLogType, UserResolveType } from '@rizzzi/enderdrive-lib/shared';
   import { Awaiter } from '@rizzzi/svelte-commons';
   import Moment from 'moment';
 
   const { file }: { file: FileResource } = $props();
   const {
-    funcs: { listFileSnapshots, getUser }
+    funcs: { listFileLogs, getUser }
   } = getConnection();
 </script>
 
 {#key file.id}
   <Awaiter
     callback={async () => {
-      const snapshots = await listFileSnapshots($authentication, file.id);
+      return (await listFileLogs($authentication, file.id, null))
+        .toSorted((log1, log2) => log2.createTime - log1.createTime)
+        .filter((log, index, array) => {
+          const previousLog = array[index - 1];
 
-      console.log(snapshots);
-      return snapshots;
+          console.table({ previousLog, log });
+
+          return (
+            previousLog == null ||
+            previousLog.actorUserId !== log.actorUserId ||
+            previousLog.type !== log.type
+          );
+        });
     }}
   >
     {#snippet success({ result })}
@@ -30,11 +39,26 @@
           <li class="history-entry">
             <i class="fa-regular fa-clock"></i>
             <p class="history-description">
-              Created by <Awaiter
+              {((type) => {
+                switch (type) {
+                  case FileLogType.Create:
+                    return 'Created';
+                  case FileLogType.Modify:
+                    return 'Modified';
+                  case FileLogType.Access:
+                    return 'Accessed';
+                  case FileLogType.Delete:
+                    return 'Deleted';
+                  case FileLogType.Restore:
+                    return 'Restored';
+                  case FileLogType.Revert:
+                    return 'Reverted';
+                }
+              })(snapshot.type)} by <Awaiter
                 callback={async () => {
                   const user = await getUser($authentication, [
                     UserResolveType.UserId,
-                    snapshot.creatorUserId
+                    snapshot.actorUserId
                   ]);
 
                   return user!;

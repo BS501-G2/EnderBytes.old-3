@@ -51,18 +51,20 @@
   <Awaiter
     callback={async () => {
       const fileContent = await readFile(getAuthentication(), file.id);
-      const url = URL.createObjectURL(
-        new Blob([fileContent], { type: await getFileMimeType(getAuthentication(), file.id) })
-      );
+      const [type] = await getFileMimeType(getAuthentication(), file.id);
 
-      return url;
+      if (type.startsWith('image/')) {
+        const url = URL.createObjectURL(new Blob([fileContent], { type }));
+        return url;
+      }
+      return null;
     }}
   >
     {#snippet children(state)}
       <img
         class="thumbnail"
         alt="Thumbnail"
-        src={state.status === AwaiterResultType.Success ? state.result : ''}
+        src={state.status === AwaiterResultType.Success ? state.result ?? '' : ''}
       />
     {/snippet}
   </Awaiter>

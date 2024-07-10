@@ -12,7 +12,7 @@ export class TestManager extends ResourceManager<TestResource, TestManager> {
     db: Database,
     init: (onInit: (version?: number) => Promise<void>) => void
   ) {
-    super(db, init, "test", 1, ["test"]);
+    super(db, init, "test", 1);
   }
 
   protected upgrade(table: Knex.AlterTableBuilder, version: number): void {

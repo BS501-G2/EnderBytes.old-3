@@ -15,6 +15,7 @@ export interface FileAccessResource
   fileId: number;
   level: FileAccessLevel;
   encryptedKey: Uint8Array;
+  granterUserId: number;
 }
 
 export interface UnlockedFileAccess extends FileAccessResource {
@@ -29,6 +30,12 @@ export class FileAccessManager extends ResourceManager<
     if (version < 1) {
       table
         .integer("userId")
+        .notNullable()
+        .references("id")
+        .inTable(this.getManager(UserManager).recordTableName)
+        .onDelete("cascade");
+      table
+        .integer("granterUserId")
         .notNullable()
         .references("id")
         .inTable(this.getManager(UserManager).recordTableName)
@@ -54,7 +61,8 @@ export class FileAccessManager extends ResourceManager<
   public async create(
     unlockedFile: UnlockedFileResource,
     targetUser: UserResource,
-    level: FileAccessLevel
+    level: FileAccessLevel,
+    granterUser: UserResource
   ): Promise<UnlockedFileAccess> {
     const [userKeys] = this.getManagers(UserAuthenticationManager);
     const userKey = (
@@ -71,6 +79,7 @@ export class FileAccessManager extends ResourceManager<
       userId: targetUser.id,
       level,
       encryptedKey: userKeys.encrypt(userKey, fileKey),
+      granterUserId: granterUser.id
     });
 
     return {

@@ -10,6 +10,8 @@ export * from "./server/db/file-access.js";
 export * from "./server/db/file-buffer.js";
 export * from "./server/db/file-content.js";
 export * from "./server/db/file-data.js";
+export * from "./server/db/file-log.js";
+export * from "./server/db/file-mime.js";
 export * from "./server/db/file-snapshot.js";
 export * from "./server/db/file.js";
 export * from "./server/db/test-manager.js";

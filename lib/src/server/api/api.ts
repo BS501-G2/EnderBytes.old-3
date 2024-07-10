@@ -4,7 +4,7 @@ import * as SocketIO from "socket.io";
 import { LogLevel, Service } from "../../shared/service.js";
 import { Server } from "../core/server.js";
 import { ConnectionFunctions, wrapSocket } from "../../shared/connection.js";
-import { ClientFunctions } from "../../client.js";
+import { ApiClientClientFunctions } from "../../client.js";
 import {
   Authentication,
   getApiFunctions,
@@ -22,6 +22,8 @@ import { UnlockedUserAuthentication } from "../db/user-authentication.js";
 import { FileResource } from "../db/file.js";
 import { FileAccessResource } from "../db/file-access.js";
 import { FileSnapshotResource } from "../db/file-snapshot.js";
+import { FileLogResource } from "../db/file-log.js";
+import { FileStarResource } from "../db/file-star.js";
 
 export interface ApiServerData {
   httpServer: HTTP.Server;
@@ -40,7 +42,7 @@ export class ApiServer extends Service<ApiServerData, ApiServerOptions> {
   #server: Server;
 
   #wrapSocket(socket: SocketIO.Socket) {
-    return wrapSocket<ClientFunctions, ApiServerFunctions, SocketIO.Socket>(
+    return wrapSocket<ApiClientClientFunctions, ApiServerFunctions, SocketIO.Socket>(
       socket,
       getApiFunctions(this.#server),
       (func) => this.#server.database.transact(func)
@@ -225,4 +227,26 @@ export interface ApiServerFunctions extends ConnectionFunctions {
     authentication: Authentication | null,
     fileId: number
   ) => Promise<string[]>;
+
+  listFileLogs: (
+    authentication: Authentication | null,
+    targetFileId: number | null,
+    actorUserId: number | null
+  ) => Promise<FileLogResource[]>;
+
+  listStarred: (
+    authentication: Authentication | null,
+    offset: number
+  ) => Promise<FileResource[]>;
+
+  isStarred: (
+    authentication: Authentication | null,
+    fileId: number
+  ) => Promise<boolean>;
+
+  setStar: (
+    authentication: Authentication | null,
+    fileId: number,
+    starred: boolean
+  ) => Promise<void>;
 }

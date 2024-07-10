@@ -5,8 +5,10 @@ import { FileAccessManager } from "../db/file-access.js";
 import { FileBufferManager } from "../db/file-buffer.js";
 import { FileContentManager } from "../db/file-content.js";
 import { FileDataManager } from "../db/file-data.js";
+import { FileLogManager } from "../db/file-log.js";
 import { FileMimeManager } from "../db/file-mime.js";
 import { FileSnapshotManager } from "../db/file-snapshot.js";
+import { FileStarManager } from "../db/file-star.js";
 import { FileManager } from "../db/file.js";
 import { UserAuthenticationManager } from "../db/user-authentication.js";
 import { UserSessionManager } from "../db/user-session.js";
@@ -74,6 +76,8 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
       VirusReportManager,
       VirusReportEntryManager,
       FileMimeManager,
+      FileLogManager,
+      FileStarManager
     ]);
     await virusScanner.start("/run/clamav/clamd.ctl");
     await mimeDetector.start();

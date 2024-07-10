@@ -7,8 +7,8 @@ import {
 import { io, Socket } from "socket.io-client";
 import { ApiServerFunctions } from "../../server.js";
 
-export interface ClientFunctions extends ConnectionFunctions {}
-export type Client = SocketWrapper<ApiServerFunctions, ClientFunctions, Socket>;
+export interface ApiClientClientFunctions extends ConnectionFunctions {}
+export type Client = SocketWrapper<ApiServerFunctions, ApiClientClientFunctions, Socket>;
 
 let connection: Client | null = null;
 

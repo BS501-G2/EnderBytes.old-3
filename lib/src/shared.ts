@@ -1,5 +1,6 @@
 export * from "./shared/db/file-access.js";
 export * from "./shared/db/file.js";
+export * from "./shared/db/file-log.js";
 export * from "./shared/db/user-authentication.js";
 export * from "./shared/db/user-session.js";
 export * from "./shared/db/user.js";

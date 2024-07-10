@@ -76,12 +76,17 @@ export function wrapSocket<
 >(
   socket: S,
   map: FL,
-  beforeCall?: (func: () => Promise<void>) => Promise<void>
+  beforeCall?: (func: () => Promise<void>) => Promise<void>,
+  onData?: (
+    ...args:
+      | [type: "send", message: Message<FL, FR>]
+      | [type: "receive", message: Message<FR, FL>]
+  ) => void
 ) {
   const pending: PendingRequestMap<FR> = {};
 
   const receive = (...message: Message<FR, FL>) => {
-    console.log("received:", message);
+    onData?.("receive", message);
 
     if (message[0] === MessageType.ResponseOk) {
       const [, id, data] = message;
@@ -119,10 +124,16 @@ export function wrapSocket<
           "InvalidFunctionName",
           `Function does not exist: ${name as string}`
         );
-        return
+        return;
       }
 
-      (async () => (await beforeCall?.(() => func(...args))) ?? func(...args))()
+      (async () => {
+        if (beforeCall != null) {
+          return await beforeCall(() => func(...args));
+        } else {
+          return await func(...args);
+        }
+      })()
         .then((data: Awaited<ReturnType<typeof func>>) =>
           send(MessageType.ResponseOk, id, data)
         )
@@ -176,13 +187,24 @@ export function wrapSocket<
       return obj;
     };
 
-    const t = traverse(message);
+    const sanitizedMessage = traverse(message);
 
-    console.log("sent:", t);
-    socket.send(...t);
+    onData?.("send", sanitizedMessage);
+    socket.send(...sanitizedMessage);
   };
 
   socket.on("message", receive);
+  socket.on("disconnect", (reason) => {
+    for (const pendingId in pending) {
+      const pendingEntry = pending[pendingId];
+
+      if (pendingEntry == null) {
+        continue;
+      }
+
+      pendingEntry.reject(new Error("Disconnected. Try again later"));
+    }
+  });
   let destroyed: boolean = false;
 
   const call = <K extends keyof FR, T extends FR[K]>(

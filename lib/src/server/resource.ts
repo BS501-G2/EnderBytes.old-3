@@ -24,16 +24,19 @@ export interface ResourceRecordStats {
   updateTime: number;
 }
 
+export type ResourceManagerInitCallback = (
+  onInit: (version?: number) => Promise<void>
+) => void;
+
 export abstract class ResourceManager<
   R extends Resource<R, M>,
   M extends ResourceManager<R, M>
 > {
   constructor(
     db: Database,
-    init: (onInit: (version?: number) => Promise<void>) => void,
+    init: ResourceManagerInitCallback,
     name: string,
-    version: number,
-    searchableColumns: string[] = []
+    version: number
   ) {
     this.#db = db;
     this.#name = name;
@@ -541,9 +544,6 @@ export abstract class ResourceManager<
           yield resource as R;
           yielded++;
         }
-
-        console.log(resourceRecord);
-
         offset++;
       }
     }

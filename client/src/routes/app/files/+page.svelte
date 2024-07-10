@@ -88,9 +88,11 @@
         selection[0].id != id
     },
     {
-      label: 'Delete',
-      icon: 'fa-solid fa-trash',
-      action: async () => {},
+      label: 'Star',
+      icon: 'fa-regular fa-star',
+      action: async () => {
+        
+      },
       group: 'actions',
       isVisible: (selection) => !$fileBrowserState.isLoading && selection.length > 0
     },
@@ -157,6 +159,13 @@
 
         $selection = [];
       },
+      group: 'actions',
+      isVisible: (selection) => !$fileBrowserState.isLoading && selection.length > 0
+    },
+    {
+      label: 'Delete',
+      icon: 'fa-solid fa-trash',
+      action: async () => {},
       group: 'actions',
       isVisible: (selection) => !$fileBrowserState.isLoading && selection.length > 0
     },

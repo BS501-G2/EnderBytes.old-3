@@ -1,20 +1,23 @@
 import { ApiError, ApiErrorType, UserResolveType } from "../../shared/api.js";
 import { baseConnectionFunctions } from "../../shared/connection.js";
 import { FileAccessLevel } from "../../shared/db/file-access.js";
+import { FileLogType } from "../../shared/db/file-log.js";
 import { FileType } from "../../shared/db/file.js";
 import { UserRole } from "../../shared/db/user.js";
 import { Server } from "../core/server.js";
 import { FileAccessManager, FileAccessResource } from "../db/file-access.js";
 import { FileContentManager } from "../db/file-content.js";
 import { FileDataManager } from "../db/file-data.js";
+import { FileLogManager } from "../db/file-log.js";
 import { FileSnapshotManager } from "../db/file-snapshot.js";
+import { FileStarManager } from "../db/file-star.js";
 import { FileManager, FileResource, UnlockedFileResource } from "../db/file.js";
 import {
   UnlockedUserAuthentication,
   UserAuthenticationManager,
 } from "../db/user-authentication.js";
 import { UserSessionManager } from "../db/user-session.js";
-import { UserManager } from "../db/user.js";
+import { UserManager, UserResource } from "../db/user.js";
 import { ApiServerFunctions } from "./api.js";
 
 export interface ServerStatus {
@@ -270,13 +273,21 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
 
     createFile: async (authentication, parentFolderId, name, content) => {
       const unlockedUserKey = await requireAuthentication(authentication);
-      const [files, fileContents, fileSnapshotManager, fileDataManager] =
-        database.getManagers(
-          FileManager,
-          FileContentManager,
-          FileSnapshotManager,
-          FileDataManager
-        );
+      const [
+        files,
+        fileContents,
+        fileSnapshotManager,
+        fileDataManager,
+        fileLogManager,
+        userManager,
+      ] = database.getManagers(
+        FileManager,
+        FileContentManager,
+        FileSnapshotManager,
+        FileDataManager,
+        FileLogManager,
+        UserManager
+      );
       const parentFolder = await files.getById(parentFolderId);
 
       if (parentFolder == null) {
@@ -320,13 +331,21 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
         content
       );
 
+      const user = (await userManager.getById(unlockedUserKey.userId))!;
+      await fileLogManager.push(unlockedParentFolder, user, FileLogType.Modify);
+      await fileLogManager.push(unlockedFile, user, FileLogType.Create);
+
       return (await files.getById(unlockedFile.id))!;
     },
 
     createFolder: async (authentication, parentFolderId, name) => {
       const unlockedUserKey = await requireAuthentication(authentication);
-      const [files] = database.getManagers(FileManager);
-      const parentFolder = await files.getById(parentFolderId);
+      const [fileManager, userManager, fileLogManager] = database.getManagers(
+        FileManager,
+        UserManager,
+        FileLogManager
+      );
+      const parentFolder = await fileManager.getById(parentFolderId);
 
       if (parentFolder == null) {
         ApiError.throw(ApiErrorType.NotFound);
@@ -335,7 +354,7 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
       let unlockedParentFolder: UnlockedFileResource;
 
       try {
-        unlockedParentFolder = (await files.unlock(
+        unlockedParentFolder = (await fileManager.unlock(
           parentFolder,
           unlockedUserKey
         )) as UnlockedFileResource;
@@ -346,19 +365,27 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
         );
       }
 
-      const unlockedFolder = await files.create(
+      const unlockedFolder = await fileManager.create(
         unlockedUserKey,
         unlockedParentFolder,
         name,
         FileType.Folder
       );
 
-      return (await files.getById(unlockedFolder.id))!;
+      const user = (await userManager.getById(unlockedUserKey.userId))!;
+      await fileLogManager.push(unlockedParentFolder, user, FileLogType.Modify);
+      await fileLogManager.push(unlockedFolder, user, FileLogType.Create);
+
+      return (await fileManager.getById(unlockedFolder.id))!;
     },
 
     scanFolder: async (authentication, folderId) => {
       const unlockedUserKey = await requireAuthentication(authentication);
-      const [files] = database.getManagers(FileManager);
+      const [files, userManager, fileLogManager] = database.getManagers(
+        FileManager,
+        UserManager,
+        FileLogManager
+      );
       const folder = await files.getById(folderId);
 
       if (folder == null) {
@@ -375,14 +402,22 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
           "Failed to unlock parent folder."
         );
       }
+      const user = (await userManager.getById(unlockedUserKey.userId))!;
+
+      await fileLogManager.push(unlockedFolder, user, FileLogType.Access);
 
       return files.scanFolder(unlockedFolder);
     },
 
     grantAccessToUser: async (authentication, fileId, targetUserId, level) => {
       const unlockedUserKey = await requireAuthentication(authentication);
-      const [fileManager, fileAccessManager, userManager] =
-        database.getManagers(FileManager, FileAccessManager, UserManager);
+      const [fileManager, fileAccessManager, userManager, fileLogManager] =
+        database.getManagers(
+          FileManager,
+          FileAccessManager,
+          UserManager,
+          FileLogManager
+        );
 
       const file = await fileManager.getById(fileId);
       if (file == null) {
@@ -423,19 +458,36 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
         });
         return (await fileAccessManager.getById(a[0].id))!;
       } else {
+        const granterUser = (await userManager.getById(
+          unlockedUserKey.userId
+        ))!;
+
         const fileAccess = await fileAccessManager.create(
           unlockedFile,
           user,
-          level
+          level,
+          granterUser
         );
+
+        await fileLogManager.push(
+          unlockedFile,
+          granterUser,
+          FileLogType.GrantAccess
+        );
+
         return (await fileAccessManager.getById(fileAccess.id))!;
       }
     },
 
     revokeAccessFromUser: async (authentication, fileId, targetUserId) => {
       const unlockedUserKey = await requireAuthentication(authentication);
-      const [fileManager, fileAccessManager, userManager] =
-        database.getManagers(FileManager, FileAccessManager, UserManager);
+      const [fileManager, fileAccessManager, userManager, fileLogManager] =
+        database.getManagers(
+          FileManager,
+          FileAccessManager,
+          UserManager,
+          FileLogManager
+        );
 
       const file = await fileManager.getById(fileId);
       if (file == null) {
@@ -473,12 +525,20 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
         return;
       }
 
+      const denierUser = (await userManager.getById(unlockedUserKey.userId))!;
+
+      await fileLogManager.push(
+        unlockedFile,
+        denierUser,
+        FileLogType.RevokeAccess
+      );
+
       await fileAccessManager.delete(accesses[0]);
     },
 
     listPathChain: async (authentication, fileId) => {
       const unlockedUserKey = await requireAuthentication(authentication);
-      const [fileManager] = await database.getManagers(
+      const [fileManager] = database.getManagers(
         FileManager,
         FileAccessManager
       );
@@ -614,11 +674,15 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
         fileManager,
         fileContentManager,
         fileSnapshotManager,
+        fileLogManager,
+        userManager,
       ] = database.getManagers(
         FileDataManager,
         FileManager,
         FileContentManager,
-        FileSnapshotManager
+        FileSnapshotManager,
+        FileLogManager,
+        UserManager
       );
 
       const unlockedFile = await fileManager.unlock(file, unlockedUserKey);
@@ -627,6 +691,9 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
         unlockedFile,
         mainFilecontent
       );
+
+      const actorUser = (await userManager.getById(unlockedUserKey.userId))!;
+      await fileLogManager.push(unlockedFile, actorUser, FileLogType.Access);
 
       return fileDataManager.readData(
         unlockedFile,
@@ -640,7 +707,12 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
     moveFile: async (authentication, fileIds, newParentFolderId) => {
       const unlockedUserKey = await requireAuthentication(authentication);
 
-      const [fileManager] = database.getManagers(FileManager);
+      const [fileManager, userManager, fileLogManager] = database.getManagers(
+        FileManager,
+        UserManager,
+        FileLogManager
+      );
+      const actorUser = (await userManager.getById(unlockedUserKey.userId))!;
       const files = await Promise.all(
         fileIds.map(async (fileId) => {
           const file = await fileManager.getById(fileId);
@@ -665,32 +737,39 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
         );
       }
 
-      const newParentFolder = await fileManager.getById(newParentFolderId);
-      if (newParentFolder == null) {
-        ApiError.throw(ApiErrorType.NotFound);
-      }
-
-      let unlockedNewParentFolder: UnlockedFileResource;
-      try {
-        unlockedNewParentFolder = await fileManager.unlock(
-          newParentFolder,
-          unlockedUserKey,
-          FileAccessLevel.Manage
-        );
-      } catch {
-        throw new ApiError(
-          ApiErrorType.Forbidden,
-          "Failed to unlock new parent folder."
-        );
-      }
-
       for (const unlockedFile of unlockedFiles) {
+        const newParentFolder = await fileManager.getById(newParentFolderId);
+        if (newParentFolder == null) {
+          ApiError.throw(ApiErrorType.NotFound);
+        }
+
+        let unlockedNewParentFolder: UnlockedFileResource;
+        try {
+          unlockedNewParentFolder = await fileManager.unlock(
+            newParentFolder,
+            unlockedUserKey,
+            FileAccessLevel.Manage
+          );
+        } catch {
+          throw new ApiError(
+            ApiErrorType.Forbidden,
+            "Failed to unlock new parent folder."
+          );
+        }
+
         if (unlockedFile.ownerUserId !== unlockedNewParentFolder.ownerUserId) {
           throw new ApiError(
             ApiErrorType.InvalidRequest,
             "Cannot move files between users."
           );
         }
+
+        await fileLogManager.push(
+          unlockedNewParentFolder,
+          actorUser,
+          FileLogType.Modify
+        );
+        await fileLogManager.push(unlockedFile, actorUser, FileLogType.Modify);
 
         await fileManager.move(unlockedFile, unlockedNewParentFolder);
       }
@@ -776,6 +855,120 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
 
       return await virusScanner.scan(unlockedFile);
     },
+
+    listFileLogs: async (authentication, targetFileId, actorUserId) => {
+      const unlockedUserKey = await requireAuthentication(authentication);
+      const [fileManager, userManager, fileLogManager] = database.getManagers(
+        FileManager,
+        UserManager,
+        FileLogManager
+      );
+
+      let unlockedTargetFile: UnlockedFileResource | null = null;
+      if (targetFileId != null) {
+        const targetFile = await fileManager.getById(targetFileId);
+
+        if (targetFile == null) {
+          ApiError.throw(ApiErrorType.NotFound, "File not found");
+        }
+
+        try {
+          unlockedTargetFile = await fileManager.unlock(
+            targetFile,
+            unlockedUserKey,
+            FileAccessLevel.Read
+          );
+        } catch {
+          ApiError.throw(ApiErrorType.Forbidden, "Failed to unlock file");
+        }
+      }
+
+      let actorUser: UserResource | null = null;
+      if (actorUserId != null) {
+        actorUser = await userManager.getById(actorUserId);
+
+        if (actorUser == null) {
+          ApiError.throw(ApiErrorType.NotFound, "User not found");
+        }
+      }
+
+      return await fileLogManager.readStreamBy({
+        file: unlockedTargetFile ?? undefined,
+        actorUser: actorUser ?? undefined,
+      });
+    },
+
+    listStarred: async (authentication, offset) => {
+      const unlockedUserKey = await requireAuthentication(authentication);
+      const [fileStarManager, fileManager] = database.getManagers(
+        FileStarManager,
+        FileManager
+      );
+
+      return await Promise.all(
+        (
+          await fileStarManager.read({
+            where: [["userId", "=", unlockedUserKey.userId]],
+            offset,
+            limit: 100,
+          })
+        ).map(async (star) => (await fileManager.getById(star.fileId))!)
+      );
+    },
+
+    isStarred: async (
+      authentication: Authentication | null,
+      fileId: number
+    ) => {
+      const unlockedUserKey = await requireAuthentication(authentication);
+      const user = await getCurrentUser(unlockedUserKey);
+
+      const [fileStarManager] = database.getManagers(FileStarManager);
+
+      return (
+        (await fileStarManager.first({
+          where: [
+            ["userId", "=", user.id],
+            ["fileId", "=", fileId],
+          ],
+        })) != null
+      );
+    },
+
+    setStar: async (authentication, fileId, starred) => {
+      const unlockedUserKey = await requireAuthentication(authentication);
+      const file = await unlockFile(
+        unlockedUserKey,
+        await functions.getFile(authentication, fileId)
+      );
+
+      const [fileStarManager] = database.getManagers(FileStarManager);
+
+      await fileStarManager.setStar(
+        await getCurrentUser(unlockedUserKey),
+        file,
+        starred
+      );
+    },
+  };
+
+  const getCurrentUser = async (
+    unlockedUserKey: UnlockedUserAuthentication
+  ) => {
+    return (await database
+      .getManager(UserManager)
+      .getById(unlockedUserKey.userId))!;
+  };
+
+  const unlockFile = (
+    unlockedUserKey: UnlockedUserAuthentication,
+    file: FileResource
+  ) => {
+    try {
+      return database.getManager(FileManager).unlock(file, unlockedUserKey);
+    } catch {
+      ApiError.throw(ApiErrorType.Forbidden, "Failed to unlock file");
+    }
   };
 
   return functions;
