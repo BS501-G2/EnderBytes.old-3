@@ -22,7 +22,7 @@ export interface UserSessionResource
 }
 
 export interface UnlockedUserSession extends UserSessionResource {
-  unlockedKey: Uint8Array;
+  key: Uint8Array;
   privateKey: Uint8Array;
 }
 
@@ -91,7 +91,7 @@ export class UserSessionManager extends ResourceManager<
     return {
       ...userSession,
 
-      unlockedKey: key,
+      key: key,
       privateKey: unlockedUserKey.privateKey,
     };
   }
@@ -103,7 +103,7 @@ export class UserSessionManager extends ResourceManager<
     return {
       ...userSession,
 
-      unlockedKey: key,
+      key: key,
       privateKey: decryptSymmetric(
         key,
         userSession.encrypterPrivateKeyIv,

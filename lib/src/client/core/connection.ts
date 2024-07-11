@@ -8,14 +8,16 @@ import {
 } from "../../shared.js";
 import { ServerFunctions } from "../../server/api/connection.js";
 
-export interface ClientFunctions extends ConnectionFunctions {}
+export interface ClientFunctions extends ConnectionFunctions {
+  
+}
 
 export interface ClientConnectionOptions {
   getAuth?: () => Authentication | null;
 }
 
 export class ClientConnection {
-  public constructor(getAuth: null | (() => Authentication | null)) {
+  public constructor(getAuth: null | (() => Authentication | null) = null) {
     this.#wrapper = wrapSocket((this.#io = io("/")), this.#client);
 
     this.#io.on("connect", () => this.#restore(getAuth?.() ?? null));
@@ -43,5 +45,9 @@ export class ClientConnection {
     return {
       ...baseConnectionFunctions,
     };
+  }
+
+  get serverFunctions() {
+    return this.#server;
   }
 }

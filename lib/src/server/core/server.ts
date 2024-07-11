@@ -1,5 +1,6 @@
 import { Service, ServiceGetDataCallback } from "../../shared/service.js";
 import { ApiServer } from "../api/api.js";
+import { ServerConnectionManager } from "../api/connection-manager.js";
 import { Database } from "../database.js";
 import { FileAccessManager } from "../db/file-access.js";
 import { FileBufferManager } from "../db/file-buffer.js";
@@ -22,6 +23,7 @@ export interface ServerInstanceData {
   database: Database;
   virusScanner: VirusScanner;
   mimeDetector: MimeDetector;
+  connectionManager: ServerConnectionManager;
 }
 
 export type ServerOptions = [port: number];
@@ -56,12 +58,13 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
     onReady: (onStop: () => void) => void,
     ...[port]: ServerOptions
   ): Promise<void> {
-    const apiServer = new ApiServer(this);
+    // const apiServer = new ApiServer(this);
+    const connectionManager = new ServerConnectionManager(this);
     const database = new Database(this);
     const virusScanner = new VirusScanner(this);
     const mimeDetector = new MimeDetector(this);
 
-    setData({ database, virusScanner, mimeDetector });
+    setData({ connectionManager, database, virusScanner, mimeDetector });
 
     await database.start([
       UserManager,
@@ -77,15 +80,17 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
       VirusReportEntryManager,
       FileMimeManager,
       FileLogManager,
-      FileStarManager
+      FileStarManager,
     ]);
     await virusScanner.start("/run/clamav/clamd.ctl");
     await mimeDetector.start();
-    await apiServer.start(port);
+    await connectionManager.start();
+    // await apiServer.start(port);
 
     await new Promise<void>((resolve) => onReady(resolve));
 
-    await apiServer.stop();
+    // await apiServer.stop();
+    await connectionManager.stop();
     await mimeDetector.stop();
     await virusScanner.stop();
     await database.stop();

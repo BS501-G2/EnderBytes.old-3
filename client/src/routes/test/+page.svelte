@@ -8,7 +8,8 @@
   } from '@rizzzi/svelte-commons';
   import { writable, type Writable } from 'svelte/store';
   import { testFunctions } from './test-functions';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client'
+  import { getConnection, ClientConnection } from '@rizzzi/enderdrive-lib/client';
+  import { authentication } from '$lib/client/auth';
 
   const returnedData: Writable<any> = writable(null);
   const messages: Writable<any[]> = writable([]);
@@ -33,6 +34,11 @@
   async function dismissError() {
     $error = null;
   }
+
+  const client: ClientConnection = new ClientConnection(() => $authentication);
+  const {
+    serverFunctions: { authenticate }
+  } = client;
 </script>
 
 {#snippet button(onClick: ButtonCallback, label: string)}

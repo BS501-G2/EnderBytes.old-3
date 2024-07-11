@@ -138,11 +138,11 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
 
       const unlockedSession = await userSessions.create(unlockedUserKey);
 
-      console.log(unlockedSession.unlockedKey);
+      console.log(unlockedSession.key);
       return {
         userId: user.id,
         userSessionId: unlockedSession.id,
-        userSessionKey: unlockedSession.unlockedKey,
+        userSessionKey: unlockedSession.key,
       };
     },
 
