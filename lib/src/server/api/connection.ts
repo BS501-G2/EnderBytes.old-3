@@ -5,6 +5,9 @@ import {
   Authentication,
   baseConnectionFunctions,
   ConnectionFunctions,
+  FileAccessLevel,
+  FileLogType,
+  FileType,
   SocketWrapper,
   UserAuthenticationType,
   UserResolvePayload,
@@ -20,7 +23,12 @@ import {
 import { UserManager, UserResource } from "../db/user.js";
 import { UserSessionManager } from "../db/user-session.js";
 import { ServerConnectionManager } from "./connection-manager.js";
-import { QueryOptions } from "../resource.js";
+import { FileManager, FileResource } from "../db/file.js";
+import { FileContentManager } from "../db/file-content.js";
+import { FileSnapshotManager } from "../db/file-snapshot.js";
+import { FileDataManager } from "../db/file-data.js";
+import { FileLogManager } from "../db/file-log.js";
+import { FileMimeManager } from "../db/file-mime.js";
 
 export interface ServerFunctions extends ConnectionFunctions {
   restore: (authentication: Authentication) => Promise<Authentication>;
@@ -45,9 +53,42 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   getUser: (resolve: UserResolvePayload) => Promise<UserResource>;
 
-  listUsers: (
-    options?: QueryOptions<UserResource, UserManager>
-  ) => Promise<UserResource[]>;
+  listUsers: (options?: {
+    searchString?: string;
+    offset?: number;
+    limit?: number;
+  }) => Promise<UserResource[]>;
+
+  createUser: (
+    username: string,
+    firstName: string,
+    middleName: string | null,
+    lastName: string,
+    role: UserRole
+  ) => Promise<
+    [
+      user: UserResource,
+      UnlockedUserAuthentication: UnlockedUserAuthentication,
+      password: string
+    ]
+  >;
+
+  updateUser: (
+    firstName: string,
+    middleName: string | null,
+    lastName: string,
+    role: UserRole
+  ) => Promise<UserResource>;
+
+  setSuspend: (id: number, isSuspended: boolean) => Promise<UserResource>;
+
+  createFile: (
+    parentFolderId: number,
+    name: string,
+    content: Uint8Array
+  ) => Promise<FileResource>;
+
+  createFolder: (parentFolderId: number, name: string) => Promise<FileResource>;
 }
 
 export interface ServerConnectionContext {
@@ -110,12 +151,54 @@ export class ServerConnection {
   get #server(): ServerFunctions {
     const database = this.#manager.server.database;
 
-    const [userManager, userAuthenticationManager, userSessionManager] =
-      database.getManagers(
-        UserManager,
-        UserAuthenticationManager,
-        UserSessionManager
-      );
+    const [
+      userManager,
+      userAuthenticationManager,
+      userSessionManager,
+      fileManager,
+      fileContentManager,
+      fileSnapshotManager,
+      fileDataManager,
+      fileLogManager,
+    ] = database.getManagers(
+      UserManager,
+      UserAuthenticationManager,
+      UserSessionManager,
+      FileManager,
+      FileContentManager,
+      FileSnapshotManager,
+      FileDataManager,
+      FileLogManager
+    );
+
+    const getFile = async (
+      id: number,
+      authentication: UnlockedUserAuthentication,
+      accessLevel: FileAccessLevel = FileAccessLevel.None,
+      requireType?: FileType
+    ) => {
+      const file: FileResource | null = await fileManager.getById(id);
+
+      if (file == null) {
+        ApiError.throw(ApiErrorType.NotFound, "File not found");
+      }
+
+      if (requireType != null && requireType != file.type) {
+        ApiError.throw(ApiErrorType.InvalidRequest, "File type invalid");
+      }
+
+      try {
+        const unlockedFile = await fileManager.unlock(
+          file,
+          authentication,
+          accessLevel
+        );
+
+        return unlockedFile;
+      } catch {
+        ApiError.throw(ApiErrorType.Forbidden, `Failed to unlock file #${id}`);
+      }
+    };
 
     const resolveUser = async (
       resolve: UserResolvePayload
@@ -292,7 +375,102 @@ export class ServerConnection {
         return await this.getUser(resolve);
       },
 
-      async listUsers() {},
+      listUsers: async ({ searchString: search, offset, limit } = {}) => {
+        await requireRole(requireAuthenticated(true), UserRole.Member);
+
+        const users = await userManager.read({
+          search,
+          offset,
+          limit,
+        });
+
+        return users;
+      },
+
+      createUser: async (username, firstName, middleName, lastName, role) => {
+        await requireRole(requireAuthenticated(true), UserRole.SiteAdmin);
+
+        const [users] = database.getManagers(UserManager);
+        const [user, unlockedUserKey, password] = await users.create(
+          username,
+          firstName,
+          middleName,
+          lastName,
+          undefined,
+          role
+        );
+
+        return [user, unlockedUserKey, password];
+      },
+
+      updateUser: async (firstName, middleName, lastName, role) => {
+        const { userId } = requireAuthenticated(true);
+
+        const user = await resolveUser([UserResolveType.UserId, userId]);
+
+        if (user.id !== userId) {
+          ApiError.throw(ApiErrorType.Forbidden);
+        }
+
+        return await userManager.update(user, {
+          firstName,
+          middleName,
+          lastName,
+          role,
+        });
+      },
+
+      setSuspend: async (id, isSuspended) => {
+        await requireRole(requireAuthenticated(true), UserRole.SiteAdmin);
+        const user = await resolveUser([UserResolveType.UserId, id]);
+
+        return await userManager.setSuspended(user, isSuspended);
+      },
+
+      createFile: async (folderId, name, content) => {
+        const authentication = requireAuthenticated(true);
+
+        const folder = await getFile(
+          folderId,
+          authentication,
+          FileAccessLevel.ReadWrite
+        );
+
+        const file = await fileManager.create(
+          authentication,
+          folder,
+          name,
+          FileType.File
+        );
+
+        const fileContent = await fileContentManager.getMain(file);
+        const fileSnapshot = await fileSnapshotManager.getMain(
+          file,
+          fileContent
+        );
+
+        await fileDataManager.writeData(
+          file,
+          fileContent,
+          fileSnapshot,
+          0,
+          content
+        );
+
+        const user = await resolveUser([
+          UserResolveType.UserId,
+          authentication.userId,
+        ]);
+        await fileLogManager.push(folder, user, FileLogType.Modify);
+        await fileLogManager.push(file, user, FileLogType.Create);
+
+        return (await fileManager.getById(file.id))!;
+      },
+
+      createFolder: async (folderId, name) => {
+        const authentication = requireAuthenticated(true);
+        // const folder =  await getFile(folderId, )
+      },
     };
 
     return server;

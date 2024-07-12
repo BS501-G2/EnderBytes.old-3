@@ -171,8 +171,11 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
     return await super.update(oldUser, user);
   }
 
-  public async suspend(user: UserResource): Promise<UserResource> {
-    return await super.update(user, { isSuspended: true });
+  public async setSuspended(
+    user: UserResource,
+    isSuspended: boolean = true
+  ): Promise<UserResource> {
+    return await super.update(user, { isSuspended });
   }
 }
 

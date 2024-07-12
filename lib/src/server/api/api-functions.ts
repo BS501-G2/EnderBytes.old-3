@@ -268,7 +268,7 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
         ApiError.throw(ApiErrorType.NotFound);
       }
 
-      return await users.suspend(user);
+      return await users.setSuspended(user);
     },
 
     createFile: async (authentication, parentFolderId, name, content) => {
