@@ -23,12 +23,16 @@ import {
 import { UserManager, UserResource } from "../db/user.js";
 import { UserSessionManager } from "../db/user-session.js";
 import { ServerConnectionManager } from "./connection-manager.js";
-import { FileManager, FileResource } from "../db/file.js";
-import { FileContentManager } from "../db/file-content.js";
-import { FileSnapshotManager } from "../db/file-snapshot.js";
+import { FileManager, FileResource, UnlockedFileResource } from "../db/file.js";
+import { FileContentManager, FileContentResource } from "../db/file-content.js";
+import {
+  FileSnapshotManager,
+  FileSnapshotResource,
+} from "../db/file-snapshot.js";
 import { FileDataManager } from "../db/file-data.js";
-import { FileLogManager } from "../db/file-log.js";
+import { FileLogManager, FileLogResource } from "../db/file-log.js";
 import { FileMimeManager } from "../db/file-mime.js";
+import { FileAccessManager, FileAccessResource } from "../db/file-access.js";
 
 export interface ServerFunctions extends ConnectionFunctions {
   restore: (authentication: Authentication) => Promise<Authentication>;
@@ -89,6 +93,79 @@ export interface ServerFunctions extends ConnectionFunctions {
   ) => Promise<FileResource>;
 
   createFolder: (parentFolderId: number, name: string) => Promise<FileResource>;
+
+  scanFolder: (folderId: number | null) => Promise<FileResource[]>;
+
+  setUserAccess: (
+    fileId: number,
+    targetUserId: number,
+    newType?: FileAccessLevel
+  ) => Promise<FileAccessLevel>;
+
+  getFile: (fileId: number | null) => Promise<FileResource>;
+
+  getFilePathChain: (fileId: number) => Promise<FileResource[]>;
+
+  getFileSize: (fileId: number) => Promise<number>;
+
+  getFileMime: (fileId: number) => Promise<[mime: string, description: string]>;
+
+  listFileViruses: (fileId: number) => Promise<string[]>;
+
+  listFileAccess: (
+    fileId: number,
+    offset?: number,
+    limit?: number
+  ) => Promise<FileAccessResource[]>;
+
+  listFileSnapshots: (
+    fileId: number,
+    offset?: number,
+    limit?: number
+  ) => Promise<FileSnapshotResource[]>;
+
+  listFileLogs: (
+    targetFileId?: number,
+    actorUserId?: number,
+    offset?: number,
+    limit?: number
+  ) => Promise<FileLogResource[]>;
+
+  feedUploadBuffer: (buffer: Uint8Array) => Promise<void>;
+  getUploadBufferSize: () => Promise<number>;
+  getUploadBufferSizeLimit: () => Promise<number>;
+  clearUploadBuffer: () => Promise<number>;
+
+  writeToFile: (
+    fileId: number,
+    baseFileSnapshotId: number,
+    position: number,
+    bufferId: number
+  ) => Promise<Uint8Array>;
+
+  downloadFile: (
+    fileId: number,
+    offset?: number,
+    limit?: number
+  ) => Promise<Uint8Array>;
+
+  moveFile: (fileIds: number, toParentId: number) => Promise<void>;
+
+  copyFile: (fileId: number, destinationId: number) => Promise<void>;
+
+  listSharedFiles: (
+    offset?: number,
+    limit?: number
+  ) => Promise<FileAccessResource[]>;
+
+  listStarredFiles: (
+    offset?: number,
+    length?: number
+  ) => Promise<FileResource[]>;
+
+  isFileStarred: (fileId: number) => Promise<boolean>;
+
+  setFileStar: (fileId: number, starred: boolean) => Promise<boolean>;
 }
 
 export interface ServerConnectionContext {
@@ -149,12 +226,20 @@ export class ServerConnection {
   }
 
   get #server(): ServerFunctions {
+    const server = this.#manager.server;
     const database = this.#manager.server.database;
+
+    const bufferLimit: number = 1024 * 1024 * 512;
+    const buffer: Uint8Array[] = [];
+
+    const getUploadBufferSize = (): number =>
+      buffer.reduce((size, buffer) => size + buffer.length, 0);
 
     const [
       userManager,
       userAuthenticationManager,
       userSessionManager,
+      fileAccessManager,
       fileManager,
       fileContentManager,
       fileSnapshotManager,
@@ -164,6 +249,7 @@ export class ServerConnection {
       UserManager,
       UserAuthenticationManager,
       UserSessionManager,
+      FileAccessManager,
       FileManager,
       FileContentManager,
       FileSnapshotManager,
@@ -172,12 +258,15 @@ export class ServerConnection {
     );
 
     const getFile = async (
-      id: number,
+      id: number | null,
       authentication: UnlockedUserAuthentication,
       accessLevel: FileAccessLevel = FileAccessLevel.None,
       requireType?: FileType
     ) => {
-      const file: FileResource | null = await fileManager.getById(id);
+      const file: FileResource | null =
+        id != null
+          ? await fileManager.getById(id)
+          : await fileManager.getRoot(authentication);
 
       if (file == null) {
         ApiError.throw(ApiErrorType.NotFound, "File not found");
@@ -197,6 +286,24 @@ export class ServerConnection {
         return unlockedFile;
       } catch {
         ApiError.throw(ApiErrorType.Forbidden, `Failed to unlock file #${id}`);
+      }
+    };
+
+    const getSnapshot = async (
+      file: UnlockedFileResource,
+      fileContent: FileContentResource,
+      id: number
+    ) => {
+      const fileSnapshot = await fileSnapshotManager.first({
+        where: [
+          ["fileId", "=", file.id],
+          ["fileContentId", "=", fileContent.id],
+          ["id", "=", id],
+        ],
+      });
+
+      if (fileSnapshot == null) {
+        ApiError.throw(ApiErrorType.InvalidRequest, "File snapshot not found");
       }
     };
 
@@ -251,7 +358,7 @@ export class ServerConnection {
       }
     };
 
-    const server: ServerFunctions = {
+    const serverFunctions: ServerFunctions = {
       ...baseConnectionFunctions,
 
       restore: async (authentication) => {
@@ -349,7 +456,7 @@ export class ServerConnection {
       async register(username, firstName, middleName, lastName, password) {
         requireAuthenticated(false);
 
-        const status = await server.getServerStatus();
+        const status = await serverFunctions.getServerStatus();
         if (!status.setupRequired) {
           ApiError.throw(
             ApiErrorType.InvalidRequest,
@@ -467,12 +574,294 @@ export class ServerConnection {
         return (await fileManager.getById(file.id))!;
       },
 
-      createFolder: async (folderId, name) => {
+      createFolder: async (parentFolderId, name) => {
         const authentication = requireAuthenticated(true);
-        // const folder =  await getFile(folderId, )
+        const parentFolder = await getFile(
+          parentFolderId,
+          authentication,
+          FileAccessLevel.ReadWrite
+        );
+
+        const folder = await fileManager.create(
+          authentication,
+          parentFolder,
+          name,
+          FileType.Folder
+        );
+
+        const user = (await userManager.getById(authentication.userId))!;
+        await fileLogManager.push(parentFolder, user, FileLogType.Modify);
+        await fileLogManager.push(folder, user, FileLogType.Create);
+
+        return (await fileManager.getById(folder.id))!;
+      },
+
+      scanFolder: async (folderId) => {
+        const authentication = requireAuthenticated(true);
+        const folder = await getFile(
+          folderId,
+          authentication,
+          FileAccessLevel.Read
+        );
+
+        const user = await resolveUser([
+          UserResolveType.UserId,
+          authentication.id,
+        ]);
+
+        await fileLogManager.push(folder, user, FileLogType.Access);
+        return await fileManager.scanFolder(folder);
+      },
+
+      setUserAccess: async (fileId, targetUserId, level) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(fileId, authentication);
+        const granterUser = await resolveUser([
+          UserResolveType.UserId,
+          authentication.userId,
+        ]);
+        const user = await resolveUser([UserResolveType.UserId, targetUserId]);
+        let accessLevel =
+          (await fileAccessManager.first({
+            where: [
+              ["userId", "=", user.id],
+              ["fileId", "=", file.id],
+            ],
+          })) ?? file.ownerUserId === user.id
+            ? FileAccessLevel.Full
+            : FileAccessLevel.None;
+
+        if (level != null) {
+          if (file.ownerUserId === user.id) {
+            ApiError.throw(
+              ApiErrorType.InvalidRequest,
+              "Owner access level cannot be altered"
+            );
+          }
+
+          await fileAccessManager.deleteWhere([
+            ["fileId", "=", file.id],
+            ["userId", "=", user.id],
+          ]);
+
+          if (FileAccessLevel[level] == null) {
+            ApiError.throw(
+              ApiErrorType.InvalidRequest,
+              "Invalid file access level"
+            );
+          }
+
+          if (level === FileAccessLevel.None) {
+            accessLevel = (
+              await fileAccessManager.create(file, user, level, granterUser)
+            ).level;
+          }
+        }
+
+        return accessLevel;
+      },
+
+      getFile: async (fileId: number | null) => {
+        const authentication = requireAuthenticated(true);
+
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.Read
+        );
+
+        return (await fileManager.getById(file.id))!;
+      },
+
+      getFilePathChain: async (fileId: number) => {
+        const authentication = requireAuthenticated(true);
+        let file = await getFile(fileId, authentication, FileAccessLevel.Read);
+
+        const chain: FileResource[] = [];
+        while (file != null) {
+          chain.unshift((await fileManager.getById(file.id))!);
+
+          const parentFolderId = file.parentFileId;
+          if (parentFolderId == null) {
+            break;
+          }
+
+          file = await getFile(
+            parentFolderId,
+            authentication,
+            FileAccessLevel.Read
+          );
+        }
+
+        return chain;
+      },
+
+      getFileSize: async (fileId) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.Read,
+          FileType.File
+        );
+
+        const fileContent = await fileContentManager.getMain(file);
+        const fileSnapshot = await fileSnapshotManager.getMain(
+          file,
+          fileContent
+        );
+
+        return fileSnapshot.size;
+      },
+
+      getFileMime: async (fileId) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.Read,
+          FileType.File
+        );
+        const fileContent = await fileContentManager.getMain(file);
+        const fileSnapshot = await fileSnapshotManager.getMain(
+          file,
+          fileContent
+        );
+
+        return await server.mimeDetector.getFileMime(
+          file,
+          fileContent,
+          fileSnapshot
+        );
+      },
+
+      listFileViruses: async (fileId) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.Read,
+          FileType.File
+        );
+        const fileContent = await fileContentManager.getMain(file);
+        const fileSnapshot = await fileSnapshotManager.getMain(
+          file,
+          fileContent
+        );
+
+        return await server.virusScanner.scan(
+          file,
+          fileContent,
+          fileSnapshot,
+          false
+        );
+      },
+
+      listFileAccess: async (fileId, offset, limit) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.Read
+        );
+
+        let fileAccesses: FileAccessResource[];
+        if (file.ownerUserId !== authentication.userId) {
+          fileAccesses = await fileAccessManager.read({
+            where: [
+              ["fileId", "=", file.id],
+              ["userId", "=", authentication.userId],
+            ],
+            orderBy: [["level", true]],
+            offset,
+            limit,
+          });
+        } else {
+          fileAccesses = await fileAccessManager.read({
+            where: [["fileId", "=", file.id]],
+            orderBy: [["level", true]],
+            offset,
+            limit,
+          });
+        }
+
+        return fileAccesses;
+      },
+
+      listFileSnapshots: async (fileId) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.Read,
+          FileType.File
+        );
+
+        const fileContent = await fileContentManager.getMain(file);
+        return await fileSnapshotManager.list(file, fileContent);
+      },
+
+      listFileLogs: async (fileId, userId, offset, limit) => {
+        const authentication = requireAuthenticated(true);
+        const logs: FileLogResource[] = [];
+
+        for await (const log of fileLogManager.readStream({
+          where: [
+            fileId != null ? ["targetFileId", "=", fileId] : null,
+            userId != null ? ["actorUserId", "=", userId] : null,
+          ],
+          offset,
+          limit,
+          orderBy: [["id", true]],
+        })) {
+          try {
+            await getFile(
+              log.targetFileId,
+              authentication,
+              FileAccessLevel.Read
+            );
+
+            logs.push(log);
+          } catch {
+            continue;
+          }
+        }
+
+        return logs;
+      },
+
+      writeToFile: async (fileId, baseFileSnapshotId, offset, bufferId) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.ReadWrite,
+          FileType.File
+        );
+
+        const fileContent = await fileContentManager.getMain(file);
+        const fileSnapshot = await getSnapshot(
+          file,
+          fileContent,
+          baseFileSnapshotId
+        );
+      },
+
+      listSharedFiles: async (offset, limit) => {
+        const authentication = requireAuthenticated(true);
+        const fileAccesses = await fileAccessManager.read({
+          where: [
+            ["userId", "=", authentication.userId],
+            ["level", ">=", FileAccessLevel.Read],
+          ],
+          offset,
+          limit,
+        });
+
+        return fileAccesses;
       },
     };
 
-    return server;
+    return serverFunctions;
   }
 }

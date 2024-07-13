@@ -9,8 +9,11 @@ import { Server } from "./server.js";
 import { UnlockedFileResource } from "../db/file.js";
 import { VirusReportManager } from "../db/virus-report.js";
 import { Database } from "../database.js";
-import { FileContentManager } from "../db/file-content.js";
-import { FileSnapshotManager } from "../db/file-snapshot.js";
+import { FileContentManager, FileContentResource } from "../db/file-content.js";
+import {
+  FileSnapshotManager,
+  FileSnapshotResource,
+} from "../db/file-snapshot.js";
 import { Readable } from "stream";
 import { FileDataManager } from "../db/file-data.js";
 
@@ -67,21 +70,14 @@ export class VirusScanner extends Service<
 
   public async scan(
     file: UnlockedFileResource,
+    fileContent: FileContentResource,
+    fileSnapshot: FileSnapshotResource,
     forceScan: boolean = false
   ): Promise<string[]> {
-    const [
-      virusReportManager,
-      fileContentManager,
-      fileSnapshotManager,
-      fileDataManager,
-    ] = this.#database.getManagers(
+    const [virusReportManager, fileDataManager] = this.#database.getManagers(
       VirusReportManager,
-      FileContentManager,
-      FileSnapshotManager,
       FileDataManager
     );
-    const fileContent = await fileContentManager.getMain(file);
-    const fileSnapshot = await fileSnapshotManager.getMain(file, fileContent);
 
     if (!forceScan) {
       const result = await virusReportManager.getScanResult(

@@ -8,7 +8,6 @@ export interface FileContentResource
   extends Resource<FileContentResource, FileContentManager> {
   fileId: number;
   isMain: boolean;
-  size: number;
 }
 
 export class FileContentManager extends ResourceManager<
@@ -42,7 +41,6 @@ export class FileContentManager extends ResourceManager<
     return this.insert({
       fileId: unlockedFile.id,
       isMain: false,
-      size: 0,
     });
   }
 
@@ -63,17 +61,7 @@ export class FileContentManager extends ResourceManager<
       (await this.insert({
         fileId: unlockedFile.id,
         isMain: true,
-        size: 0,
       }))
     );
-  }
-
-  public async setSize(
-    fileContent: FileContentResource,
-    size: number
-  ): Promise<void> {
-    await this.update(fileContent, {
-      size,
-    });
   }
 }

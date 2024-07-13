@@ -831,15 +831,17 @@ export function getApiFunctions(server: Server): ApiServerFunctions {
     getFileSize: async (authentication, fileId) => {
       const file = await functions.getFile(authentication, fileId);
       const unlockedUserKey = await requireAuthentication(authentication);
-      const [fileManager, fileContentManager] = database.getManagers(
+      const [fileManager, fileContentManager, fileSnapshotManager] = database.getManagers(
         FileManager,
-        FileContentManager
+        FileContentManager,
+        FileSnapshotManager
       );
 
       const unlockedFile = await fileManager.unlock(file, unlockedUserKey);
-      const mainFileContent = await fileContentManager.getMain(unlockedFile);
+      const fileContent = await fileContentManager.getMain(unlockedFile);
+      const fileSnapshot = await fileSnapshotManager.getMain(unlockedFile, fileContent)
 
-      return mainFileContent.size;
+      return fileSnapshot.size;
     },
 
     scanFile: async (authentication, fileId) => {

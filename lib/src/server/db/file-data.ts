@@ -205,11 +205,31 @@ export class FileDataManager extends ResourceManager<
       }
     }
 
-    const [fileContentManager] = this.getManagers(FileContentManager);
+    const [fileContentManager] = this.getManagers(FileSnapshotManager);
     await fileContentManager.setSize(
+      unlockedFile,
       fileContent,
-      Math.max(positionEnd, fileContent.size)
+      fileSnapshot,
+      Math.max(positionEnd, fileSnapshot.size)
     );
+  }
+
+  public async copyDataSnapshot(
+    unlockedFile: UnlockedFileResource,
+    fileContent: FileContentResource,
+    sourceFileSnapshot: FileSnapshotResource,
+    destinationFileSnapshot: FileSnapshotResource
+  ) {
+    const size = sourceFileSnapshot.size;
+
+    if (
+      (await this.count([
+        ["fileSnapshotId", "=", destinationFileSnapshot.id],
+      ])) > 0 ||
+      destinationFileSnapshot.size > 0
+    ) {
+      throw new Error("Destination snapshot must be empty.");
+    }
   }
 
   public async readData(
@@ -217,14 +237,14 @@ export class FileDataManager extends ResourceManager<
     fileContent: FileContentResource,
     fileSnapshot: FileSnapshotResource,
     position: number = 0,
-    length: number = fileContent.size
+    length: number = fileSnapshot.size
   ): Promise<Uint8Array> {
-    if (position >= fileContent.size) {
+    if (position >= fileSnapshot.size) {
       throw new Error("Position out of bounds");
     }
 
     const [fileBuffers] = this.getManagers(FileBufferManager);
-    length = Math.min(length, fileContent.size - position);
+    length = Math.min(length, fileSnapshot.size - position);
 
     if (length <= 0) {
       return new Uint8Array(0);

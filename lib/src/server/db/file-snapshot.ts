@@ -12,6 +12,8 @@ export interface FileSnapshotResource extends Resource {
   baseFileSnapshotId: number | null;
 
   creatorUserId: number;
+
+  size: number;
 }
 
 export class FileSnapshotManager extends ResourceManager<
@@ -54,6 +56,8 @@ export class FileSnapshotManager extends ResourceManager<
         .references("id")
         .inTable(this.getManager(UserManager).recordTableName)
         .onDelete("cascade");
+
+      table.integer("size").notNullable();
     }
   }
 
@@ -68,6 +72,7 @@ export class FileSnapshotManager extends ResourceManager<
       fileContentId: fileContent.id,
       baseFileSnapshotId: baseFileSnapshot.id,
       creatorUserId: authorUser.id,
+      size: 0,
     });
   }
 
@@ -90,8 +95,59 @@ export class FileSnapshotManager extends ResourceManager<
         fileContentId: fileContent.id,
         baseFileSnapshotId: null,
         creatorUserId: unlockedFile.creatorUserId,
+        size: 0,
       }))
     );
+  }
+
+  public async getByFileAndId(
+    unlockedFile: UnlockedFileResource,
+    fileContent: FileContentResource,
+    snapshotId: number
+  ) {
+    return await this.first({
+      where: [
+        ["fileId", "=", unlockedFile.id],
+        ["fileContentId", "=", fileContent.id],
+        ["id", "=", snapshotId],
+      ],
+    });
+  }
+
+  public async getLatest(
+    unlockedFile: UnlockedFileResource,
+    fileContent: FileContentResource
+  ): Promise<FileSnapshotResource> {
+    return (await this.getLeaves(unlockedFile, fileContent)).reduce(
+      (latestSnapshot, snapshot) =>
+        (latestSnapshot?.id ?? 0) < snapshot.id ? snapshot : latestSnapshot,
+      null as FileSnapshotResource | null
+    )!;
+  }
+
+  public async getLeaves(
+    unlockedFile: UnlockedFileResource,
+    fileContent: FileContentResource
+  ): Promise<FileSnapshotResource[]> {
+    const snapshots: FileSnapshotResource[] = [];
+
+    for await (const snapshot of this.readStream({
+      where: [
+        ["fileId", "=", unlockedFile.id],
+        ["fileContentId", "=", fileContent.id],
+      ],
+    })) {
+      const baseSnapshotIndex = snapshots.findIndex(
+        (baseSnapshot) => baseSnapshot.id === snapshot.baseFileSnapshotId
+      );
+
+      snapshots.push(snapshot);
+      if (baseSnapshotIndex >= 0) {
+        snapshots.splice(baseSnapshotIndex, 1);
+      }
+    }
+
+    return snapshots;
   }
 
   public async list(
@@ -104,5 +160,28 @@ export class FileSnapshotManager extends ResourceManager<
         ["fileId", "=", unlockedFile.id],
       ],
     });
+  }
+
+  public async setSize(
+    file: UnlockedFileResource,
+    fileContent: FileContentResource,
+    fileSnapshot: FileSnapshotResource,
+    size: number
+  ): Promise<number> {
+    await this.updateWhere({ size }, [
+      ["fileId", "=", file.id],
+      ["fileContentId", "=", fileContent.id],
+      ["id", "=", fileSnapshot.id],
+    ]);
+
+    return size;
+  }
+
+  public async fork(
+    file: UnlockedFileResource,
+    fileContent: FileContentResource,
+    baseFileSnapshot: FileSnapshotResource
+  ) {
+
   }
 }
