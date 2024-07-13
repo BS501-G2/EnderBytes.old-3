@@ -214,21 +214,37 @@ export class FileDataManager extends ResourceManager<
     );
   }
 
-  public async copyDataSnapshot(
+  public async copySnapshotData(
     unlockedFile: UnlockedFileResource,
     fileContent: FileContentResource,
     sourceFileSnapshot: FileSnapshotResource,
     destinationFileSnapshot: FileSnapshotResource
   ) {
-    const size = sourceFileSnapshot.size;
-
     if (
       (await this.count([
+        ["fileId", "=", unlockedFile.id],
+        ["fileContentId", "=", fileContent.id],
         ["fileSnapshotId", "=", destinationFileSnapshot.id],
       ])) > 0 ||
       destinationFileSnapshot.size > 0
     ) {
       throw new Error("Destination snapshot must be empty.");
+    }
+
+    for await (const fileData of this.readStream({
+      where: [
+        ["fileId", "=", unlockedFile.id],
+        ["fileContentId", "=", fileContent.id],
+        ["fileSnapshotId", "=", sourceFileSnapshot.id],
+      ],
+    })) {
+      await this.insert({
+        fileId: unlockedFile.id,
+        fileContentId: fileContent.id,
+        fileSnapshotId: destinationFileSnapshot.id,
+        index: fileData.index,
+        fileBufferId: fileData.fileBufferId,
+      });
     }
   }
 

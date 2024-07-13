@@ -43,6 +43,20 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
     super(db, init, "File", 1);
   }
 
+  public async getByName(
+    folder: FileResource,
+    name: string
+  ): Promise<FileResource | null> {
+    return (
+      (await this.first({
+        where: [
+          ["parentFileId", "=", folder.id],
+          ["name", "=", name],
+        ],
+      })) ?? null
+    );
+  }
+
   protected upgrade(table: Knex.AlterTableBuilder, version: number): void {
     if (version < 1) {
       table

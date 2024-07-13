@@ -33,6 +33,7 @@ import { FileDataManager } from "../db/file-data.js";
 import { FileLogManager, FileLogResource } from "../db/file-log.js";
 import { FileMimeManager } from "../db/file-mime.js";
 import { FileAccessManager, FileAccessResource } from "../db/file-access.js";
+import { FileStarManager, FileStarResource } from "../db/file-star.js";
 
 export interface ServerFunctions extends ConnectionFunctions {
   restore: (authentication: Authentication) => Promise<Authentication>;
@@ -86,11 +87,7 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   setSuspend: (id: number, isSuspended: boolean) => Promise<UserResource>;
 
-  createFile: (
-    parentFolderId: number,
-    name: string,
-    content: Uint8Array
-  ) => Promise<FileResource>;
+  createFile: (parentFolderId: number, name: string) => Promise<FileResource>;
 
   createFolder: (parentFolderId: number, name: string) => Promise<FileResource>;
 
@@ -131,27 +128,30 @@ export interface ServerFunctions extends ConnectionFunctions {
     limit?: number
   ) => Promise<FileLogResource[]>;
 
-  feedUploadBuffer: (buffer: Uint8Array) => Promise<void>;
-  getUploadBufferSize: () => Promise<number>;
-  getUploadBufferSizeLimit: () => Promise<number>;
-  clearUploadBuffer: () => Promise<number>;
+  feedUploadBuffer: (buffer: Uint8Array) => Promise<number>;
 
-  writeToFile: (
+  getUploadBufferSize: () => Promise<number>;
+
+  getUploadBufferSizeLimit: () => Promise<number>;
+
+  clearUploadBuffer: () => Promise<void>;
+
+  writeUploadBufferToFile: (
     fileId: number,
-    baseFileSnapshotId: number,
-    position: number,
-    bufferId: number
-  ) => Promise<Uint8Array>;
+    sourceFileSnapshotId: number,
+    position: number
+  ) => Promise<void>;
 
   downloadFile: (
     fileId: number,
-    offset?: number,
-    limit?: number
+    position?: number,
+    length?: number,
+    snapshotId?: number
   ) => Promise<Uint8Array>;
 
-  moveFile: (fileIds: number, toParentId: number) => Promise<void>;
+  moveFile: (fileIds: number[], toParentId: number) => Promise<void>;
 
-  copyFile: (fileId: number, destinationId: number) => Promise<void>;
+  copyFile: (fileIds: number[], toParentId: number) => Promise<void>;
 
   listSharedFiles: (
     offset?: number,
@@ -159,9 +159,12 @@ export interface ServerFunctions extends ConnectionFunctions {
   ) => Promise<FileAccessResource[]>;
 
   listStarredFiles: (
+    fileId?: number,
+    userId?: number,
+
     offset?: number,
     length?: number
-  ) => Promise<FileResource[]>;
+  ) => Promise<FileStarResource[]>;
 
   isFileStarred: (fileId: number) => Promise<boolean>;
 
@@ -230,10 +233,29 @@ export class ServerConnection {
     const database = this.#manager.server.database;
 
     const bufferLimit: number = 1024 * 1024 * 512;
-    const buffer: Uint8Array[] = [];
+    const buffers: Uint8Array[] = [];
+
+    const feedUploadBuffer = (buffer: Uint8Array) => {
+      if (getUploadBufferSize() + buffer.length > bufferLimit) {
+        ApiError.throw(
+          ApiErrorType.InvalidRequest,
+          "Upload buffer size limit reached"
+        );
+      }
+
+      buffers.push(buffer);
+      return getUploadBufferSize();
+    };
 
     const getUploadBufferSize = (): number =>
-      buffer.reduce((size, buffer) => size + buffer.length, 0);
+      buffers.reduce((size, buffer) => size + buffer.length, 0);
+
+    const consumeUploadBuffer = (): Uint8Array => {
+      const buffer = Buffer.concat(buffers);
+      buffers.splice(0, buffers.length);
+
+      return buffer;
+    };
 
     const [
       userManager,
@@ -245,6 +267,7 @@ export class ServerConnection {
       fileSnapshotManager,
       fileDataManager,
       fileLogManager,
+      fileStarManager,
     ] = database.getManagers(
       UserManager,
       UserAuthenticationManager,
@@ -254,7 +277,8 @@ export class ServerConnection {
       FileContentManager,
       FileSnapshotManager,
       FileDataManager,
-      FileLogManager
+      FileLogManager,
+      FileStarManager
     );
 
     const getFile = async (
@@ -305,6 +329,8 @@ export class ServerConnection {
       if (fileSnapshot == null) {
         ApiError.throw(ApiErrorType.InvalidRequest, "File snapshot not found");
       }
+
+      return fileSnapshot;
     };
 
     const resolveUser = async (
@@ -534,8 +560,12 @@ export class ServerConnection {
         return await userManager.setSuspended(user, isSuspended);
       },
 
-      createFile: async (folderId, name, content) => {
+      createFile: async (folderId, name) => {
         const authentication = requireAuthenticated(true);
+
+        if (getUploadBufferSize() === 0) {
+          ApiError.throw(ApiErrorType.InvalidRequest, "File cannot  be empty");
+        }
 
         const folder = await getFile(
           folderId,
@@ -561,7 +591,7 @@ export class ServerConnection {
           fileContent,
           fileSnapshot,
           0,
-          content
+          consumeUploadBuffer()
         );
 
         const user = await resolveUser([
@@ -830,7 +860,21 @@ export class ServerConnection {
         return logs;
       },
 
-      writeToFile: async (fileId, baseFileSnapshotId, offset, bufferId) => {
+      feedUploadBuffer: async (buffer) => feedUploadBuffer(buffer),
+
+      getUploadBufferSize: async () => getUploadBufferSize(),
+
+      getUploadBufferSizeLimit: async () => bufferLimit,
+
+      clearUploadBuffer: async () => {
+        consumeUploadBuffer();
+      },
+
+      writeUploadBufferToFile: async (
+        fileId,
+        sourceFileSnapshotId,
+        position
+      ) => {
         const authentication = requireAuthenticated(true);
         const file = await getFile(
           fileId,
@@ -838,13 +882,161 @@ export class ServerConnection {
           FileAccessLevel.ReadWrite,
           FileType.File
         );
+        const user = await resolveUser([
+          UserResolveType.UserId,
+          authentication.userId,
+        ]);
 
         const fileContent = await fileContentManager.getMain(file);
-        const fileSnapshot = await getSnapshot(
+        const sourceFileSnapshot = await getSnapshot(
           file,
           fileContent,
-          baseFileSnapshotId
+          sourceFileSnapshotId
         );
+
+        const destinationFileSnapshot = await fileSnapshotManager.fork(
+          file,
+          fileContent,
+          sourceFileSnapshot,
+          user
+        );
+
+        await fileDataManager.writeData(
+          file,
+          fileContent,
+          destinationFileSnapshot,
+          position,
+          consumeUploadBuffer()
+        );
+      },
+
+      downloadFile: async (ileId, position, length, snapshotId) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(
+          ileId,
+          authentication,
+          FileAccessLevel.Read,
+          FileType.File
+        );
+        const fileContent = await fileContentManager.getMain(file);
+        const latest =
+          snapshotId != null
+            ? await fileSnapshotManager.getByFileAndId(
+                file,
+                fileContent,
+                snapshotId
+              )
+            : await fileSnapshotManager.getLatest(file, fileContent);
+
+        if (latest == null) {
+          ApiError.throw(
+            ApiErrorType.InvalidRequest,
+            "File snapshot not found"
+          );
+        }
+
+        return await fileDataManager.readData(
+          file,
+          fileContent,
+          latest,
+          position,
+          length
+        );
+      },
+      moveFile: async (fileIds, toParentId) => {
+        const authentication = requireAuthenticated(true);
+
+        for (const fileId of fileIds) {
+          const file = await getFile(
+            fileId,
+            authentication,
+            FileAccessLevel.None
+          );
+
+          const toParent = await getFile(
+            toParentId,
+            authentication,
+            FileAccessLevel.ReadWrite,
+            FileType.Folder
+          );
+
+          await fileManager.move(file, toParent);
+        }
+      },
+
+      copyFile: async (fileIds, toParentId) => {
+        const authentication = requireAuthenticated(true);
+
+        for (const fileId of fileIds) {
+          const file = await getFile(
+            fileId,
+            authentication,
+            FileAccessLevel.None
+          );
+
+          const toParent = await getFile(
+            toParentId,
+            authentication,
+            FileAccessLevel.ReadWrite,
+            FileType.Folder
+          );
+
+          const copy = async (
+            sourceFile: UnlockedFileResource,
+            destinationFile: UnlockedFileResource
+          ) => {
+            if (sourceFile.type === FileType.File) {
+              const newFile = await fileManager.create(
+                authentication,
+                toParent,
+                file.name,
+                FileType.File
+              );
+            } else if (sourceFile.type === FileType.Folder) {
+              let newFolder: UnlockedFileResource;
+
+              {
+                const newFolderFind = await fileManager.getByName(
+                  destinationFile,
+                  sourceFile.name
+                );
+
+                if (newFolderFind == null) {
+                  newFolder = await fileManager.create(
+                    authentication,
+                    destinationFile,
+                    sourceFile.name,
+                    FileType.Folder
+                  );
+                } else {
+                  newFolder = await fileManager.unlock(
+                    newFolderFind,
+                    authentication,
+                    FileAccessLevel.ReadWrite
+                  );
+                }
+              }
+
+              for (const file of await fileManager
+                .scanFolder(sourceFile)
+                .then((files) =>
+                  Promise.all(
+                    files.map((file) =>
+                      fileManager.unlock(
+                        file,
+                        authentication,
+                        FileAccessLevel.Read
+                      )
+                    )
+                  )
+                )) {
+                await copy(file, newFolder);
+              }
+            }
+          };
+
+          await copy(file, toParent);
+        }
       },
 
       listSharedFiles: async (offset, limit) => {
@@ -859,6 +1051,60 @@ export class ServerConnection {
         });
 
         return fileAccesses;
+      },
+
+      listStarredFiles: async (fileId, userId, offset, limit) => {
+        const authentication = requireAuthenticated(true);
+
+        const file =
+          fileId != null
+            ? await getFile(fileId, authentication, FileAccessLevel.Read)
+            : null;
+
+        const user =
+          userId != null
+            ? await resolveUser([UserResolveType.UserId, userId])
+            : null;
+
+        return await fileStarManager.read({
+          where: [
+            file != null ? ["fileId", "=", file.id] : null,
+            user != null ? ["userId", "=", user.id] : null,
+          ],
+
+          offset,
+          limit,
+        });
+      },
+
+      isFileStarred: async (fileId) => {
+        const authentication = requireAuthenticated(true);
+
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.Read
+        );
+
+        return (await fileStarManager.count([["fileId", "=", file.id]])) !== 0;
+      },
+
+      setFileStar: async (fileId, starred) => {
+        const authentication = requireAuthenticated(true);
+
+        const user = await resolveUser([
+          UserResolveType.UserId,
+          authentication.userId,
+        ]);
+
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.Read
+        );
+
+        await fileStarManager.setStar(user, file, starred);
+        return starred;
       },
     };
 

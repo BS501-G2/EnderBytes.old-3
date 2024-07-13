@@ -5,6 +5,7 @@ import { FileManager, UnlockedFileResource } from "./file.js";
 import { FileContentManager, FileContentResource } from "./file-content.js";
 import { UserManager, UserResource } from "./user.js";
 import { UnlockedUserAuthentication } from "./user-authentication.js";
+import { FileDataManager } from "./file-data.js";
 
 export interface FileSnapshotResource extends Resource {
   fileId: number;
@@ -118,11 +119,13 @@ export class FileSnapshotManager extends ResourceManager<
     unlockedFile: UnlockedFileResource,
     fileContent: FileContentResource
   ): Promise<FileSnapshotResource> {
-    return (await this.getLeaves(unlockedFile, fileContent)).reduce(
-      (latestSnapshot, snapshot) =>
-        (latestSnapshot?.id ?? 0) < snapshot.id ? snapshot : latestSnapshot,
-      null as FileSnapshotResource | null
-    )!;
+    return (
+      (await this.getLeaves(unlockedFile, fileContent)).reduce(
+        (latestSnapshot, snapshot) =>
+          (latestSnapshot?.id ?? 0) < snapshot.id ? snapshot : latestSnapshot,
+        null as FileSnapshotResource | null
+      ) ?? (await this.getMain(unlockedFile, fileContent))
+    );
   }
 
   public async getLeaves(
@@ -180,8 +183,26 @@ export class FileSnapshotManager extends ResourceManager<
   public async fork(
     file: UnlockedFileResource,
     fileContent: FileContentResource,
-    baseFileSnapshot: FileSnapshotResource
+    baseFileSnapshot: FileSnapshotResource,
+    creatorUser: UserResource
   ) {
+    const newFileSnapshot = await this.insert({
+      fileId: file.id,
+      fileContentId: fileContent.id,
+      baseFileSnapshotId: baseFileSnapshot.id,
+      creatorUserId: creatorUser.id,
+      size: baseFileSnapshot.size,
+    });
 
+    const [fileDataManager] = this.getManagers(FileDataManager);
+
+    await fileDataManager.copySnapshotData(
+      file,
+      fileContent,
+      baseFileSnapshot,
+      newFileSnapshot
+    );
+
+    return newFileSnapshot;
   }
 }
