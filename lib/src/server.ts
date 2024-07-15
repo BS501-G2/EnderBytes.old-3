@@ -3,8 +3,6 @@ export * from "./server/crypto.js";
 export * from "./server/database.js";
 export * from "./server/resource.js";
 export * from "./server/resource.js";
-export * from "./server/api/api-functions.js";
-export * from "./server/api/api.js";
 export * from "./server/api/connection-manager.js";
 export * from "./server/api/connection.js";
 export * from "./server/core/server.js";

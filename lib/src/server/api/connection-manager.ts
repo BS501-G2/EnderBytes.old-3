@@ -7,17 +7,19 @@ import {
 } from "../../shared.js";
 import { Server } from "../core/server.js";
 import { ServerConnection, ServerConnectionContext } from "./connection.js";
+import * as SocketIO from "socket.io";
 
 export interface ServerConnectionManagerData {
   connections: Record<number, ServerConnection>;
   contexts: Record<number, ServerConnectionContext>;
+  io: SocketIO.Server;
 
   handle: (socket: Socket) => void;
 }
 
 export class ServerConnectionManager extends Service<
   ServerConnectionManagerData,
-  []
+  [port: number]
 > {
   public constructor(server: Server) {
     let getData: ServiceGetDataCallback<ServerConnectionManagerData> =
@@ -63,29 +65,37 @@ export class ServerConnectionManager extends Service<
 
   async run(
     setData: ServiceSetDataCallback<ServerConnectionManagerData>,
-    onReady: ServiceReadyCallback
+    onReady: ServiceReadyCallback,
+    port: number
   ): Promise<void> {
     let connectionId: number = 0;
 
-    const { connections, contexts }: ServerConnectionManagerData = setData({
-      connections: {},
-      contexts: {},
-      handle: (socket) => {
-        const connection: ServerConnection = new ServerConnection(
-          this,
-          ++connectionId,
-          socket,
-          {
-            onDisconnect: () => {
-              delete connections[connection.id];
-            },
-            getContext: () => this.#getConnectionContext(connection),
-          }
-        );
+    const { connections, contexts, io, handle }: ServerConnectionManagerData =
+      setData({
+        connections: {},
+        contexts: {},
+        handle: (socket) => {
+          const connection: ServerConnection = new ServerConnection(
+            this,
+            ++connectionId,
+            socket,
+            {
+              onDisconnect: () => {
+                delete connections[connection.id];
+              },
+              getContext: () => this.#getConnectionContext(connection),
+            }
+          );
 
-        connections[connection.id] = connection;
-      },
-    });
+          connections[connection.id] = connection;
+        },
+        io: new SocketIO.Server({
+          maxHttpBufferSize: 1024 * 1024 * 256
+        }),
+      });
+
+    io.on("connection", handle);
+    io.listen(port);
 
     const checkContexts = () => {
       for (const userId in contexts) {

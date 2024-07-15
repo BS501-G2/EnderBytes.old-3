@@ -58,7 +58,7 @@ export class UserSessionManager extends ResourceManager<
         .notNullable()
         .references("id")
         .inTable(this.getManager(UserAuthenticationManager).recordTableName)
-        .onDelete('cascade');
+        .onDelete("cascade");
 
       table.binary("encryptedPrivateKey").notNullable();
       table.binary("encrypterPrivateKeyIv").notNullable();
@@ -67,7 +67,7 @@ export class UserSessionManager extends ResourceManager<
   }
 
   public async create(
-    unlockedUserKey: UnlockedUserAuthentication,
+    unlockedUserAuthentication: UnlockedUserAuthentication,
     expireDuration: number = userSessionExpiryDuration
   ): Promise<UnlockedUserSession> {
     const [key, iv] = await Promise.all([randomBytes(32), randomBytes(16)]);
@@ -75,13 +75,13 @@ export class UserSessionManager extends ResourceManager<
     const [authTag, encryptedPrivateKey] = encryptSymmetric(
       key,
       iv,
-      unlockedUserKey.privateKey
+      unlockedUserAuthentication.privateKey
     );
 
     const userSession = await this.insert({
       expireTime: Date.now() + expireDuration,
-      userId: unlockedUserKey.userId,
-      originUserAuthenticationId: unlockedUserKey.id,
+      userId: unlockedUserAuthentication.userId,
+      originUserAuthenticationId: unlockedUserAuthentication.id,
 
       encryptedPrivateKey,
       encrypterPrivateKeyIv: iv,
@@ -92,7 +92,7 @@ export class UserSessionManager extends ResourceManager<
       ...userSession,
 
       key: key,
-      privateKey: unlockedUserKey.privateKey,
+      privateKey: unlockedUserAuthentication.privateKey,
     };
   }
 

@@ -164,9 +164,7 @@ export function wrapSocket<
     })();
 
     const traverse = <T>(obj: T): T => {
-      if (BufferC.isBuffer(obj) || obj instanceof Uint8Array) {
-        return new Uint8Array(obj).buffer as T;
-      } else if (Array.isArray(obj)) {
+      if (Array.isArray(obj)) {
         for (let index = 0; index < obj.length; index++) {
           const a = traverse(obj[index]);
 
@@ -230,7 +228,7 @@ export function wrapSocket<
       destroyed = true;
 
       for (const id in pending) {
-        pending[id].reject(new Error("Destroyed"));
+        pending[id].reject(new Error("Connection destroyed"));
       }
     },
 

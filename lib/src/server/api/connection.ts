@@ -2,20 +2,16 @@ import { Socket } from "socket.io";
 import {
   ApiError,
   ApiErrorType,
-  Authentication,
   baseConnectionFunctions,
-  ConnectionFunctions,
   FileAccessLevel,
   FileLogType,
   FileType,
   SocketWrapper,
-  UserAuthenticationType,
   UserResolvePayload,
   UserResolveType,
   UserRole,
   wrapSocket,
 } from "../../shared.js";
-import { ClientFunctions } from "../../client/core/connection.js";
 import {
   UnlockedUserAuthentication,
   UserAuthenticationManager,
@@ -25,151 +21,13 @@ import { UserSessionManager } from "../db/user-session.js";
 import { ServerConnectionManager } from "./connection-manager.js";
 import { FileManager, FileResource, UnlockedFileResource } from "../db/file.js";
 import { FileContentManager, FileContentResource } from "../db/file-content.js";
-import {
-  FileSnapshotManager,
-  FileSnapshotResource,
-} from "../db/file-snapshot.js";
+import { FileSnapshotManager } from "../db/file-snapshot.js";
 import { FileDataManager } from "../db/file-data.js";
 import { FileLogManager, FileLogResource } from "../db/file-log.js";
-import { FileMimeManager } from "../db/file-mime.js";
 import { FileAccessManager, FileAccessResource } from "../db/file-access.js";
-import { FileStarManager, FileStarResource } from "../db/file-star.js";
-
-export interface ServerFunctions extends ConnectionFunctions {
-  restore: (authentication: Authentication) => Promise<Authentication>;
-
-  authenticate: (
-    user: UserResolvePayload,
-    type: UserAuthenticationType,
-    payload: Uint8Array
-  ) => Promise<Authentication | null>;
-
-  getServerStatus: () => Promise<{
-    setupRequired: boolean;
-  }>;
-
-  register: (
-    username: string,
-    firstName: string,
-    middleName: string | null,
-    lastName: string,
-    password: string
-  ) => Promise<UserResource>;
-
-  getUser: (resolve: UserResolvePayload) => Promise<UserResource>;
-
-  listUsers: (options?: {
-    searchString?: string;
-    offset?: number;
-    limit?: number;
-  }) => Promise<UserResource[]>;
-
-  createUser: (
-    username: string,
-    firstName: string,
-    middleName: string | null,
-    lastName: string,
-    role: UserRole
-  ) => Promise<
-    [
-      user: UserResource,
-      UnlockedUserAuthentication: UnlockedUserAuthentication,
-      password: string
-    ]
-  >;
-
-  updateUser: (
-    firstName: string,
-    middleName: string | null,
-    lastName: string,
-    role: UserRole
-  ) => Promise<UserResource>;
-
-  setSuspend: (id: number, isSuspended: boolean) => Promise<UserResource>;
-
-  createFile: (parentFolderId: number, name: string) => Promise<FileResource>;
-
-  createFolder: (parentFolderId: number, name: string) => Promise<FileResource>;
-
-  scanFolder: (folderId: number | null) => Promise<FileResource[]>;
-
-  setUserAccess: (
-    fileId: number,
-    targetUserId: number,
-    newType?: FileAccessLevel
-  ) => Promise<FileAccessLevel>;
-
-  getFile: (fileId: number | null) => Promise<FileResource>;
-
-  getFilePathChain: (fileId: number) => Promise<FileResource[]>;
-
-  getFileSize: (fileId: number) => Promise<number>;
-
-  getFileMime: (fileId: number) => Promise<[mime: string, description: string]>;
-
-  listFileViruses: (fileId: number) => Promise<string[]>;
-
-  listFileAccess: (
-    fileId: number,
-    offset?: number,
-    limit?: number
-  ) => Promise<FileAccessResource[]>;
-
-  listFileSnapshots: (
-    fileId: number,
-    offset?: number,
-    limit?: number
-  ) => Promise<FileSnapshotResource[]>;
-
-  listFileLogs: (
-    targetFileId?: number,
-    actorUserId?: number,
-    offset?: number,
-    limit?: number
-  ) => Promise<FileLogResource[]>;
-
-  feedUploadBuffer: (buffer: Uint8Array) => Promise<number>;
-
-  getUploadBufferSize: () => Promise<number>;
-
-  getUploadBufferSizeLimit: () => Promise<number>;
-
-  clearUploadBuffer: () => Promise<void>;
-
-  writeUploadBufferToFile: (
-    fileId: number,
-    sourceFileSnapshotId: number,
-    position: number
-  ) => Promise<void>;
-
-  downloadFile: (
-    fileId: number,
-    position?: number,
-    length?: number,
-    snapshotId?: number
-  ) => Promise<Uint8Array>;
-
-  moveFile: (fileIds: number[], toParentId: number) => Promise<void>;
-
-  copyFile: (fileIds: number[], toParentId: number) => Promise<void>;
-
-  listSharedFiles: (
-    offset?: number,
-    limit?: number
-  ) => Promise<FileAccessResource[]>;
-
-  listStarredFiles: (
-    fileId?: number,
-    userId?: number,
-
-    offset?: number,
-    length?: number
-  ) => Promise<FileStarResource[]>;
-
-  isFileStarred: (fileId: number) => Promise<boolean>;
-
-  setFileStar: (fileId: number, starred: boolean) => Promise<boolean>;
-}
+import { FileStarManager } from "../db/file-star.js";
+import { ServerFunctions } from "./connection-functions.js";
+import { ClientFunctions } from "../../client/core/connection-functions.js";
 
 export interface ServerConnectionContext {
   updateTime: number;
@@ -190,8 +48,13 @@ export class ServerConnection {
   ) {
     this.#manager = manager;
     this.#id = id;
-    this.#wrapper = wrapSocket((this.#io = socket), this.#server, (func) =>
-      this.#onMessage(func)
+    this.#wrapper = wrapSocket(
+      (this.#io = socket),
+      this.#server,
+      (func) => this.#onMessage(func),
+      (...message) => {
+        console.log(...message);
+      }
     );
     this.#getContext = getContext;
 
@@ -387,7 +250,7 @@ export class ServerConnection {
     const serverFunctions: ServerFunctions = {
       ...baseConnectionFunctions,
 
-      restore: async (authentication) => {
+      isAuthenticationValid: async (authentication) => {
         requireAuthenticated(false);
 
         const { userId, userSessionId, userSessionKey } = authentication;
@@ -412,7 +275,7 @@ export class ServerConnection {
           try {
             const unlockedSession = userSessionManager.unlock(
               userSession,
-              userSessionKey
+              Buffer.from(userSessionKey, "base64")
             );
 
             const userAuthentication = await userAuthenticationManager.getById(
@@ -420,18 +283,84 @@ export class ServerConnection {
             );
 
             if (userAuthentication != null) {
-              return {
-                userId: userId,
-                userSessionId: unlockedSession.id,
-                userSessionKey: unlockedSession.key,
-              };
+              return true;
             }
           } catch {
             //
           }
         }
 
+        return false;
+      },
+
+      restore: async (authentication) => {
+        requireAuthenticated(false);
+
+        const { userId, userSessionId, userSessionKey } = authentication;
+
+        const userSession = await userSessionManager.getById(userSessionId);
+
+        if (
+          userSession != null &&
+          userSession.userId === userId &&
+          userSession.expireTime > Date.now()
+        ) {
+          const user = await userManager.getById(userSession.userId);
+
+          if (user != null) {
+            if (user.isSuspended) {
+              ApiError.throw(
+                ApiErrorType.Forbidden,
+                `User @${user.username} is currently suspended.`
+              );
+            }
+
+            try {
+              const unlockedSession = userSessionManager.unlock(
+                userSession,
+                Buffer.from(userSessionKey, "base64")
+              );
+
+              const userAuthentication =
+                await userAuthenticationManager.getById(
+                  unlockedSession.originUserAuthenticationId
+                );
+
+              if (userAuthentication != null) {
+                this.#userAuthentication = userSessionManager.unlockKey(
+                  unlockedSession,
+                  userAuthentication
+                );
+
+                return {
+                  userId: userId,
+                  userSessionId: unlockedSession.id,
+                  userSessionKey: Buffer.from(unlockedSession.key).toString(
+                    "base64"
+                  ),
+                };
+              }
+            } catch (error) {
+              console.log(error);
+              //
+            }
+          }
+        }
+
         ApiError.throw(ApiErrorType.Unauthorized, "Invalid login details");
+      },
+
+      whoAmI: async () => {
+        const authentication = this.#userAuthentication;
+
+        if (authentication == null) {
+          return null;
+        }
+
+        return await resolveUser([
+          UserResolveType.UserId,
+          authentication.userId,
+        ]);
       },
 
       authenticate: async (resolve, type, payload) => {
@@ -454,20 +383,18 @@ export class ServerConnection {
         }
 
         if (user.isSuspended) {
-          ApiError.throw(
-            ApiErrorType.Forbidden,
-            "User is currently suspended."
-          );
+          ApiError.throw(ApiErrorType.Forbidden, "User is currently suspended");
         }
 
         const unlockedSession = await userSessionManager.create(
           unlockedUserAuthentication
         );
 
+        this.#userAuthentication = unlockedUserAuthentication;
         return {
           userId: user.id,
           userSessionId: unlockedSession.id,
-          userSessionKey: unlockedSession.key,
+          userSessionKey: Buffer.from(unlockedSession.key).toString('base64'),
         };
       },
 
@@ -505,7 +432,7 @@ export class ServerConnection {
       async getUser(resolve) {
         requireAuthenticated(true);
 
-        return await this.getUser(resolve);
+        return await resolveUser(resolve);
       },
 
       listUsers: async ({ searchString: search, offset, limit } = {}) => {
@@ -536,7 +463,7 @@ export class ServerConnection {
         return [user, unlockedUserKey, password];
       },
 
-      updateUser: async (firstName, middleName, lastName, role) => {
+      updateUser: async ({ firstName, middleName, lastName, role }) => {
         const { userId } = requireAuthenticated(true);
 
         const user = await resolveUser([UserResolveType.UserId, userId]);

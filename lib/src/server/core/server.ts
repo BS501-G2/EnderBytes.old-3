@@ -1,5 +1,4 @@
 import { Service, ServiceGetDataCallback } from "../../shared/service.js";
-import { ApiServer } from "../api/api.js";
 import { ServerConnectionManager } from "../api/connection-manager.js";
 import { Database } from "../database.js";
 import { FileAccessManager } from "../db/file-access.js";
@@ -84,7 +83,7 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
     ]);
     await virusScanner.start("/run/clamav/clamd.ctl");
     await mimeDetector.start();
-    await connectionManager.start();
+    await connectionManager.start(port);
     // await apiServer.start(port);
 
     await new Promise<void>((resolve) => onReady(resolve));

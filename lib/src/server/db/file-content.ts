@@ -32,7 +32,6 @@ export class FileContentManager extends ResourceManager<
         .onDelete("cascade");
 
       table.boolean("isMain").notNullable();
-      table.integer("size").notNullable();
     }
   }
   public async create(

@@ -6,19 +6,28 @@ import {
   SocketWrapper,
   wrapSocket,
 } from "../../shared.js";
-import { ServerFunctions } from "../../server/api/connection.js";
-
-export interface ClientFunctions extends ConnectionFunctions {
-  
-}
+import { ServerFunctions } from "../../server/api/connection-functions.js";
+import { ClientFunctions } from "./connection-functions.js";
 
 export interface ClientConnectionOptions {
   getAuth?: () => Authentication | null;
 }
 
 export class ClientConnection {
-  public constructor(getAuth: null | (() => Authentication | null) = null) {
-    this.#wrapper = wrapSocket((this.#io = io("/")), this.#client);
+  public constructor(
+    getAuth: null | (() => Authentication | null) = null,
+    setAuthentication: (authentication: Authentication | null) => void
+  ) {
+    this.#wrapper = wrapSocket(
+      (this.#io = io("/", {})),
+      this.#client,
+      undefined,
+      (...message) => {
+        console.log(...message);
+      }
+    );
+    this.#setAuthentication = setAuthentication;
+    this.#preConnect = [];
 
     this.#io.on("connect", () => this.#restore(getAuth?.() ?? null));
     this.#io.on("reconnect", () => this.#restore(getAuth?.() ?? null));
@@ -31,14 +40,85 @@ export class ClientConnection {
       return;
     }
 
-    await restore(authentication);
+    try {
+      await restore(authentication);
+    } finally {
+      for (const preConnext of this.#preConnect.splice(
+        0,
+        this.#preConnect.length
+      )) {
+        await preConnext();
+      }
+    }
   }
 
+  readonly #preConnect: (() => Promise<void>)[];
   readonly #io: Socket;
   readonly #wrapper: SocketWrapper<ServerFunctions, ClientFunctions, Socket>;
+  readonly #setAuthentication: (authentication: Authentication | null) => void;
 
-  get #server() {
-    return this.#wrapper.funcs;
+  get #server(): ServerFunctions {
+    const funcs = this.#wrapper.funcs;
+
+    const wrapFunctions = (
+      funcs: ServerFunctions,
+      wrapped: Partial<ServerFunctions>
+    ): ServerFunctions => {
+      const getFunc: <T extends keyof ServerFunctions>(
+        funcs: ServerFunctions,
+        key: T
+      ) => ServerFunctions[T] = (funcs, key) => {
+        const wrap = wrapped[key];
+
+        if (wrap != null) {
+          return wrap;
+        }
+
+        return funcs[key];
+      };
+
+      const getFunc2: <T extends keyof ServerFunctions>(
+        funcs: ServerFunctions,
+        key: T
+      ) => ServerFunctions[T] = (...args) => {
+        const func = getFunc(...args);
+
+        return (...args) => {
+          if (this.#io.connected) {
+            return func(...args);
+          }
+
+          return new Promise((resolve, reject) =>
+            this.#preConnect.push(() => func(...args).then(resolve, reject))
+          );
+        };
+      };
+
+      const proxy = new Proxy(funcs, {
+        get: getFunc2 as never,
+      });
+
+      return proxy;
+    };
+
+    return wrapFunctions(funcs, {
+      restore: (authentication) =>
+        funcs.restore(authentication).catch((error: Error) => {
+          if (error.message === "Invalid login details") {
+            this.#setAuthentication(null);
+          }
+
+          throw error;
+        }),
+
+      authenticate: (user, type, payload) =>
+        funcs.authenticate(user, type, payload).then((authentication) => {
+          console.log("New Session:", authentication?.userSessionKey.length);
+
+          this.#setAuthentication(authentication);
+          return authentication;
+        }),
+    });
   }
 
   get #client(): ClientFunctions {

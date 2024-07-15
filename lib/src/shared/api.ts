@@ -10,7 +10,7 @@ export interface Authentication {
   userId: number;
 
   userSessionId: number;
-  userSessionKey: Uint8Array;
+  userSessionKey: string;
 }
 
 export interface PartialAuthenticationToken {
