@@ -22,18 +22,18 @@
   import { goto } from '$app/navigation';
   import { FileAccessLevel, FileType } from '@rizzzi/enderdrive-lib/shared';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
-  import { getAuthentication } from '$lib/client/auth';
+  import { getConnection } from '$lib/client/client';
 
   const {
-    funcs: {
-      readFile,
-      getFileMimeType,
+    serverFunctions: {
+      downloadFile,
+      getFileMime,
       moveFile,
       getFile,
       scanFolder,
       listFileAccess,
-      listPathChain
+      getFilePathChain,
+      whoAmI
     }
   } = getConnection();
 
@@ -90,9 +90,7 @@
     {
       label: 'Star',
       icon: 'fa-regular fa-star',
-      action: async () => {
-        
-      },
+      action: async () => {},
       group: 'actions',
       isVisible: (selection) => !$fileBrowserState.isLoading && selection.length > 0
     },
@@ -105,9 +103,9 @@
           return;
         }
 
-        const ro = await readFile(getAuthentication(), file.id);
+        const ro = await downloadFile(file.id);
         const blob = new Blob([ro], {
-          type: (await getFileMimeType(getAuthentication(), file.id))[0]
+          type: (await getFileMime(file.id))[0]
         });
         const url = URL.createObjectURL(blob);
 
@@ -198,7 +196,6 @@
 
           if ($fileClipboard.isCut) {
             await moveFile(
-              getAuthentication(),
               $fileClipboard.files.map((file) => file.id),
               $fileBrowserState.file.id
             );
@@ -253,12 +250,12 @@
       $fileBrowserState = { isLoading: true, controlBarActions: [] };
 
       try {
-        const file = await getFile(getAuthentication(), id ?? null);
+        const file = await getFile(id ?? null);
 
         const [files, pathChain, accesses] = await Promise.all([
-          file.type === FileType.Folder ? scanFolder(getAuthentication(), file.id) : [],
-          listPathChain(getAuthentication(), file.id),
-          listFileAccess(getAuthentication(), file.id)
+          file.type === FileType.Folder ? scanFolder(file.id) : [],
+          getFilePathChain(file.id),
+          listFileAccess(file.id)
         ]);
 
         files.sort((file1, file2) => file2.type - file1.type);
@@ -272,10 +269,10 @@
           pathChain: {
             root: pathChain[0],
             chain: pathChain.slice(1),
-            isForeign: pathChain[0].ownerUserId === getAuthentication()!.userId
+            isForeign: pathChain[0].ownerUserId === (await whoAmI())!.id
           },
           access:
-            file.ownerUserId === getAuthentication()!.userId
+            file.ownerUserId === (await whoAmI())!.id
               ? undefined
               : {
                   highestLevel: accesses[0].level,

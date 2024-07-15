@@ -8,8 +8,7 @@
   } from '@rizzzi/svelte-commons';
   import { writable, type Writable } from 'svelte/store';
   import { testFunctions } from './test-functions';
-  import { getConnection, ClientConnection } from '@rizzzi/enderdrive-lib/client';
-  import { authentication } from '$lib/client/auth';
+  import { getConnection } from '$lib/client/client'
 
   const returnedData: Writable<any> = writable(null);
   const messages: Writable<any[]> = writable([]);
@@ -34,11 +33,6 @@
   async function dismissError() {
     $error = null;
   }
-
-  const client: ClientConnection = new ClientConnection(() => $authentication);
-  const {
-    serverFunctions: { authenticate }
-  } = client;
 </script>
 
 {#snippet button(onClick: ButtonCallback, label: string)}
@@ -56,48 +50,47 @@
     {/snippet}
   </Button>
 {/snippet}
+    <div class="container">
+      <h2>Buttons</h2>
 
-<div class="container">
-  <h2>Buttons</h2>
+      <div class="button-list">
+        {#each testFunctions(getConnection()) as [label, callback]}
+          {@render button(() => onClick(callback), label)}
+        {/each}
+      </div>
 
-  <div class="button-list">
-    {#each testFunctions(getConnection()) as [label, callback]}
-      {@render button(() => onClick(callback), label)}
-    {/each}
-  </div>
+      {#if typeof $returnedData === 'function'}
+        {@render $returnedData()}
+      {:else}
+        <h2>Returned Data</h2>
 
-  {#if typeof $returnedData === 'function'}
-    {@render $returnedData()}
-  {:else}
-    <h2>Returned Data</h2>
-
-    <div class="json-data">
-      <p>JSON</p>
-      <pre>{JSON.stringify($returnedData, undefined, '  ')}</pre>
+        <div class="json-data">
+          <p>JSON</p>
+          <pre>{JSON.stringify($returnedData, undefined, '  ')}</pre>
+        </div>
+      {/if}
     </div>
-  {/if}
-</div>
 
-{#if $error != null}
-  <Dialog onDismiss={dismissError} dialogClass={DialogClass.Error}>
-    {#snippet head()}
-      <h2 class="error-head">{$error!.name}</h2>
-    {/snippet}
+    {#if $error != null}
+      <Dialog onDismiss={dismissError} dialogClass={DialogClass.Error}>
+        {#snippet head()}
+          <h2 class="error-head">{$error!.name}</h2>
+        {/snippet}
 
-    {#snippet body()}
-      <div class="error-message">
-        <b>{$error!.message}</b>
-        <pre>
+        {#snippet body()}
+          <div class="error-message">
+            <b>{$error!.message}</b>
+            <pre>
           {$error!.stack}
         </pre>
-      </div>
-    {/snippet}
+          </div>
+        {/snippet}
 
-    {#snippet actions()}
-      <Button onClick={dismissError}><div class="button">OK</div></Button>
-    {/snippet}
-  </Dialog>
-{/if}
+        {#snippet actions()}
+          <Button onClick={dismissError}><div class="button">OK</div></Button>
+        {/snippet}
+      </Dialog>
+    {/if}
 
 <style lang="scss">
   h2.error-head {

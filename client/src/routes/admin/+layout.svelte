@@ -2,7 +2,7 @@
   import { type Snippet } from 'svelte';
   import { type Writable, writable } from 'svelte/store';
   import { Dialog } from '@rizzzi/svelte-commons';
-  import { authentication } from '$lib/client/auth';
+  import { authentication } from '$lib/client/client'
 
   const { children }: { children: Snippet } = $props();
 

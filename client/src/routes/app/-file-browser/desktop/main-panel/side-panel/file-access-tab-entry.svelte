@@ -4,9 +4,8 @@
   import type { Snippet } from 'svelte';
 
   import type { FileAccessResource, FileResource } from '@rizzzi/enderdrive-lib/server';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
-  import { getAuthentication } from '$lib/client/auth';
   import { FileAccessLevel, UserResolveType } from '@rizzzi/enderdrive-lib/shared';
+  import { getConnection } from '$lib/client/client';
 
   const {
     file,
@@ -18,10 +17,10 @@
 <Awaiter
   callback={async () => {
     const {
-      funcs: { getUser }
+      serverFunctions: { getUser }
     } = getConnection();
 
-    return await getUser(getAuthentication(), [UserResolveType.UserId, access.userId]);
+    return await getUser([UserResolveType.UserId, access.userId]);
   }}
 >
   {#snippet success({ result: user })}
@@ -33,11 +32,10 @@
         <select
           onchange={async ({ currentTarget }) => {
             const {
-              funcs: { grantAccessToUser }
+              serverFunctions: { grantAccessToUser }
             } = getConnection();
 
             await grantAccessToUser(
-              getAuthentication(),
               file.id,
               user!.id,
               Number.parseInt(currentTarget.value) as FileAccessLevel
@@ -62,10 +60,10 @@
           container={buttonContainer}
           onClick={() => {
             const {
-              funcs: { revokeAccessFromUser }
+              serverFunctions: { revokeAccessFromUser }
             } = getConnection();
 
-            revokeAccessFromUser(getAuthentication(), file.id, user!.id);
+            revokeAccessFromUser(file.id, user!.id);
             reload();
           }}
           hint="Revoke"

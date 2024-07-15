@@ -18,9 +18,8 @@
     UserResource
   } from '@rizzzi/enderdrive-lib/server';
   import { ApiError, FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
-  import { getAuthentication } from '$lib/client/auth';
   import User from '$lib/client/user.svelte';
+  import { getAuthentication, getConnection } from '$lib/client/client';
 
   const { file }: { file: FileResource } = $props();
 
@@ -33,7 +32,7 @@
   const addNewUser: Writable<boolean> = writable(false);
 
   const {
-    funcs: { grantAccessToUser, listFileAccess, searchUser }
+    serverFunctions: { setUserAccess, listFileAccess, listUsers }
   } = getConnection();
 </script>
 
@@ -50,7 +49,7 @@
 
     if (toGrant != null) {
       try {
-        await grantAccessToUser(getAuthentication(), file.id, toGrant[0].id, toGrant[1]);
+        await setUserAccess(file.id, toGrant[0].id, toGrant[1]);
       } catch (error: unknown) {
         if (error instanceof ApiError) {
           $toGrantError = new Error('User has already been granted access.');
@@ -62,7 +61,7 @@
       toGrant = null;
     }
 
-    return await listFileAccess(getAuthentication(), file.id);
+    return await listFileAccess(file.id);
   }}
 >
   {#snippet success({ result: list })}
@@ -90,7 +89,8 @@
           {#if $userSearch.length}
             <Awaiter
               callback={async () => {
-                const users = await searchUser(getAuthentication(), $userSearch);
+                const users = await listUsers({ searchString: $userSearch || undefined });
+
                 return users;
               }}
             >

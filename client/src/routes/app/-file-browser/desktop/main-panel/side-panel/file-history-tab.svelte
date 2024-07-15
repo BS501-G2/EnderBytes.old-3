@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { authentication } from '$lib/client/auth';
+    import { authentication, getConnection } from '$lib/client/client';
   import User from '$lib/client/user.svelte';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
   import { FileLogType, UserResolveType } from '@rizzzi/enderdrive-lib/shared';
   import { Awaiter } from '@rizzzi/svelte-commons';
@@ -9,14 +8,14 @@
 
   const { file }: { file: FileResource } = $props();
   const {
-    funcs: { listFileLogs, getUser }
+    serverFunctions: { listFileLogs, getUser }
   } = getConnection();
 </script>
 
 {#key file.id}
   <Awaiter
     callback={async () => {
-      return (await listFileLogs($authentication, file.id, null))
+      return (await listFileLogs(file.id))
         .toSorted((log1, log2) => log2.createTime - log1.createTime)
         .filter((log, index, array) => {
           const previousLog = array[index - 1];
@@ -56,7 +55,7 @@
                 }
               })(snapshot.type)} by <Awaiter
                 callback={async () => {
-                  const user = await getUser($authentication, [
+                  const user = await getUser([
                     UserResolveType.UserId,
                     snapshot.actorUserId
                   ]);

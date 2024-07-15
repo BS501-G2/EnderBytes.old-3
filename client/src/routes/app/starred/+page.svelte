@@ -3,14 +3,13 @@
   import FileBrowser, { type FileBrowserState } from '../file-browser.svelte';
   import { writable, type Writable } from 'svelte/store';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
-  import { authentication } from '$lib/client/auth';
+  import { getConnection } from '$lib/client/client';
 
   const fileBrowserState: Writable<FileBrowserState> = writable({ isLoading: true });
   const errorStore: Writable<Error | null> = writable(null);
 
   const {
-    funcs: { listStarred }
+    serverFunctions: { listStarred }
   } = getConnection();
 
   const starred = writable<FileResource[]>([]);
@@ -23,8 +22,8 @@
   callback={async () => {
     $fileBrowserState = {
       isLoading: false,
-      files: await listStarred($authentication, 0),
-      title: 'Starred',
+      files: await listStarred(0),
+      title: 'Starred'
     };
   }}
 ></Awaiter>

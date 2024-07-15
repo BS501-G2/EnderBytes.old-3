@@ -1,9 +1,9 @@
 import { goto } from '$app/navigation';
-import { getConnection } from '@rizzzi/enderdrive-lib/client';
+import { getConnection } from '$lib/client/client';
 
 export async function load() {
   const {
-    funcs: { getServerStatus }
+    serverFunctions: { getServerStatus }
   } = getConnection();
 
   const status = await getServerStatus();

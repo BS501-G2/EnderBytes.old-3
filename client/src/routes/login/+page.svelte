@@ -12,7 +12,7 @@
   } from '@rizzzi/svelte-commons';
   import { type Writable, writable } from 'svelte/store';
   import { type Snippet } from 'svelte';
-  import { authenticateWithPassword } from '$lib/client/auth';
+    import { authenticateWithPassword } from '$lib/client/client';
 
   const {}: {} = $props();
 

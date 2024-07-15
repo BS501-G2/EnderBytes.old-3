@@ -4,10 +4,8 @@
 <script lang="ts">
   import { writable, type Writable } from 'svelte/store';
   import type { QueryOptions, UserManager, UserResource } from '@rizzzi/enderdrive-lib/server';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
-
   import Page from '../+page.svelte';
-  import { getAuthentication } from '$lib/client/auth';
+  import { getConnection } from '$lib/client/client';
 
   const userQueryOptions: Writable<QueryOptions<UserResource, UserManager>> = writable({
     limit: 10
@@ -31,14 +29,14 @@
 
   async function loadItems(): Promise<void> {
     const {
-      funcs: { listUsers }
+      serverFunctions: { listUsers }
     } = getConnection();
 
     if (noMore) {
       return;
     }
 
-    const items = await listUsers(getAuthentication(), {
+    const items = await listUsers({
       ...$userQueryOptions,
 
       offset: $list.length

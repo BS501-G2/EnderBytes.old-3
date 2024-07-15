@@ -1,5 +1,5 @@
-import { authenticateWithPassword, authentication, getAuthentication } from '$lib/client/auth';
-import { type Client } from '@rizzzi/enderdrive-lib/client';
+import { authenticateWithPassword, getAuthentication } from '$lib/client/client';
+import { ClientConnection } from '@rizzzi/enderdrive-lib/client';
 import { UserAuthenticationType } from '@rizzzi/enderdrive-lib/shared';
 import { Buffer } from 'buffer';
 
@@ -12,29 +12,26 @@ const adminMiddleName = 'G';
 const adminLastName = 'Rection';
 
 export const testFunctions = ({
-  funcs: {
-    echo,
-    getServerStatus,
-    createAdminUser,
-    authenticate,
-    updateUser,
-    listUsers,
-    isAuthenticationValid
-  }
-}: Client): TestFunctions => [
+  serverFunctions: { echo, getServerStatus, register, updateUser, listUsers, whoAmI }
+}: ClientConnection): TestFunctions => [
   ['Hello', () => 'hello'],
   ['World', () => 'world'],
   [
     'Echo',
     async (log) => {
-      const bytes = new Uint8Array(1024 * 1024 * 8);
-      log(`Sending random ${bytes.length} bytes.`);
+      // const bytes = new Uint8Array(1024 * 1024 * 8);
+      // log(`Sending random ${bytes.length} bytes.`);
 
-      for (let i = 0; i < bytes.length; i++) {
-        bytes[i] = Math.floor(Math.random() * 256);
-      }
+      // for (let i = 0; i < bytes.length; i++) {
+      //   bytes[i] = Math.floor(Math.random() * 256);
+      // }
 
-      log(await echo(bytes));
+      // log(await echo(bytes));
+
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+
+      log(decoder.decode(await echo(encoder.encode('Hello World!'))));
     }
   ],
   ['Get Server Status', () => getServerStatus()],
@@ -48,7 +45,7 @@ export const testFunctions = ({
   [
     'Register Admin User',
     async () => {
-      const user = await createAdminUser(
+      const user = await register(
         adminUser,
         adminFirstName,
         adminMiddleName,
@@ -71,14 +68,11 @@ export const testFunctions = ({
   ],
   [
     'Update User Name',
-    async () => {
-      const authentication = getAuthentication();
-
-      return await updateUser(getAuthentication(), authentication!.userId, {
+    () =>
+      updateUser({
         firstName: 'Test' + Date.now()
-      });
-    }
+      })
   ],
-  ['List Users', () => listUsers(getAuthentication())],
-  ['Is Authentication Valid?', () => isAuthenticationValid(getAuthentication()!)]
+  ['List Users', () => listUsers()],
+  ['Who Am I?', () => whoAmI()]
 ];

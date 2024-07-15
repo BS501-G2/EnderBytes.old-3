@@ -1,19 +1,18 @@
 <script lang="ts">
   import { Title, Awaiter, Button, ButtonClass } from '@rizzzi/svelte-commons';
   import { showSettingsDialog } from '../settings-dialog.svelte';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
-    import { getAuthentication } from '$lib/client/auth';
-    import { UserResolveType, type UserResolvePayload } from '@rizzzi/enderdrive-lib/shared';
+  import { UserResolveType, type UserResolvePayload } from '@rizzzi/enderdrive-lib/shared';
+  import { getConnection } from '$lib/client/client';
 
   const {
-    funcs: { getUser }
+    serverFunctions: { getUser }
   } = getConnection();
 
   export let resolve: UserResolvePayload;
   let userPromise: Promise<any> | null;
 
   async function load(): Promise<any | null> {
-    return await getUser(getAuthentication(), resolve)
+    return await getUser(resolve);
   }
 </script>
 

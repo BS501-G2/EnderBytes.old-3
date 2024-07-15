@@ -4,9 +4,8 @@
   import { type FileBrowserState, fileClipboard } from '../../../../file-browser.svelte';
   import { Awaiter, AwaiterResultType } from '@rizzzi/svelte-commons';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
-  import { getAuthentication } from '$lib/client/auth';
   import { FileType } from '@rizzzi/enderdrive-lib/shared';
+  import { getConnection } from '$lib/client/client';
 
   let {
     file,
@@ -27,7 +26,7 @@
   } = $props();
 
   const {
-    funcs: { readFile, getFileMimeType }
+    serverFunctions: { downloadFile, getFileMime }
   } = getConnection();
 </script>
 
@@ -50,11 +49,12 @@
 >
   <Awaiter
     callback={async () => {
-      const fileContent = await readFile(getAuthentication(), file.id);
-      const [type] = await getFileMimeType(getAuthentication(), file.id);
+      const [type] = await getFileMime(file.id);
 
       if (type.startsWith('image/')) {
+        const fileContent = await downloadFile(file.id);
         const url = URL.createObjectURL(new Blob([fileContent], { type }));
+
         return url;
       }
       return null;

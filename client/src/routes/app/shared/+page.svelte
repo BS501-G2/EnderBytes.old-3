@@ -9,15 +9,14 @@
   } from '@rizzzi/svelte-commons';
   import FileBrowser, { type FileBrowserState } from '../file-browser.svelte';
   import { writable, type Writable } from 'svelte/store';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
-  import { getAuthentication } from '$lib/client/auth';
+    import { getConnection } from '$lib/client/client';
 
   let refresh: Writable<AwaiterResetFunction<null>> = writable();
   const fileBrowserState: Writable<FileBrowserState> = writable({ isLoading: true });
   const errorStore: Writable<Error | null> = writable(null);
 
   const {
-    funcs: { listSharedFiles, getFile }
+    serverFunctions: { listSharedFiles, getFile }
   } = getConnection();
 </script>
 
@@ -27,12 +26,12 @@
     $fileBrowserState = { isLoading: true };
 
     try {
-      const fileAccesses = await listSharedFiles(getAuthentication());
+      const fileAccesses = await listSharedFiles();
 
       $fileBrowserState = {
         isLoading: false,
         files: await Promise.all(
-          fileAccesses.map((fileAccess) => getFile(getAuthentication(), fileAccess.fileId))
+          fileAccesses.map((fileAccess) => getFile(fileAccess.fileId))
         ),
         title: 'Shared Files'
       };

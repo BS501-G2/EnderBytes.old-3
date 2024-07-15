@@ -35,9 +35,9 @@
   import { fly } from 'svelte/transition';
   import { type FileBrowserState } from '../file-browser.svelte';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
-  import { FileType } from '@rizzzi/enderdrive-lib/shared';
-  import { getAuthentication } from '$lib/client/auth';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
+  import { getConnection } from '$lib/client/client';
+  import { fileBufferSize } from '@rizzzi/enderdrive-lib/shared';
+  import { executeBackgroundTask } from '$lib/background-task.svelte';
 
   const {
     fileBrowserState,
@@ -57,7 +57,7 @@
   }
 
   const {
-    funcs: { createFile, createFolder }
+    serverFunctions: { createFile, createFolder, feedUploadBuffer }
   } = getConnection();
 
   const tabs: [type: 'file' | 'folder', name: string, icon: string, description: string][] = [
@@ -129,19 +129,44 @@
           if ($fileBrowserState.isLoading) {
             return;
           }
+          if (files.length === 0) {
+            return;
+          }
+
           const newFiles: FileResource[] = [];
 
-          for (const file of files) {
-            const blob = new Blob([file], { type: file.type });
-            const newFile = await createFile(
-              getAuthentication(),
-              $fileBrowserState.file!.id,
-              file.name,
-              new Uint8Array(await blob.arrayBuffer())
-            );
+          const task = executeBackgroundTask(
+            files.length > 1 ? files[0].name : `${files.length} file(s)`,
+            true,
+            async (_, setStatus) => {
+              const totalSize = files.reduce((size, file) => size + file.size, 0);
+              const bufferSize = 1024 * 1024 * 1
+              let uploadedSize = 0;
 
-            newFiles.push(newFile);
-          }
+              setStatus('Uploading...', uploadedSize / totalSize);
+
+              for (const file of files) {
+                const blob = new Blob([file], { type: file.type });
+
+                for (let offset = 0; offset < blob.size; offset += bufferSize) {
+                  const buffer = blob.slice(offset, offset + bufferSize);
+
+                  await feedUploadBuffer(new Uint8Array(await buffer.arrayBuffer()));
+                  uploadedSize += buffer.size;
+
+                  setStatus('Uploading...', uploadedSize / totalSize);
+                }
+
+                const newFile = await createFile($fileBrowserState.file!.id, file.name);
+
+                newFiles.push(newFile);
+              }
+
+              setStatus('Upload Complete', null);
+            }
+          );
+
+          await task.run();
 
           onNewFiles(...newFiles.map((file) => file.id));
         }}
@@ -204,11 +229,7 @@
             return;
           }
 
-          const folder = await createFolder(
-            getAuthentication(),
-            $fileBrowserState.file!.id,
-            $newFolderName
-          );
+          const folder = await createFolder($fileBrowserState.file!.id, $newFolderName);
           onDismiss();
           onNewFolder(folder.id);
           $newFolderName = '';

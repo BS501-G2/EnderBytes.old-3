@@ -13,12 +13,11 @@
 
   import { fly } from 'svelte/transition';
   import PathChainEntry from './entry.svelte';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
-  import { getAuthentication } from '$lib/client/auth';
+  import { getConnection } from '$lib/client/client';
 
   const {
-    funcs: { getFile, scanFolder }
+    serverFunctions: { getFile, scanFolder }
   } = getConnection();
 
   const {
@@ -48,9 +47,9 @@
   <div class="path-chain-menu" transition:fly|global={{ duration: 200, x: -32 }}>
     <Awaiter
       callback={async (): Promise<FileResource[]> => {
-        const parentFolder = await getFile(getAuthentication(), pathChainMenu.fileId);
+        const parentFolder = await getFile(pathChainMenu.fileId);
 
-        return await scanFolder(getAuthentication(), parentFolder.id);
+        return await scanFolder(parentFolder.id);
       }}
     >
       {#snippet loading()}

@@ -1,5 +1,6 @@
 <script lang="ts" context="module">
   import type { UserResource } from '@rizzzi/enderdrive-lib/server';
+  import { getConnection } from './client';
 
   export enum UserClass {
     Link
@@ -20,12 +21,10 @@
 </script>
 
 <script lang="ts">
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
-
   const { ...props }: UserProps = $props();
 
   const {
-    funcs: { getUser }
+    serverFunctions: { getUser }
   } = getConnection();
 </script>
 

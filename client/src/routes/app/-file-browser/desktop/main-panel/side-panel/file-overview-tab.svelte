@@ -2,17 +2,15 @@
   import UserName from '$lib/client/user.svelte';
   import { Awaiter, Button, ButtonClass, LoadingSpinner } from '@rizzzi/svelte-commons';
   import { byteUnit } from '$lib/shared/utils';
-  import { getConnection } from '@rizzzi/enderdrive-lib/client';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
-  import { authentication, getAuthentication } from '$lib/client/auth';
   import { FileType, UserResolveType } from '@rizzzi/enderdrive-lib/shared';
-  import type { Snippet } from 'svelte';
   import VirusScanReportDialog, { pushVirusDialog } from './virus-scan-report-dialog.svelte';
+  import { getConnection } from '$lib/client/client';
 
   const { file }: { file: FileResource } = $props();
 
   const {
-    funcs: { getUser, scanFile, getFileSize, getFileMimeType }
+    serverFunctions: { getUser, listFileViruses, scanFolder, getFileSize, getFileMime }
   } = getConnection();
 </script>
 
@@ -44,10 +42,7 @@
         {#key file.id}
           <Awaiter
             callback={async () => {
-              const user = await getUser($authentication, [
-                UserResolveType.UserId,
-                file.ownerUserId
-              ]);
+              const user = await getUser([UserResolveType.UserId, file.ownerUserId]);
 
               return user;
             }}
@@ -68,7 +63,7 @@
         <p class="label">Size</p>
         <p class="value">
           {#key file.id}
-            <Awaiter callback={async () => getFileSize(getAuthentication(), file.id)}>
+            <Awaiter callback={async () => getFileSize(file.id)}>
               {#snippet loading()}
                 <LoadingSpinner size="1em" />
               {/snippet}
@@ -83,7 +78,7 @@
         <p class="label">Type</p>
         <p class="value">
           {#key file.id}
-            <Awaiter callback={async () => await getFileMimeType($authentication, file.id, false)}>
+            <Awaiter callback={async () => (await getFileMime(file.id))}>
               {#snippet loading()}
                 <LoadingSpinner size="1em" />
               {/snippet}
@@ -99,7 +94,7 @@
       <div class="details-row">
         <p class="label">Virus Scan</p>
         {#key file.id}
-          <Awaiter callback={async () => await scanFile($authentication, file.id)}>
+          <Awaiter callback={async () => await listFileViruses(file.id)}>
             {#snippet loading()}
               <p class="value">
                 <LoadingSpinner size="1em" />
@@ -134,10 +129,7 @@
           {#key file.id}
             <Awaiter
               callback={async () => {
-                const user = await getUser($authentication, [
-                  UserResolveType.UserId,
-                  file.creatorUserId
-                ]);
+                const user = await getUser([UserResolveType.UserId, file.creatorUserId]);
 
                 return user;
               }}

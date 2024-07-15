@@ -14,7 +14,7 @@
   import { type Writable, writable } from 'svelte/store';
 
   import { goto } from '$app/navigation';
-    import { getConnection } from '@rizzzi/enderdrive-lib/client';
+    import { getConnection } from '$lib/client/client';
 
   const tabs: TabItem[] = [
     {
@@ -114,7 +114,7 @@
             if (currentTabIndex !== tabs.length - 1) {
               setTab(currentTabIndex + 1);
             } else {
-              getConnection().funcs.createAdminUser(
+              getConnection().serverFunctions.register(
                 $username,
                 $firstName,
                 $middleName || null,

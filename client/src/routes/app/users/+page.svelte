@@ -1,9 +1,9 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { authentication } from '$lib/client/auth';
   import { UserResolveType, type UserResolvePayload } from '@rizzzi/enderdrive-lib/shared';
 
   import ProfilePage from './profile-page.svelte';
+  import { authentication } from '$lib/client/client';
 
   const parse = (): UserResolvePayload | null => {
     const idenfierString = $page.url.searchParams.get('id');
