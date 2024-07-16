@@ -106,7 +106,7 @@ export class MimeDetector extends Service<
         fileContent,
         fileSnapshot,
         0,
-        fileBufferSize
+        1024 * 1024
       )
     );
 

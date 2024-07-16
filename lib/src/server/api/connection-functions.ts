@@ -1,4 +1,11 @@
-import { Authentication, ConnectionFunctions, FileAccessLevel, UserAuthenticationType, UserResolvePayload, UserRole } from "../../shared.js";
+import {
+  Authentication,
+  ConnectionFunctions,
+  FileAccessLevel,
+  UserAuthenticationType,
+  UserResolvePayload,
+  UserRole,
+} from "../../shared.js";
 import { FileAccessResource } from "../db/file-access.js";
 import { FileLogResource } from "../db/file-log.js";
 import { FileSnapshotResource } from "../db/file-snapshot.js";
@@ -128,6 +135,17 @@ export interface ServerFunctions extends ConnectionFunctions {
   moveFile: (fileIds: number[], toParentId: number) => Promise<void>;
 
   copyFile: (fileIds: number[], toParentId: number) => Promise<void>;
+
+  restoreFile: (fileIds: number[], newParentId?: number) => Promise<void>;
+
+  trashFile: (fileIds: number[]) => Promise<void>;
+
+  purgeFile: (fileIds: number[]) => Promise<void>;
+
+  listTrashedFiles: (
+    offset?: number,
+    limit?: number
+  ) => Promise<FileResource[]>;
 
   listSharedFiles: (
     offset?: number,

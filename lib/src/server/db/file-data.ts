@@ -255,7 +255,7 @@ export class FileDataManager extends ResourceManager<
     position: number = 0,
     length: number = fileSnapshot.size
   ): Promise<Uint8Array> {
-    if (position >= fileSnapshot.size) {
+    if (position > fileSnapshot.size) {
       throw new Error("Position out of bounds");
     }
 

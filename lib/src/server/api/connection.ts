@@ -4,6 +4,8 @@ import {
   ApiErrorType,
   baseConnectionFunctions,
   FileAccessLevel,
+  fileBufferSize,
+  fileIoSize,
   FileLogType,
   FileType,
   SocketWrapper,
@@ -247,6 +249,9 @@ export class ServerConnection {
       }
     };
 
+    const currentUser = (authentication: UnlockedUserAuthentication) =>
+      resolveUser([UserResolveType.UserId, authentication.userId]);
+
     const serverFunctions: ServerFunctions = {
       ...baseConnectionFunctions,
 
@@ -394,7 +399,7 @@ export class ServerConnection {
         return {
           userId: user.id,
           userSessionId: unlockedSession.id,
-          userSessionKey: Buffer.from(unlockedSession.key).toString('base64'),
+          userSessionKey: Buffer.from(unlockedSession.key).toString("base64"),
         };
       },
 
@@ -913,12 +918,47 @@ export class ServerConnection {
             destinationFile: UnlockedFileResource
           ) => {
             if (sourceFile.type === FileType.File) {
+              const fileContent = await fileContentManager.getMain(file);
+              const fileSnapshot = await fileSnapshotManager.getLatest(
+                file,
+                fileContent
+              );
+
               const newFile = await fileManager.create(
                 authentication,
                 toParent,
                 file.name,
                 FileType.File
               );
+              const newFileContent = await fileContentManager.getMain(newFile);
+              const newFileSnapshot = await fileSnapshotManager.getMain(
+                newFile,
+                newFileContent
+              );
+
+              for (
+                let position = 0;
+                position < fileSnapshot.size;
+                position += fileIoSize
+              ) {
+                const buffer = await fileDataManager.readData(
+                  file,
+                  fileContent,
+                  fileSnapshot,
+                  position,
+                  fileIoSize
+                );
+
+                console.log(buffer);
+
+                await fileDataManager.writeData(
+                  newFile,
+                  newFileContent,
+                  newFileSnapshot,
+                  position,
+                  buffer
+                );
+              }
             } else if (sourceFile.type === FileType.Folder) {
               let newFolder: UnlockedFileResource;
 
@@ -964,6 +1004,74 @@ export class ServerConnection {
 
           await copy(file, toParent);
         }
+      },
+
+      trashFile: async (fileIds) => {
+        const authentication = requireAuthenticated(true);
+
+        for (const fileId of fileIds) {
+          const file = await getFile(
+            fileId,
+            authentication,
+            FileAccessLevel.Manage
+          );
+
+          if (file.deleted) {
+            return;
+          }
+
+          await fileManager.trash(file);
+        }
+      },
+
+      purgeFile: async (fileIds) => {
+        const authentication = requireAuthenticated(true);
+
+        for (const fileId of fileIds) {
+          const file = await getFile(
+            fileId,
+            authentication,
+            FileAccessLevel.Manage
+          );
+
+          if (!file.deleted) {
+            return;
+          }
+
+          await fileManager.delete(file);
+        }
+      },
+
+      restoreFile: async (fileIds, newParentId) => {
+        const authentication = requireAuthenticated(true);
+
+        for (const fileId of fileIds) {
+          const file = await getFile(
+            fileId,
+            authentication,
+            FileAccessLevel.Manage
+          );
+
+          await fileManager.untrash(
+            authentication,
+            file,
+            newParentId != null
+              ? await getFile(
+                  newParentId,
+                  authentication,
+                  FileAccessLevel.ReadWrite,
+                  FileType.Folder
+                )
+              : undefined
+          );
+        }
+      },
+
+      listTrashedFiles: async (offset, limit) => {
+        const authentication = requireAuthenticated(true);
+        const user = await currentUser(authentication);
+
+        return await fileManager.listTrashed(user, { offset, limit });
       },
 
       listSharedFiles: async (offset, limit) => {

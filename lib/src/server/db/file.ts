@@ -1,5 +1,5 @@
 import { Knex } from "knex";
-import { Resource, ResourceManager } from "../resource.js";
+import { QueryOptions, Resource, ResourceManager } from "../resource.js";
 import { Database } from "../database.js";
 import {
   FileNameVerificationFlag,
@@ -7,7 +7,7 @@ import {
   fileNameInvalidCharacters,
   fileNameLength,
 } from "../../shared/db/file.js";
-import { UserManager } from "./user.js";
+import { UserManager, UserResource } from "./user.js";
 import {
   UnlockedUserAuthentication,
   UserAuthenticationManager,
@@ -315,7 +315,7 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
     const files = await this.scanFolder(newParent);
 
     if (file.parentFileId == null) {
-      throw new Error("Cannot move  root folder");
+      throw new Error("Cannot move root folder");
     }
 
     if (files.find((f) => f.name === file.name)) {
@@ -359,6 +359,36 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
   public async trash(file: UnlockedFileResource): Promise<void> {
     await this.update(file, {
       deleted: true,
+    });
+  }
+
+  public async untrash(
+    authentication: UnlockedUserAuthentication,
+    file: UnlockedFileResource,
+    newFolder?: UnlockedFileResource
+  ): Promise<void> {
+    file = await this.unlock(
+      await this.update(file, {
+        deleted: false,
+      }),
+      authentication,
+      FileAccessLevel.Manage
+    );
+
+    if (newFolder != null) {
+      await this.move(file, newFolder);
+    }
+  }
+
+  public async listTrashed(
+    ownerUser: UserResource,
+
+    options?: Omit<QueryOptions<FileResource, FileManager>, "where">
+  ) {
+    return await this.read({
+      ...options,
+
+      where: [["ownerUserId", "=", ownerUser.id]],
     });
   }
 }

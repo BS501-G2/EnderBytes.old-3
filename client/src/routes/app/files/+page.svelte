@@ -33,7 +33,9 @@
       scanFolder,
       listFileAccess,
       getFilePathChain,
-      whoAmI
+      whoAmI,
+      copyFile,
+      trashFile
     }
   } = getConnection();
 
@@ -163,7 +165,22 @@
     {
       label: 'Delete',
       icon: 'fa-solid fa-trash',
-      action: async () => {},
+      action: async () => {
+        const fileIds = $selection.map((file) => file.id);
+
+        const task = executeBackgroundTask(
+          `Delete ${fileIds.length} file(s)`,
+          true,
+          async (_, setStatus) => {
+            await trashFile(fileIds);
+
+            setStatus(`${fileIds.length} file(s) moved to trash.`);
+          $refresh?.(true, null);
+          }
+        );
+
+        await task.run();
+      },
       group: 'actions',
       isVisible: (selection) => !$fileBrowserState.isLoading && selection.length > 0
     },
@@ -196,6 +213,11 @@
 
           if ($fileClipboard.isCut) {
             await moveFile(
+              $fileClipboard.files.map((file) => file.id),
+              $fileBrowserState.file.id
+            );
+          } else {
+            await copyFile(
               $fileClipboard.files.map((file) => file.id),
               $fileBrowserState.file.id
             );
