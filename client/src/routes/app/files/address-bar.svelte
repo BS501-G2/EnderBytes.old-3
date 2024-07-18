@@ -77,14 +77,14 @@
       <i class="fa-solid fa-caret-right"></i>
     </div>
 
-    <div class="name">{file.name}</div>
+    <div class="name">Target1</div>
   </div>
   <div class="entry">
     <div class="arrow">
       <i class="fa-solid fa-caret-right"></i>
     </div>
 
-    <div class="name">{file.name}</div>
+    <div class="name">Target2</div>
   </div>
 {/snippet}
 
