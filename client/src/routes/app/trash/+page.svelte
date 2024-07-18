@@ -1,11 +1,8 @@
 <script lang="ts">
-  import { Title } from '@rizzzi/svelte-commons';
-  import FileBrowser, { type FileBrowserState } from '../file-browser.svelte';
   import { writable, type Writable } from 'svelte/store';
+  import FileManager, { FileManagerMode, FileManagerPage } from '../files/file-manager.svelte';
 
-  const fileBrowserState: Writable<FileBrowserState> = writable({ isLoading: true });
+  const selection: Writable<number[]> = writable([]);
 </script>
 
-<Title title="Trash" />
-
-<FileBrowser {fileBrowserState} />
+<FileManager mode={FileManagerMode.FileExplorer} page={FileManagerPage.Trash} {selection} />
