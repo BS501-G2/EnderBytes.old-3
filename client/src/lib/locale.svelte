@@ -40,7 +40,6 @@
     if (locale == null || !(locale in LocaleType)) {
       const defaultLocale = LocaleType.en_US;
 
-      currentLocale.set(defaultLocale);
       return defaultLocale;
     }
 

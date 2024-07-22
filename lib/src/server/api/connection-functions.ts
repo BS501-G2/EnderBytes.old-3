@@ -132,6 +132,12 @@ export interface ServerFunctions extends ConnectionFunctions {
     snapshotId?: number
   ) => Promise<Uint8Array>;
 
+  getMyAccess: (fileId: number) => Promise<{
+    level: FileAccessLevel;
+
+    access: FileAccessResource | null;
+  }>;
+
   moveFile: (fileIds: number[], toParentId: number) => Promise<void>;
 
   copyFile: (fileIds: number[], toParentId: number) => Promise<void>;

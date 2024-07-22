@@ -28,14 +28,14 @@
 
     align-items: center;
 
-    img.title-image {
+    -webkit-app-region: drag;
+
+    > img.title-image {
       max-height: 16px;
       aspect-ratio: 1;
     }
 
-    -webkit-app-region: drag;
-
-    p.title-text {
+    > p.title-text {
       margin: 0px;
       font-size: 14px;
       font-weight: lighter;

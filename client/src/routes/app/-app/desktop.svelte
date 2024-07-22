@@ -97,6 +97,8 @@
 
     > div.right-panel {
       min-width: 0px;
+      min-height: 0px;
+
       flex-grow: 1;
 
       -webkit-app-region: no-drag;

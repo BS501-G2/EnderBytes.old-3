@@ -11,44 +11,130 @@
     Trash = 'trash'
   }
 
-  export type FileManagerOnPageCallback = (page: FileManagerPage) => void;
-  export type FileManagerOnFileIdCallback = (fileId: number | null) => void;
+  export type FileManagerOnPageCallback = (
+    event: MouseEvent & { currentTarget: HTMLButtonElement },
+    page: FileManagerPage
+  ) => void;
+
+  export type FileManagerOnFileIdCallback = (
+    event: (MouseEvent & { currentTarget: HTMLButtonElement }) | null,
+    fileId: number | null
+  ) => void;
+
+  export type FileManagerOnNewCallback = (
+    event: MouseEvent & { currentTarget: HTMLButtonElement }
+  ) => void;
+
+  export type FileManagerOnViewCallback = (
+    event: MouseEvent & { currentTarget: HTMLButtonElement }
+  ) => void;
+
+  export type FileManagerOnSidePanelCallback = (
+    event: MouseEvent & { currentTarget: HTMLButtonElement },
+    shown: boolean
+  ) => void;
+
+  export type FileManagerGetRefreshFunction = (func: () => void) => void;
+
   export type FileManagerProps = {
     selection: Writable<number[]>;
-    mode: FileManagerMode;
 
     onPage?: FileManagerOnPageCallback;
+    onFileId?: FileManagerOnFileIdCallback;
+    onView?: FileManagerOnViewCallback;
   } & (
     | {
         page: FileManagerPage.Files;
 
-        fileId: number | null;
-        onFileId: FileManagerOnFileIdCallback;
+        fileId: Readable<number | null>;
+
+        onNew?: FileManagerOnNewCallback;
       }
     | {
         page: FileManagerPage.Shared | FileManagerPage.Starred | FileManagerPage.Trash;
       }
-  );
+  ) &
+    (
+      | {
+          mode: FileManagerMode.FileExplorer;
+        }
+      | {
+          mode: FileManagerMode.FileBrowser;
+
+          onSelect?: (fileIds: number[]) => void;
+          onCancel?: () => void;
+        }
+    );
+
+  export function getOnPageCallback({ onPage }: FileManagerProps) {
+    return (
+      onPage ??
+      ((page) => {
+        goto('/app/' + page);
+      })
+    );
+  }
+
+  export function getOnFileIdCallback({ onFileId }: FileManagerProps) {
+    return (
+      onFileId ??
+      ((fileId) => {
+        goto(`/app/files?id=${fileId}`);
+      })
+    );
+  }
+
+  export interface FileManagerContext {
+    props: FileManagerProps;
+
+    sidePanel: Writable<boolean>;
+
+    mobileSelectMode: Writable<[selection: Writable<FileResource[]>] | null>;
+    desktopSelectMode: Writable<[capturedSelection: Writable<FileResource[]>] | null>;
+
+    files: Writable<FileResource[]>;
+
+    onRefresh: Writable<(() => void)[]>;
+    refresh: Writable<() => void>;
+  }
+
+  export const FileManagerContextName = 'file-manager-context';
 </script>
 
 <script lang="ts">
   import { goto } from '$app/navigation';
 
-  import Card from '$lib/ui/card.svelte';
   import { ResponsiveLayout, ViewMode, viewMode } from '@rizzzi/svelte-commons';
-  import type { Writable } from 'svelte/store';
-  import AddressBar from './address-bar.svelte';
-  import FileList from './file-list.svelte';
-  import SelectionBar from './selection-bar.svelte';
+  import { derived, writable, type Readable, type Writable } from 'svelte/store';
+  import FileManagerAddressBar from './file-manager-address-bar.svelte';
+  import FileManagerView from './file-manager-view.svelte';
+  import FileManagerSelectionBar from './file-manager-selection-bar.svelte';
+  import { onMount, setContext } from 'svelte';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 
-  const { ...props }: FileManagerProps = $props();
-  const { selection } = props;
+  const { refresh, ...props }: FileManagerProps & { refresh: Writable<() => void> } = $props();
+  const {
+    props: { selection },
+    onRefresh
+  } = setContext<FileManagerContext>(FileManagerContextName, {
+    props,
 
-  const onPage: FileManagerOnPageCallback =
-    props.onPage ??
-    ((page) => {
-      goto('/app/files/' + page);
-    });
+    mobileSelectMode: writable(null),
+    desktopSelectMode: writable(null),
+
+    sidePanel: writable(false),
+
+    files: writable([]),
+    onRefresh: writable([]),
+
+    refresh
+  });
+
+  $refresh = () => {
+    for (const refresh of $onRefresh) {
+      refresh();
+    }
+  };
 </script>
 
 <div
@@ -59,24 +145,24 @@
   <ResponsiveLayout>
     {#snippet mobile()}
       {#if props.page === FileManagerPage.Files}
-        <AddressBar {...props} />
+        <FileManagerAddressBar />
       {/if}
 
-      <FileList {...props} />
+      <FileManagerView />
 
       {#if $selection.length}
-        <SelectionBar {...props} />
+        <FileManagerSelectionBar />
       {/if}
     {/snippet}
     {#snippet desktop()}
       {#if props.page === FileManagerPage.Files}
-        <AddressBar {...props} />
+        <FileManagerAddressBar />
       {/if}
 
-      <FileList {...props} />
+      <FileManagerView />
 
       {#if $selection.length}
-        <SelectionBar {...props} />
+        <FileManagerSelectionBar />
       {/if}
     {/snippet}
   </ResponsiveLayout>
@@ -84,8 +170,9 @@
 
 <style lang="scss">
   div.file-manager {
-    min-height: 100%;
-    max-height: 100%;
+    flex-grow: 1;
+
+    min-height: 0px;
 
     display: flex;
     flex-direction: column;
@@ -96,6 +183,7 @@
     color: var(--onBackground);
 
     padding: 16px;
+    gap: 8px;
   }
 
   div.file-manager.mobile {

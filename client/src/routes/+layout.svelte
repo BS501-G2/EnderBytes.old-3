@@ -7,22 +7,23 @@
     Title,
     titleString,
     ColorScheme,
-    getColorHex
+    getColorHex,
+    currentColorScheme
   } from '@rizzzi/svelte-commons';
 </script>
 
 <svelte:head>
-  <meta name="theme-color" content={getColorHex(ColorKey.PrimaryContainer)} />
+  <meta name="theme-color" content={getColorHex($currentColorScheme, ColorKey.PrimaryContainer)} />
   <title>{$titleString}</title>
 </svelte:head>
 
 <Locale string={[[LocaleKey.AppName]]}>
-  {#snippet children([appName])}
+  {#snippet children([appName]: string[])}
     <Title title={appName} />
   {/snippet}
 </Locale>
 <ResetCSS />
-<ColorScheme />
+<ColorScheme colorScheme={$currentColorScheme} />
 <slot />
 
 <style lang="scss">

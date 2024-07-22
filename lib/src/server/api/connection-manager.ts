@@ -1,5 +1,6 @@
 import { Socket } from "socket.io";
 import {
+  LogLevel,
   Service,
   ServiceGetDataCallback,
   ServiceReadyCallback,

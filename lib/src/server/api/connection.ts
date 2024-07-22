@@ -875,6 +875,46 @@ export class ServerConnection {
           length
         );
       },
+
+      getMyAccess: async (fileId) => {
+        const authentication = requireAuthenticated(true);
+
+        const me = await currentUser(authentication);
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.None
+        );
+
+        if (file.ownerUserId === me.id) {
+          return { level: FileAccessLevel.Full, access: null };
+        }
+
+        const fileAccesses = await fileAccessManager.read({
+          where: [
+            ["userId", "=", me.id],
+            ["fileId", "=", file.id],
+          ],
+        });
+
+        const access = fileAccesses.reduce(
+          (highest: FileAccessResource | null, current) => {
+            if (highest == null) {
+              return current;
+            }
+
+            if (highest.level > current.level) {
+              return highest;
+            }
+
+            return current;
+          },
+          null
+        );
+
+        return { access, level: access?.level ?? FileAccessLevel.None };
+      },
+
       moveFile: async (fileIds, toParentId) => {
         const authentication = requireAuthenticated(true);
 

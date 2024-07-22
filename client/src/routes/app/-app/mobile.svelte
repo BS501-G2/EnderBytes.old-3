@@ -42,6 +42,10 @@
       flex-grow: 1;
 
       overflow-y: auto;
+
+      display: flex;
+
+      min-height: 0px;
     }
 
     > div.bottom-panel {
