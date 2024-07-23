@@ -311,7 +311,7 @@ export class FileDataManager extends ResourceManager<
       read += toRead;
     }
 
-    return Buffer.concat(output);
+    return Buffer.concat(output) as any;
   }
 
   public async readDataStream(

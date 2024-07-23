@@ -3,6 +3,12 @@
   import FileManager, { FileManagerMode, FileManagerPage } from '../files/file-manager.svelte';
 
   const selection: Writable<number[]> = writable([]);
+  const refresh: Writable<() => void> = writable(null as never);
 </script>
 
-<FileManager mode={FileManagerMode.FileExplorer} page={FileManagerPage.Shared} {selection} />
+<FileManager
+  mode={FileManagerMode.FileExplorer}
+  page={FileManagerPage.Shared}
+  {selection}
+  {refresh}
+/>

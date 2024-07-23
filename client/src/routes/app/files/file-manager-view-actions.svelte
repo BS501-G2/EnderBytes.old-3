@@ -13,7 +13,8 @@
   ) => void | Promise<void>;
 
   export type FileManagerViewActionGenerator = (
-    selection: number[]
+    selection: number[],
+    content: FileManagerContent
   ) => FileManagerViewAction | null | Promise<FileManagerViewAction | null>;
 
   export enum FileManagerViewActionCategory {
@@ -28,10 +29,11 @@
   import {
     FileManagerContextName,
     FileManagerPage,
+    type FileManagerContent,
     type FileManagerContext,
     type FileManagerProps
   } from './file-manager.svelte';
-  import { derived, get, writable, type Writable } from 'svelte/store';
+  import { derived, get, writable, type Readable, type Writable } from 'svelte/store';
   import { getConnection } from '$lib/client/client';
   import { FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
   import { getContext } from 'svelte';
@@ -41,10 +43,10 @@
   const minPixelCount = 256;
 
   const {
-    serverFunctions: { isFileStarred, getMyAccess, getFile, whoAmI }
+    serverFunctions: { isFileStarred, getMyAccess, getFile, whoAmI, setFileStar }
   } = getConnection();
 
-  const { mobileSelectMode, desktopSelectMode, onRefresh } =
+  const { mobileSelectMode, desktopSelectMode, refreshKey, content } =
     getContext<FileManagerContext>(FileManagerContextName);
 
   const actionCallbacks = derived(
@@ -86,7 +88,9 @@
             icon: `fa-${isStarred ? 'solid' : 'regular'} fa-star`,
             category: FileManagerViewActionCategory.FileAction,
 
-            action: () => {}
+            action: async () => {
+              await Promise.all(selection.map((fileId) => setFileStar(fileId, !isStarred)));
+            }
           };
         });
       }
@@ -113,13 +117,8 @@
     }
   );
 
-  const refreshKey: Writable<number> = writable(0);
-
-  onRefresh.update((onRefresh) => {
-    onRefresh.push(() => refreshKey.update((value) => value + 1));
-
-    return onRefresh;
-  });
+  const fileId: Readable<number | null> =
+    props.page === FileManagerPage.Files ? props.fileId : writable(null);
 </script>
 
 {#snippet buttons()}
@@ -148,12 +147,15 @@
   {/snippet}
 
   <Awaiter
-    callback={async (): Promise<FileManagerViewAction[]> =>
-      (
+    callback={async (): Promise<FileManagerViewAction[]> => {
+      return (
         await Promise.all(
-          $actionCallbacks.map(async (actionCallback) => await actionCallback($selection))
+          $actionCallbacks.map(
+            async (actionCallback) => await actionCallback($selection, await $content!)
+          )
         )
-      ).filter((action) => action != null)}
+      ).filter((action) => action != null);
+    }}
   >
     {#snippet success({ result: actions }: { result: FileManagerViewAction[] })}
       {@const newActions = actions.filter(
@@ -193,7 +195,7 @@
 {#snippet key()}
   {#key $refreshKey}
     {#if props.page === FileManagerPage.Files}
-      {#key props.fileId}
+      {#key $fileId}
         {@render buttons()}
       {/key}
     {:else}
@@ -230,6 +232,10 @@
   }
 
   div.actions.mobile {
+    min-height: 48px;
+    min-width: 0;
+
+    overflow: auto hidden;
   }
 
   button.action {

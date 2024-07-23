@@ -164,7 +164,7 @@
   }
 
   div.dialog.desktop {
-    min-width: min(512px, 100vw - 64px);
+    min-width: min(512px, 100dvw - 64px);
   }
 
   div.tab-host {

@@ -150,7 +150,7 @@
 
           <button class="tab-entry" class:active={tabs[currentIndex] === tab} onclick={switchToTab}>
             <p>
-              {tab.name}
+              <b>{tab.name}</b>
             </p>
           </button>
         {/each}
@@ -270,7 +270,7 @@
   }
 
   div.selected-files.desktop {
-    max-height: calc(100vh - 512px);
+    max-height: calc(100dvh - 512px);
   }
 
   div.selected-files {

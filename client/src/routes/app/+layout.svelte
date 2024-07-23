@@ -33,4 +33,8 @@
   div.top-loading {
     height: 0px;
   }
+
+  :root {
+    overflow: hidden auto;
+  }
 </style>

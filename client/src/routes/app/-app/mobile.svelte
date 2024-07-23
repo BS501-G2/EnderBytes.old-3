@@ -19,8 +19,8 @@
   div.panel-container {
     -webkit-app-region: no-drag;
 
-    width: 100vw;
-    height: 100vh;
+    width: 100dvw;
+    height: 100dvh;
 
     display: flex;
 
@@ -54,6 +54,9 @@
       padding: 8px;
 
       background-color: var(--primaryContainer);
+
+      overflow: auto hidden;
+      min-height: 0;
     }
   }
 </style>

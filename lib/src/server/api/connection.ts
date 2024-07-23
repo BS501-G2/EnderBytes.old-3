@@ -119,7 +119,7 @@ export class ServerConnection {
       const buffer = Buffer.concat(buffers);
       buffers.splice(0, buffers.length);
 
-      return buffer;
+      return buffer as any;
     };
 
     const [
@@ -280,7 +280,7 @@ export class ServerConnection {
           try {
             const unlockedSession = userSessionManager.unlock(
               userSession,
-              Buffer.from(userSessionKey, "base64")
+              Buffer.from(userSessionKey, "base64") as any
             );
 
             const userAuthentication = await userAuthenticationManager.getById(
@@ -323,7 +323,7 @@ export class ServerConnection {
             try {
               const unlockedSession = userSessionManager.unlock(
                 userSession,
-                Buffer.from(userSessionKey, "base64")
+                Buffer.from(userSessionKey, "base64") as any
               );
 
               const userAuthentication =
@@ -496,9 +496,10 @@ export class ServerConnection {
         const authentication = requireAuthenticated(true);
 
         if (getUploadBufferSize() === 0) {
-          ApiError.throw(ApiErrorType.InvalidRequest, "File cannot  be empty");
+          ApiError.throw(ApiErrorType.InvalidRequest, "File cannot be empty");
         }
 
+        const buffer = consumeUploadBuffer();
         const folder = await getFile(
           folderId,
           authentication,
@@ -523,7 +524,7 @@ export class ServerConnection {
           fileContent,
           fileSnapshot,
           0,
-          consumeUploadBuffer()
+          buffer
         );
 
         const user = await resolveUser([
@@ -792,13 +793,27 @@ export class ServerConnection {
         return logs;
       },
 
-      feedUploadBuffer: async (buffer) => feedUploadBuffer(buffer),
+      feedUploadBuffer: async (buffer) => {
+        requireAuthenticated(true);
 
-      getUploadBufferSize: async () => getUploadBufferSize(),
+        return feedUploadBuffer(buffer);
+      },
 
-      getUploadBufferSizeLimit: async () => bufferLimit,
+      getUploadBufferSize: async () => {
+        requireAuthenticated(true);
+
+        return getUploadBufferSize();
+      },
+
+      getUploadBufferSizeLimit: async () => {
+        requireAuthenticated(true);
+
+        return bufferLimit;
+      },
 
       clearUploadBuffer: async () => {
+        requireAuthenticated(true);
+
         consumeUploadBuffer();
       },
 

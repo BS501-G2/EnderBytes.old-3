@@ -100,7 +100,7 @@
   div.error-message {
     color: var(--error);
 
-    min-width: min(720px, 100vw - 64px);
+    min-width: min(720px, 100dvw - 64px);
   }
 
   div.container {

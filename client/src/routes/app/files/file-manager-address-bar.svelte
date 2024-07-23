@@ -2,38 +2,38 @@
 </script>
 
 <script lang="ts">
-  import { Awaiter, ResponsiveLayout, ViewMode, viewMode } from '@rizzzi/svelte-commons';
   import {
+    Awaiter,
+    LoadingSpinner,
+    ResponsiveLayout,
+    ViewMode,
+    viewMode
+  } from '@rizzzi/svelte-commons';
+  import {
+    FileManagerContentName,
     FileManagerContextName,
     FileManagerPage,
+    type FileManagerContent,
+    type FileManagerContentContext,
     type FileManagerContext
   } from './file-manager.svelte';
   import { getConnection } from '$lib/client/client';
   import type { FileResource, UserResource } from '@rizzzi/enderdrive-lib/server';
   import { getContext, type Snippet } from 'svelte';
+  import { writable, type Writable } from 'svelte/store';
 
   const {
     props,
-    props: { fileId }
+    props: { onFileId },
+
+    addressBarMenu,
+
+    refreshKey
   } = getContext<FileManagerContext & { props: { page: FileManagerPage.Files } }>(
     FileManagerContextName
   );
 
-  const {
-    serverFunctions: { getFilePathChain, getFile, whoAmI }
-  } = getConnection();
-
-  async function get(): Promise<[me: UserResource, files: FileResource[]]> {
-    if (props.page !== FileManagerPage.Files) {
-      throw new Error('Not available in page');
-    }
-
-    const user = (await whoAmI())!;
-    const file = await getFile($fileId);
-    const filePathChain = await getFilePathChain(file.id);
-
-    return [user, filePathChain];
-  }
+  const content = getContext<Writable<FileManagerContentContext>>(FileManagerContentName);
 </script>
 
 {#snippet rootFile(me: UserResource, file: FileResource | null = null)}
@@ -73,7 +73,12 @@
     class:desktop={$viewMode & ViewMode.Desktop}
     class:mobile={$viewMode & ViewMode.Mobile}
   >
-    <button class="arrow" onclick={() => {}}>
+    <button
+      class="arrow"
+      onclick={({ currentTarget }) => {
+        $addressBarMenu = [currentTarget, parent?.id ?? null];
+      }}
+    >
       <ResponsiveLayout>
         {#snippet desktop()}
           <i class="fa-solid fa-caret-right"></i>
@@ -84,7 +89,12 @@
       </ResponsiveLayout>
     </button>
 
-    <button class="name">{file.name}</button>
+    <button
+      class="name"
+      onclick={(event) => {
+        onFileId?.(event, file.id);
+      }}>{file.name}</button
+    >
   </div>
 {/snippet}
 
@@ -104,20 +114,40 @@
 {/snippet}
 
 {#snippet getFiles(view: Snippet<[me: UserResource, files: FileResource[]]>)}
-  {#key props.fileId}
-    <Awaiter callback={get}>
-      {#snippet success({
-        result: [me, files]
-      }: {
-        result: [me: UserResource, files: FileResource[]];
-      })}
-        {@render view(me, files)}
+  {#key $refreshKey}
+    <Awaiter
+      callback={async (): Promise<FileManagerContent | null> => {
+        if ($content == null) {
+          return null;
+        }
+
+        return await $content;
+      }}
+    >
+      {#snippet success({ result })}
+        {#if result != null && result.page === 'files'}
+          {@const { me, filePathChain } = result}
+
+          {@render view(me, filePathChain)}
+        {/if}
+      {/snippet}
+
+      {#snippet loading()}
+        <div class="loading">
+          <LoadingSpinner size="1.2em" />
+
+          <p>Loading...</p>
+        </div>
       {/snippet}
     </Awaiter>
   {/key}
 {/snippet}
 
-<div class="container" class:desktop={$viewMode & ViewMode.Desktop}>
+<div
+  class="container"
+  class:desktop={$viewMode & ViewMode.Desktop}
+  class:mobile={$viewMode & ViewMode.Mobile}
+>
   <ResponsiveLayout>
     {#snippet mobile()}
       <div class="mobile-bar">
@@ -142,6 +172,12 @@
 
   div.container.desktop {
     border-radius: 8px;
+
+    min-height: calc(1.2em + 24px);
+  }
+
+  div.container.mobile {
+    min-height: calc(1.2em + 25px);
   }
 
   div.mobile-bar {
@@ -175,6 +211,8 @@
     display: flex;
     flex-direction: row;
 
+    align-items: center;
+
     min-height: calc(1.2em + 8px);
     max-height: calc(1.2em + 8px);
 
@@ -186,6 +224,15 @@
 
     background-color: var(--backgroundVariant);
     color: var(--onBackgroundVariant);
+  }
+
+  div.loading {
+    display: flex;
+    flex-direction: row;
+
+    gap: 8px;
+
+    align-items: center;
   }
 
   div.root-card {

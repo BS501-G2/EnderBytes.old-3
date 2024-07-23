@@ -32,10 +32,10 @@
 
 <style lang="scss">
   div.backdrop {
-    min-width: 100vw;
-    min-height: 100vh;
-    max-width: 100vw;
-    max-height: 100vh;
+    min-width: 100dvw;
+    min-height: 100dvh;
+    max-width: 100dvw;
+    max-height: 100dvh;
 
     display: flex;
 
@@ -51,10 +51,10 @@
     > div.viewport {
       flex-grow: 1;
 
-      min-width: 100vw;
-      min-height: 100vh;
-      max-width: 100vw;
-      max-height: 100vh;
+      min-width: 100dvw;
+      min-height: 100dvh;
+      max-width: 100dvw;
+      max-height: 100dvh;
 
       display: flex;
       padding: 8px;

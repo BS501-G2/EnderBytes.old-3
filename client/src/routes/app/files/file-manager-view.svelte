@@ -56,6 +56,7 @@
 
   div.view.desktop {
     min-height: 0px;
+    min-width: 0;
 
     border-radius: 8px;
     padding: 4px 8px;
@@ -68,6 +69,8 @@
 
     display: flex;
     flex-direction: row;
+
+    min-height: 0;
 
     gap: 8px;
   }

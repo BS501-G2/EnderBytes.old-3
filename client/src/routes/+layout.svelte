@@ -42,7 +42,7 @@
     -webkit-app-region: drag;
 
     margin: unset;
-    min-height: 100vh;
+    min-height: 100dvh;
     background-color: var(--background);
   }
 </style>

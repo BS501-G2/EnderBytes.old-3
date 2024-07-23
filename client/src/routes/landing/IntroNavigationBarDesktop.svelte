@@ -75,7 +75,7 @@
     justify-content: center;
     align-items: center;
 
-    width: 100vw;
+    width: 100dvw;
 
     position: fixed;
     left: 0px;

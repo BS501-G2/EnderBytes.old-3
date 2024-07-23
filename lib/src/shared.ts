@@ -8,7 +8,6 @@ export * from "./shared/api.js";
 export * from "./shared/bytes.js";
 export * from "./shared/connection.js";
 export * from "./shared/logger.js";
-export * from "./shared/serializer.js";
 export * from "./shared/service.js";
 export * from "./shared/task-queue.js";
 

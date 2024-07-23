@@ -145,7 +145,7 @@
   }
 
   div.tab-view {
-    min-width: min(100vw, 512px);
+    min-width: min(100dvw, 512px);
 
     display: flex;
     flex-direction: column;
