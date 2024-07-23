@@ -1,151 +1,4 @@
 <script lang="ts" context="module">
-  export enum FileManagerMode {
-    FileExplorer,
-    FileBrowser
-  }
-
-  export enum FileManagerPage {
-    Files = 'files',
-    Shared = 'shared',
-    Starred = 'starred',
-    Trash = 'trash'
-  }
-
-  export type FileManagerOnPageCallback = (
-    event: MouseEvent & { currentTarget: HTMLButtonElement },
-    page: FileManagerPage
-  ) => void;
-
-  export type FileManagerOnFileIdCallback = (
-    event: (MouseEvent & { currentTarget: HTMLButtonElement }) | null,
-    fileId: number | null
-  ) => void;
-
-  export type FileManagerOnNewCallback = (
-    event: MouseEvent & { currentTarget: HTMLButtonElement }
-  ) => void;
-
-  export type FileManagerOnViewCallback = (
-    event: MouseEvent & { currentTarget: HTMLButtonElement }
-  ) => void;
-
-  export type FileManagerOnSidePanelCallback = (
-    event: MouseEvent & { currentTarget: HTMLButtonElement },
-    shown: boolean
-  ) => void;
-
-  export type FileManagerGetRefreshFunction = (func: () => void) => void;
-
-  export type FileManagerProps = {
-    selection: Writable<number[]>;
-
-    onPage?: FileManagerOnPageCallback;
-    onFileId?: FileManagerOnFileIdCallback;
-    onView?: FileManagerOnViewCallback;
-  } & (
-    | {
-        page: FileManagerPage.Files;
-
-        fileId: Readable<number | null>;
-
-        onNew?: FileManagerOnNewCallback;
-      }
-    | {
-        page: FileManagerPage.Shared | FileManagerPage.Starred | FileManagerPage.Trash;
-      }
-  ) &
-    (
-      | {
-          mode: FileManagerMode.FileExplorer;
-        }
-      | {
-          mode: FileManagerMode.FileBrowser;
-
-          onSelect?: (fileIds: number[]) => void;
-          onCancel?: () => void;
-        }
-    );
-
-  export function getOnPageCallback({ onPage }: FileManagerProps) {
-    return (
-      onPage ??
-      ((page) => {
-        goto('/app/' + page);
-      })
-    );
-  }
-
-  export function getOnFileIdCallback({ onFileId }: FileManagerProps) {
-    return (
-      onFileId ??
-      ((fileId) => {
-        goto(`/app/files?id=${fileId}`);
-      })
-    );
-  }
-
-  export interface FileManagerContext {
-    props: FileManagerProps;
-
-    sidePanel: Writable<boolean>;
-
-    mobileSelectMode: Writable<[selection: Writable<FileResource[]>] | null>;
-    desktopSelectMode: Writable<[capturedSelection: Writable<FileResource[]>] | null>;
-
-    refreshKey: Writable<number>;
-    refresh: Writable<() => void>;
-
-    addressBarMenu: Writable<[sourceElement: HTMLButtonElement, fileId: number | null] | null>;
-
-    content: Writable<FileManagerContentContext>
-  }
-
-  export type FileManagerContent = (
-    | ({
-        page: 'files';
-        file: FileResource;
-        filePathChain: FileResource[];
-        myAccess: {
-          level: FileAccessLevel;
-          access: FileAccessResource | null;
-        };
-        accesses: FileAccessResource[];
-        logs: FileLogResource[];
-      } & (
-        | {
-            type: 'file';
-            viruses: string[];
-            snapshots: FileSnapshotResource[];
-          }
-        | {
-            type: 'folder';
-            files: FileResource[];
-          }
-      ))
-    | {
-        page: 'shared' | 'trashed' | 'starred';
-
-        files: FileResource[];
-      }
-  ) & {
-    me: UserResource;
-  };
-
-  export type FileManagerContentContext = Promise<FileManagerContent> | null;
-
-  export const FileManagerContextName = 'file-manager-context';
-  export const FileManagerContentName = 'file-manager-content';
-</script>
-
-<script lang="ts">
-  import { goto } from '$app/navigation';
-
-  import { Awaiter, ResponsiveLayout, ViewMode, viewMode } from '@rizzzi/svelte-commons';
-  import { writable, type Readable, type Writable } from 'svelte/store';
-  import FileManagerAddressBar from './file-manager-address-bar.svelte';
-  import FileManagerView from './file-manager-view.svelte';
-  import FileManagerSelectionBar from './file-manager-selection-bar.svelte';
-  import { setContext } from 'svelte';
   import type {
     FileAccessResource,
     FileLogResource,
@@ -153,82 +6,141 @@
     FileSnapshotResource,
     UserResource
   } from '@rizzzi/enderdrive-lib/server';
+  import { FileType, type FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
+  import { setContext, type Snippet } from 'svelte';
+  import { writable, type Readable, type Writable } from 'svelte/store';
+
+  export type SourceEvent = MouseEvent;
+
+  export type FileManagerOnFileIdCallback = (event: SourceEvent, fileId: number | null) => void;
+  export type FileManagerOnPageCallback = (
+    event: SourceEvent,
+    page: 'files' | 'shared' | 'trashed' | 'starred'
+  ) => void;
+
+  export type FileManagerProps = {
+    refresh: Writable<() => void>;
+
+    onFileId: FileManagerOnFileIdCallback;
+    onPage: FileManagerOnPageCallback;
+  } & (
+    | {
+        page: 'files';
+
+        fileId: Readable<number | null>;
+      }
+    | {
+        page: 'shared' | 'starred' | 'trash';
+      }
+  );
+
+  export type FileManagerResolved =
+    | {
+        status: 'loading';
+      }
+    | {
+        status: 'error';
+        error: Error;
+      }
+    | ({
+        status: 'success';
+        me: UserResource;
+      } & (
+        | ({
+            page: 'files';
+
+            file: FileResource;
+            filePathChain: FileResource[];
+            myAccess: {
+              level: FileAccessLevel;
+              access: FileAccessResource | null;
+            };
+            accesses: FileAccessResource[];
+            logs: FileLogResource[];
+          } & (
+            | {
+                type: 'file';
+
+                viruses: string[];
+                snapshots: FileSnapshotResource[];
+              }
+            | {
+                type: 'folder';
+
+                files: FileResource[];
+                selection: Writable<[event: SourceEvent, files: FileResource[]] | null>;
+              }
+          ))
+        | {
+            page: 'shared' | 'starred' | 'trash';
+
+            files: FileResource[];
+            selection: Writable<[event: SourceEvent, files: FileResource[]] | null>;
+          }
+      ));
+
+  export interface FileManagerContext {
+    refreshKey: Writable<number>;
+
+    resolved: Writable<FileManagerResolved>;
+  }
+
+  export const FileManagerContextName = 'fm-context';
+</script>
+
+<script lang="ts">
+  import {
+    Awaiter,
+    Button,
+    ButtonClass,
+    LoadingSpinner,
+    ResponsiveLayout,
+    ViewMode,
+    viewMode
+  } from '@rizzzi/svelte-commons';
   import { getConnection } from '$lib/client/client';
 
-  import { FileAccessLevel, FileType } from '@rizzzi/enderdrive-lib/shared';
+  const { ...props }: FileManagerProps = $props();
+  const { refresh, onFileId, onPage } = props;
 
   const {
     serverFunctions: {
       whoAmI,
-
       getFile,
-      getMyAccess,
-
       getFilePathChain,
-
+      getMyAccess,
       listFileAccess,
       listFileLogs,
       listFileSnapshots,
       listFileViruses,
-      scanFolder,
-
       listSharedFiles,
-      listTrashedFiles,
       listStarredFiles,
-
-      isFileStarred
+      listTrashedFiles,
+      scanFolder
     }
   } = getConnection();
 
-  const { refresh, ...props }: FileManagerProps & { refresh: Writable<() => void> } = $props();
-  const onRefresh: Writable<(() => void)[]> = writable([]);
-  const refreshKey = writable(0);
-
-  onRefresh.update((onRefresh) => {
-    onRefresh.push(() => refreshKey.update((value) => value + 1));
-
-    return onRefresh;
+  const { refreshKey, resolved } = setContext<FileManagerContext>(FileManagerContextName, {
+    refreshKey: writable(0),
+    resolved: writable({ status: 'loading' })
   });
 
-  const {
-    props: { selection }, content
-  } = setContext<FileManagerContext>(FileManagerContextName, {
-    props,
+  refresh.set(() => refreshKey.update((value) => value + 1));
 
-    mobileSelectMode: writable(null),
-    desktopSelectMode: writable(null),
+  const fileId = props.page === 'files' ? props.fileId : writable(null);
 
-    sidePanel: writable(false),
-
-    refresh,
-    refreshKey,
-
-    addressBarMenu: writable(null),
-
-    content: writable(null)
-  });
-
-  const fileId = props.page === FileManagerPage.Files ? props.fileId : writable(null);
-
-  $refresh = () => {
-    for (const refresh of $onRefresh) {
-      console.log('executing');
-      refresh();
-    }
-  };
-
-  fileId.subscribe(() => {
-    $refresh();
-  });
+  fileId.subscribe(() => $refresh());
 </script>
 
-{#snippet contentResolver()}
+{#key $refreshKey}
   <Awaiter
-    callback={() =>
-      ($content = (async (): Promise<FileManagerContent> => {
+    callback={async () => {
+      $resolved = { status: 'loading' };
+
+      try {
         const me = (await whoAmI())!;
 
-        if (props.page === FileManagerPage.Files) {
+        if (props.page === 'files') {
           const file = await getFile($fileId);
           const [filePathChain, myAccess, accesses, logs] = await Promise.all([
             getFilePathChain(file.id),
@@ -243,128 +155,341 @@
               listFileSnapshots(file.id)
             ]);
 
-            return {
+            $resolved = {
               me,
               page: 'files',
-              type: 'file',
+              status: 'success',
               file,
               filePathChain,
               myAccess,
               accesses,
               logs,
-              snapshots,
-              viruses
+              type: 'file',
+              viruses,
+              snapshots
             };
           } else if (file.type === FileType.Folder) {
             const files = await scanFolder(file.id);
 
-            return {
+            $resolved = {
               me,
               page: 'files',
-              type: 'folder',
+              status: 'success',
               file,
               filePathChain,
               myAccess,
               accesses,
               logs,
-              files
+              type: 'folder',
+              files,
+              selection: writable(null)
             };
           }
-        } else if (props.page === FileManagerPage.Shared) {
-          const sharedList = await listSharedFiles();
-          const files = await Promise.all(
-            sharedList.map((sharedEntry) => getFile(sharedEntry.fileId))
-          );
+        } else if (props.page === 'shared') {
+          const shareList = await listSharedFiles();
+          const files = await Promise.all(shareList.map((sharedFile) => getFile(sharedFile.id)));
 
-          return {
+          $resolved = {
             me,
+            status: 'success',
             page: 'shared',
-            files
+            files,
+            selection: writable(null)
           };
-        } else if (props.page === FileManagerPage.Trash) {
-          const files = await listTrashedFiles();
-
-          return {
-            me,
-            page: 'trashed',
-            files
-          };
-        } else if (props.page === FileManagerPage.Starred) {
+        } else if (props.page === 'starred') {
           const starredList = await listStarredFiles();
           const files = await Promise.all(
-            starredList.map((starredEntry) => getFile(starredEntry.fileId))
+            starredList.map((starredFile) => getFile(starredFile.id))
           );
 
-          return {
+          $resolved = {
             me,
+            status: 'success',
             page: 'starred',
-            files
+            files,
+            selection: writable(null)
+          };
+        } else if (props.page === 'trash') {
+          const files = await listTrashedFiles();
+
+          $resolved = {
+            me,
+            status: 'success',
+            page: 'trash',
+            files,
+            selection: writable(null)
           };
         }
-
-        throw new Error('Invalid content details');
-      })())}
+      } catch (error: unknown) {
+        $resolved = { status: 'error', error: error as Error };
+      }
+    }}
   />
-{/snippet}
-
-{#key $refreshKey}
-  {#key $fileId}
-    {@render contentResolver()}
-  {/key}
 {/key}
 
-<div
-  class="file-manager"
-  class:desktop={($viewMode & ViewMode.Desktop) !== 0}
-  class:mobile={($viewMode & ViewMode.Mobile) !== 0}
->
-  <ResponsiveLayout>
-    {#snippet mobile()}
-      {#if props.page === FileManagerPage.Files}
-        <FileManagerAddressBar />
-      {/if}
+<ResponsiveLayout>
+  {#snippet mobile()}
+    <div class="mobile file-manager">
+      {@render view()}
+    </div>
+  {/snippet}
 
-      <FileManagerView />
+  {#snippet desktop()}
+    <div class="desktop file-manager">
+      {@render view()}
+    </div>
+  {/snippet}
+</ResponsiveLayout>
 
-      {#if $selection.length}
-        <FileManagerSelectionBar />
-      {/if}
+{#snippet view()}
+  {#if props.page === 'files'}
+    {@render addressBar()}
+  {/if}
+{/snippet}
+
+{#snippet addressBar()}
+  {#snippet rootButton(me: UserResource, root: FileResource | null)}
+    {@const isLocal = root == null || root.ownerUserId === me.id}
+
+    {#snippet button(icon: string, name: string)}
+      <i class="fa-solid {icon}"></i>
+      <ResponsiveLayout>
+        {#snippet desktop()}
+          <p class="address-bar-root-button">{name}</p>
+        {/snippet}
+      </ResponsiveLayout>
     {/snippet}
-    {#snippet desktop()}
-      {#if props.page === FileManagerPage.Files}
-        <FileManagerAddressBar />
+
+    <Button
+      onClick={(event) => onFileId(event, null)}
+      buttonClass={isLocal ? ButtonClass.Transparent : ButtonClass.Primary}
+      outline={false}
+      container={buttonContainer}
+    >
+      {#if isLocal}
+        {@render button('fa-regular fa-folder-open', 'My Files')}
+      {:else}
+        {@render button('fa-solid fa-user-group', root.name)}
+      {/if}
+    </Button>
+  {/snippet}
+
+  {#snippet entryButton(file: FileResource)}
+    <div class="address-bar-entry" class:desktop={$viewMode & ViewMode.Desktop}>
+      {#if $viewMode & ViewMode.Desktop}
+        <button class="arrow">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      {:else}
+        <div class="arrow">
+          <i class="fa-solid fa-caret-right"></i>
+        </div>
       {/if}
 
-      <FileManagerView />
+      <button class="file">{file.name}</button>
+    </div>
+  {/snippet}
 
-      {#if $selection.length}
-        <FileManagerSelectionBar />
+  {#snippet view()}
+    {#if $resolved.status === 'loading'}
+      <div class="address-bar-loading">
+        <LoadingSpinner size="1.2em" />
+        <p>Loading...</p>
+      </div>
+    {:else if $resolved.status === 'success' && $resolved.page === 'files'}
+      {@const [rootFile, ...filePathChain] = $resolved.filePathChain}
+
+      {@render rootButton($resolved.me, rootFile)}
+
+      {#if filePathChain.length > 0}
+        <div class="vertical separator with-margin"></div>
       {/if}
-    {/snippet}
-  </ResponsiveLayout>
-</div>
+
+      <div class="address-bar-path-chain">
+        {#each filePathChain as entry}
+          {@render entryButton(entry)}
+        {/each}
+      </div>
+    {/if}
+  {/snippet}
+
+  <div
+    class="address-bar"
+    class:mobile={$viewMode & ViewMode.Mobile}
+    class:desktop={$viewMode & ViewMode.Desktop}
+  >
+    {@render view()}
+  </div>
+
+  {#if $viewMode & ViewMode.Mobile}
+    <div class="horizontal separator"></div>
+  {/if}
+{/snippet}
+
+{#snippet buttonContainer(view: Snippet)}
+  <div class="button-container">{@render view()}</div>
+{/snippet}
 
 <style lang="scss">
   div.file-manager {
     flex-grow: 1;
 
-    min-height: 0px;
-    min-width: 0;
-
     display: flex;
     flex-direction: column;
+
+    min-width: 0px;
+    min-height: 0px;
   }
 
   div.file-manager.desktop {
-    background-color: var(--background);
-    color: var(--onBackground);
-
     padding: 16px;
-    gap: 8px;
   }
 
   div.file-manager.mobile {
     background-color: var(--backgroundVariant);
     color: var(--onBackgroundVariant);
+  }
+
+  div.address-bar {
+    display: flex;
+    flex-direction: row;
+
+    min-height: calc(24px + 1em);
+    line-height: 1em;
+
+    min-width: 0px;
+  }
+
+  div.address-bar.mobile {
+  }
+
+  div.address-bar.desktop {
+    background-color: var(--backgroundVariant);
+    color: var(--onBackgroundVariant);
+
+    border-radius: 8px;
+  }
+
+  div.address-bar-path-chain {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+
+    // align-items: center;
+
+    overflow: auto hidden;
+
+    min-width: 0px;
+
+    padding: 0px 8px;
+  }
+
+  div.address-bar-loading {
+    display: flex;
+    flex-direction: row;
+
+    align-items: center;
+
+    gap: 8px;
+    padding: 0px 8px;
+  }
+
+  p.address-bar-root-button {
+    text-wrap: nowrap;
+    max-lines: 1;
+  }
+
+  div.address-bar-entry {
+    display: flex;
+    flex-direction: row;
+
+    // padding: 4px;
+    margin: 4px 0px;
+
+    border-radius: 4px;
+
+    > button.file,
+    > button.arrow,
+    > div.arrow {
+      padding: 0px 8px;
+      background-color: unset;
+      color: inherit;
+      border: none;
+    }
+
+    > button.arrow,
+    > div.arrow {
+      display: flex;
+      flex-direction: row;
+
+      align-items: center;
+
+      border-radius: 4px 0px 0px 4px;
+    }
+
+    > button.arrow:hover {
+      background-color: var(--primaryContainer);
+      color: var(--onPrimaryContainer);
+
+      cursor: pointer;
+    }
+
+    > button.file {
+      max-lines: 1;
+
+      text-wrap: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      max-width: 128px;
+
+      border-radius: 0px 4px 4px 0px;
+    }
+
+    > button.file:hover {
+      background-color: var(--primaryContainer);
+      color: var(--onPrimaryContainer);
+
+      cursor: pointer;
+    }
+  }
+
+  div.address-bar-entry.desktop:hover {
+    background-color: var(--background);
+    color: var(--onBackground);
+
+    cursor: pointer;
+  }
+
+  div.separator {
+    background-color: var(--primaryContainer);
+  }
+
+  div.separator.horizontal {
+    min-height: 1px;
+    max-height: 1px;
+  }
+
+  div.separator.horizontal.with-margin {
+    margin: 0px 8px;
+  }
+
+  div.separator.vertical {
+    min-width: 1px;
+    max-width: 1px;
+  }
+
+  div.separator.vertical.with-margin {
+    margin: 8px 0px;
+  }
+
+  div.button-container {
+    display: flex;
+    flex-direction: row;
+
+    align-items: center;
+
+    padding: 4px 8px;
+    gap: 4px;
   }
 </style>

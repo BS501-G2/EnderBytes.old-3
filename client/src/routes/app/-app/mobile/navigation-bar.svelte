@@ -41,6 +41,7 @@
     display: flex;
     flex-direction: row;
     justify-content: space-evenly;
+    min-width: min-content;
 
     div.button {
       display: flex;
