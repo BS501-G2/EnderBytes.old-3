@@ -53,7 +53,7 @@ export class SyncManager extends Service<SyncData, SyncOptions> {
       const request = fileHandles.getAll();
 
       request.onsuccess = () => {
-        console.log(request.result.map((e) => e.a));
+        // console.log(request.result.map((e) => e.a));
       };
       request.onerror = () => reject(new Error(""));
     });

@@ -22,9 +22,9 @@ export class ClientConnection {
       (this.#io = io("/", {})),
       this.#client,
       undefined,
-      (...message) => {
-        console.log(...message);
-      }
+      // (...message) => {
+      //   console.log(...message);
+      // }
     );
     this.#setAuthentication = setAuthentication;
     this.#preConnect = [];
@@ -113,7 +113,7 @@ export class ClientConnection {
 
       authenticate: (user, type, payload) =>
         funcs.authenticate(user, type, payload).then((authentication) => {
-          console.log("New Session:", authentication?.userSessionKey.length);
+          // console.log("New Session:", authentication?.userSessionKey.length);
 
           this.#setAuthentication(authentication);
           return authentication;

@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { LocaleKey, LocaleType, getString } from '$lib/locale.svelte';
 import { _sizes } from '../favicon.svg/+server';
-import { colors } from '@rizzzi/svelte-commons'
+import { ColorKey, colors, getColorHex } from '@rizzzi/svelte-commons'
 
 export const prerender = false;
 
@@ -44,8 +44,8 @@ export async function GET(request: Request) {
         shortcut('Feed', '/feed')
       ],
       start_url: '/app',
-      theme_color: `#${colors[color].primaryContainer.toString(16)}`,
-      background_color: `#${colors[color].background.toString(16)}`
+      theme_color: `${getColorHex(ColorKey.PrimaryContainer, color)}`,
+      background_color: `${getColorHex(ColorKey.Background, color)}`
     },
     {
       headers: {

@@ -56,7 +56,8 @@
       background-color: var(--primaryContainer);
 
       overflow: auto hidden;
-      min-height: 0;
+
+      min-height: 72px;
     }
   }
 </style>

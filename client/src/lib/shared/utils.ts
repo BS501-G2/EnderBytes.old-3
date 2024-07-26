@@ -7,3 +7,4 @@ export function byteUnit(size: number): string {
   }
   return `${size.toFixed(2)} ${byteUnitDictionary[i]}${i === 0 ? '' : 'i'}B`;
 }
+

@@ -13,7 +13,7 @@
 </script>
 
 <svelte:head>
-  <meta name="theme-color" content={getColorHex($currentColorScheme, ColorKey.PrimaryContainer)} />
+  <meta name="theme-color" content={getColorHex(ColorKey.PrimaryContainer, $currentColorScheme)} />
   <title>{$titleString}</title>
 </svelte:head>
 

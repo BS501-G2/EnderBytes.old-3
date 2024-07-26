@@ -17,6 +17,7 @@
     event: SourceEvent,
     page: 'files' | 'shared' | 'trashed' | 'starred'
   ) => void;
+  export type FileManagerOnNewCallback = (event: SourceEvent) => void;
 
   export type FileManagerProps = {
     refresh: Writable<() => void>;
@@ -26,6 +27,8 @@
   } & (
     | {
         page: 'files';
+
+        onNew: FileManagerOnNewCallback;
 
         fileId: Readable<number | null>;
       }
@@ -68,14 +71,14 @@
                 type: 'folder';
 
                 files: FileResource[];
-                selection: Writable<[event: SourceEvent, files: FileResource[]] | null>;
+                selection: Writable<FileResource[]>;
               }
           ))
         | {
             page: 'shared' | 'starred' | 'trash';
 
             files: FileResource[];
-            selection: Writable<[event: SourceEvent, files: FileResource[]] | null>;
+            selection: Writable<FileResource[]>;
           }
       ));
 
@@ -83,14 +86,10 @@
     refreshKey: Writable<number>;
 
     resolved: Writable<FileManagerResolved>;
+
+    listViewMode: Writable<FileManagerViewMode>;
+      showSideBar: Writable<boolean>;
   }
-
-  export type FileManagerAction = {
-    name: string;
-    icon: string;
-
-    action: (event: MouseEvent) => Promise<void>;
-  };
 
   export type FileManagerActionGenerator = () => FileManagerAction | null;
 
@@ -110,11 +109,11 @@
     ViewMode,
     viewMode
   } from '@rizzzi/svelte-commons';
+
   import { getConnection } from '$lib/client/client';
-  import { scale } from 'svelte/transition';
   import { persisted } from 'svelte-persisted-store';
-  import FileManagerActionBar from './file-manager-action-bar.svelte';
-  import FileManagerFolderList from './file-manager-folder-list.svelte';
+  import FileManagerActionBar, { type FileManagerAction } from './file-manager-action-bar.svelte';
+  import FileManagerFolderList, { FileManagerViewMode, type FileManagerSelection } from './file-manager-folder-list.svelte';
   import FileManagerSideBar from './file-manager-side-bar.svelte';
   import FileManagerBottomBar from './file-manager-bottom-bar.svelte';
   import FileManagerFileView from './file-manager-file-view.svelte';
@@ -122,8 +121,7 @@
   import FileManagerAddressBar from './file-manager-address-bar.svelte';
 
   const { ...props }: FileManagerProps = $props();
-  const { refresh, onFileId, onPage } = props;
-  const showInfoBar = persisted('side-bar', false);
+  const { refresh } = props;
 
   const {
     serverFunctions: {
@@ -143,9 +141,12 @@
   } = getConnection();
 
   setContext<FileManagerProps>(FileManagerPropsName, props);
-  const { refreshKey, resolved } = setContext<FileManagerContext>(FileManagerContextName, {
+  const { refreshKey, resolved, showSideBar } = setContext<FileManagerContext>(FileManagerContextName, {
     refreshKey: writable(0),
-    resolved: writable({ status: 'loading' })
+    resolved: writable({ status: 'loading' }),
+
+    listViewMode: persisted('fm-list-mode', FileManagerViewMode.Grid),
+    showSideBar: persisted('side-bar', false)
   });
 
   refresh.set(() => refreshKey.update((value) => value + 1));
@@ -158,8 +159,8 @@
     $resolved = { status: 'loading' };
 
     try {
+      // await new Promise<void>((resolve) => setTimeout(resolve, 1000));
       // throw new Error('Simulated Exception');
-      await new Promise<void>((resolve) => setTimeout(resolve, 1000));
 
       const me = (await whoAmI())!;
 
@@ -203,7 +204,7 @@
             accesses,
             type: 'folder',
             files,
-            selection: writable(null)
+            selection: writable([])
           };
         }
       } else if (props.page === 'shared') {
@@ -215,7 +216,7 @@
           status: 'success',
           page: 'shared',
           files,
-          selection: writable(null)
+          selection: writable([])
         };
       } else if (props.page === 'starred') {
         const starredList = await listStarredFiles();
@@ -226,7 +227,7 @@
           status: 'success',
           page: 'starred',
           files,
-          selection: writable(null)
+          selection: writable([])
         };
       } else if (props.page === 'trash') {
         const files = await listTrashedFiles();
@@ -236,7 +237,7 @@
           status: 'success',
           page: 'trash',
           files,
-          selection: writable(null)
+          selection: writable([])
         };
       }
     } catch (error: unknown) {
@@ -270,6 +271,8 @@
     {#if $resolved.status === 'loading'}
       <LoadingSpinner size="64px" />
     {:else if $resolved.status === 'error'}
+      <FileManagerActionBar />
+      <FileManagerSeparator orientation="horizontal" with-margin />
       <Banner bannerClass={BannerClass.Error}>
         <div class="main-view-error">
           <h3>{$resolved.error.name}: {$resolved.error.message}</h3>
@@ -289,7 +292,7 @@
           <FileManagerFolderList />
         {/if}
 
-        {#if $viewMode & ViewMode.Desktop && $showInfoBar}
+        {#if $viewMode & ViewMode.Desktop && $showSideBar}
           <FileManagerSeparator orientation="vertical" with-margin />
           <FileManagerSideBar />
         {/if}
@@ -346,6 +349,8 @@
 
     flex-grow: 1;
 
+    min-height: 0px;
+
     div.main-view-error {
       > pre {
         overflow: auto;
@@ -376,5 +381,7 @@
 
     display: flex;
     flex-direction: row;
+
+    min-height: 0px;
   }
 </style>

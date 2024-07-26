@@ -5,14 +5,17 @@
   import NavigationBarMobile from './IntroNavigationBarMobile.svelte';
   import Locale, { LocaleKey } from '$lib/locale.svelte';
   import { ResponsiveLayout, Title } from '@rizzzi/svelte-commons';
+  import { type Snippet } from 'svelte';
+
+  const { children }: { children: Snippet } = $props();
 </script>
 
 <ResponsiveLayout>
   {#snippet desktop()}
-    <NavigationBarDesktop />
+    <NavigationBarDesktop></NavigationBarDesktop>
   {/snippet}
   {#snippet mobile()}
-    <NavigationBarMobile />
+    <NavigationBarMobile></NavigationBarMobile>
   {/snippet}
 </ResponsiveLayout>
 
@@ -25,4 +28,4 @@
 </svelte:head>
 
 <div style="display: contents; margin-top: {0}px; margin-bottom: {0}px;"></div>
-<slot />
+{@render children()}

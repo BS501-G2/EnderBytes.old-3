@@ -54,9 +54,9 @@ export class ServerConnection {
       (this.#io = socket),
       this.#server,
       (func) => this.#onMessage(func),
-      (...message) => {
-        console.log(...message);
-      }
+      // (...message) => {
+      //   console.log(...message);
+      // }
     );
     this.#getContext = getContext;
 
@@ -346,7 +346,7 @@ export class ServerConnection {
                 };
               }
             } catch (error) {
-              console.log(error);
+              // console.log(error);
               //
             }
           }
@@ -1004,7 +1004,7 @@ export class ServerConnection {
                   fileIoSize
                 );
 
-                console.log(buffer);
+                // console.log(buffer);
 
                 await fileDataManager.writeData(
                   newFile,
