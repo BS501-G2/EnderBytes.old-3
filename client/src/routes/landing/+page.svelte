@@ -7,12 +7,27 @@
   class:desktop={$viewMode & ViewMode.Desktop}
   class:mobile={$viewMode & ViewMode.Mobile}
 >
-  TODO: Landing Page
+  <div class=first>
+    <h1>Seamless and Secure Access to Your Data</h1>
+    <p> </p>
+  </div>
 </div>
 
 <style lang="scss">
+  div.landing{
+     overflow-y: auto;
+  }
+  div.first{
+    display:flex;
+    justify-content: center;
+    align-items:center;
+    text-align: center;
+    height:75vh;
+    font-size: 1.5em;
+  }
   div.landing.desktop {
     padding-top: 72px;
+
   }
 
   div.landing.mobile {

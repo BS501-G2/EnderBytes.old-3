@@ -388,7 +388,10 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
     return await this.read({
       ...options,
 
-      where: [["ownerUserId", "=", ownerUser.id]],
+      where: [
+        ["ownerUserId", "=", ownerUser.id],
+        ["deleted", "=", true],
+      ],
     });
   }
 }

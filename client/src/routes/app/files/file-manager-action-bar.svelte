@@ -20,13 +20,29 @@
     type FileManagerProps
   } from './file-manager.svelte';
   import { FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import { derived, writable } from 'svelte/store';
 
   const props = getContext<FileManagerProps>(FileManagerPropsName);
   const { refresh } = props;
   const { resolved } = getContext<FileManagerContext>(FileManagerContextName);
 
-  function getActions(): FileManagerAction[] {
+  function getActions(selection: FileResource[]): FileManagerAction[] {
     const actions: FileManagerAction[] = [];
+
+    if (selection.length > 0) {
+      actions.push({
+        name: `Delete ${selection.length} item${selection.length > 1 ? 's' : ''}`,
+        icon: 'fa-solid fa-trash',
+        type: 'modify',
+        action: async (event) => {
+          if (props.page === 'files') {
+            // props.onDelete(selection, event);
+          }
+        }
+      });
+    }
+
     if ($resolved.status === 'success') {
       if (
         $resolved.page === 'files' &&
@@ -68,11 +84,25 @@
     return actions;
   }
 
-  const actions = getActions();
+  const selected =
+    $resolved.status === 'success' && !($resolved.page === 'files' && $resolved.type === 'file')
+      ? $resolved.selection
+      : writable([]);
 
-  const newActions = actions.filter((action) => action.type === 'new');
-  const modifyActions = actions.filter((action) => action.type === 'modify');
-  const arrangeActions = actions.filter((action) => action.type === 'arrange');
+  const actions = derived(selected, (selected) => {
+    const actions = getActions(selected);
+    const newActions = actions.filter((action) => action.type === 'new');
+    const modifyActions = actions.filter((action) => action.type === 'modify');
+    const arrangeActions = actions.filter((action) => action.type === 'arrange');
+
+    // return [actions.filter((action) => action.type === 'new'), actions.filter((action) => action.type === 'modify'), actions.filter((action) => action.type === 'arrange')];
+
+    return {
+      newActions,
+      modifyActions,
+      arrangeActions
+    };
+  });
 </script>
 
 <div
@@ -104,19 +134,21 @@
     {/if}
   {/snippet}
 
-  {@render list(newActions)}
+    {#key $selected}
+      {@render list($actions.newActions)}
 
-  {#if modifyActions.length > 0}
-    <FileManagerSeparator orientation="vertical" with-margin />
-  {/if}
+      {#if $actions.modifyActions.length > 0}
+        <FileManagerSeparator orientation="vertical" with-margin />
+      {/if}
 
-  {@render list(modifyActions, true)}
+      {@render list($actions.modifyActions, true)}
 
-  {#if modifyActions.length > 0}
-    <FileManagerSeparator orientation="vertical" with-margin />
-  {/if}
+      {#if $actions.modifyActions.length > 0}
+        <FileManagerSeparator orientation="vertical" with-margin />
+      {/if}
 
-  {@render list(arrangeActions)}
+      {@render list($actions.arrangeActions)}
+    {/key}
 </div>
 
 <style lang="scss">
@@ -124,7 +156,7 @@
     display: flex;
     flex-direction: row;
 
-    min-height: calc(24px + 1em);
+    min-height: calc(32px + 1em);
   }
 
   div.action-bar.desktop {
@@ -168,6 +200,10 @@
     justify-content: center;
 
     flex-grow: 1;
+
+    > i {
+      font-size: 1.5em;
+    }
   }
 
   button.action.desktop:hover {

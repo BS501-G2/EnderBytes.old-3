@@ -8,7 +8,8 @@
     titleString,
     ColorScheme,
     getColorHex,
-    currentColorScheme
+    currentColorScheme,
+    ResponsiveLayout
   } from '@rizzzi/svelte-commons';
 </script>
 
@@ -17,6 +18,7 @@
   <title>{$titleString}</title>
 </svelte:head>
 
+<ResponsiveLayout />
 <Locale string={[[LocaleKey.AppName]]}>
   {#snippet children([appName]: string[])}
     <Title title={appName} />

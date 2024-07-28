@@ -1,10 +1,8 @@
 <script lang="ts">
   import { type Snippet } from 'svelte';
-  import { navigating } from '$app/stores';
 
-  import Dashboard from './app.svelte';
+  import Dashboard from './dashboard.svelte';
   import { runningBackgroundTasks } from '$lib/background-task.svelte';
-  import { LoadingBar } from '@rizzzi/svelte-commons';
 
   const { children }: { children: Snippet } = $props();
 </script>
@@ -21,20 +19,5 @@
 />
 
 <Dashboard>
-  {#if $navigating}
-    <div class="top-loading">
-      <LoadingBar />
-    </div>
-  {/if}
   {@render children()}
 </Dashboard>
-
-<style lang="scss">
-  div.top-loading {
-    height: 0px;
-  }
-
-  :root {
-    overflow: hidden auto;
-  }
-</style>

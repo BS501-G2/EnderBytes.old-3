@@ -254,6 +254,40 @@
   />
 {/if}
 
+<svelte:window
+  onmousedown={({ target, clientX, clientY }) => {
+    if (target === innerList) {
+      updateSelectionSnapshot(
+        'down',
+        clientX - list.offsetLeft,
+        clientY - list.offsetTop + list.scrollTop,
+
+        list.offsetLeft,
+        list.offsetTop,
+        list.offsetWidth,
+        list.offsetHeight,
+        list.scrollTop
+      );
+    }
+  }}
+  onmousemove={({ clientX, clientY }) => {
+    updateSelectionSnapshot(
+      'update',
+      clientX - list.offsetLeft,
+      clientY - list.offsetTop + list.scrollTop,
+
+      list.offsetLeft,
+      list.offsetTop,
+      list.offsetWidth,
+      list.offsetHeight,
+      list.scrollTop
+    );
+  }}
+  onmouseup={() => {
+    updateSelectionSnapshot('up');
+  }}
+/>
+
 <div class="list-container">
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -263,37 +297,6 @@
     class:mobile={$viewMode & ViewMode.Mobile}
     class:desktop={$viewMode & ViewMode.Desktop}
     in:scale|global={{ start: 0.9, duration: 250 }}
-    onmousedown={({ target, currentTarget, clientX, clientY }) => {
-      if (target === innerList) {
-        updateSelectionSnapshot(
-          'down',
-          clientX - currentTarget.offsetLeft,
-          clientY - currentTarget.offsetTop + currentTarget.scrollTop,
-
-          currentTarget.offsetLeft,
-          currentTarget.offsetTop,
-          currentTarget.offsetWidth,
-          currentTarget.offsetHeight,
-          currentTarget.scrollTop
-        );
-      }
-    }}
-    onmousemove={({ currentTarget, clientX, clientY }) => {
-      updateSelectionSnapshot(
-        'update',
-        clientX - currentTarget.offsetLeft,
-        clientY - currentTarget.offsetTop + currentTarget.scrollTop,
-
-        currentTarget.offsetLeft,
-        currentTarget.offsetTop,
-        currentTarget.offsetWidth,
-        currentTarget.offsetHeight,
-        currentTarget.scrollTop
-      );
-    }}
-    onmouseup={() => {
-      updateSelectionSnapshot('up');
-    }}
   >
     <div class="selection-container">
       {#if $selectionBoxCoordinates != null}
@@ -302,10 +305,10 @@
         <div
           bind:this={selectionBox}
           class="selection"
-          style:margin-left="{x}px"
-          style:margin-top="{y}px"
-          style:width="{w}px"
-          style:height="{h}px"
+          style:margin-left="{Math.max(x, 0)}px"
+          style:margin-top="{Math.max(y, 0)}px"
+          style:width="{Math.min(Math.min(w, w + x), list.offsetWidth - x)}px"
+          style:height="{Math.min(Math.min(h, h + y), list.scrollHeight - y)}px"
         ></div>
       {/if}
     </div>

@@ -11,6 +11,11 @@
   import { goto } from '$app/navigation';
   import { executeBackgroundTask } from '$lib/background-task.svelte';
   import { byteUnit } from '@rizzzi/enderdrive-lib/shared';
+  import { getContext, onMount } from 'svelte';
+  import { DashboardContextName, type DashboardContext } from '../dashboard.svelte';
+  import { Title } from '@rizzzi/svelte-commons';
+
+  const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
 
   const {
     serverFunctions: { getFile, createFile, createFolder, feedUploadBuffer }
@@ -83,7 +88,7 @@
           await createFile(parentFile.id, file.name);
         }
 
-        setStatus('Task Completed', 1)
+        setStatus('Task Completed', 1);
       },
       false
     );
@@ -98,17 +103,23 @@
     $newDialog = null;
     void task.run();
   };
+
+  onMount(() => setMainContent(layout));
 </script>
 
-<FileManager page="files" {refresh} {onPage} {onFileId} {onNew} {fileId} />
+<Title title="My Files" />
 
-{#if $newDialog != null}
-  <FileManagerNew
-    element={$newDialog[0]}
-    onDismiss={() => {
-      $newDialog = null;
-    }}
-    {uploadNewFiles}
-    {createNewFolder}
-  />
-{/if}
+{#snippet layout()}
+  <FileManager page="files" {refresh} {onPage} {onFileId} {onNew} {fileId} />
+
+  {#if $newDialog != null}
+    <FileManagerNew
+      element={$newDialog[0]}
+      onDismiss={() => {
+        $newDialog = null;
+      }}
+      {uploadNewFiles}
+      {createNewFolder}
+    />
+  {/if}
+{/snippet}
