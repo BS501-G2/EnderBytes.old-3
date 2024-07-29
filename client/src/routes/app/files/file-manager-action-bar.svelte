@@ -29,21 +29,24 @@
 
   function getActions(selection: FileResource[]): FileManagerAction[] {
     const actions: FileManagerAction[] = [];
-
-    if (selection.length > 0) {
-      actions.push({
-        name: `Delete ${selection.length} item${selection.length > 1 ? 's' : ''}`,
-        icon: 'fa-solid fa-trash',
-        type: 'modify',
-        action: async (event) => {
-          if (props.page === 'files') {
-            // props.onDelete(selection, event);
-          }
-        }
-      });
-    }
-
     if ($resolved.status === 'success') {
+      // if (selection.length > 0) {
+      //   actions.push({
+      //     name: `Delete ${selection.length} item${selection.length > 1 ? 's' : ''}`,
+      //     icon: 'fa-solid fa-trash',
+      //     type: 'modify',
+      //     action: async (event) => {
+      //       if (props.page === 'files') {
+      //         // props.onDelete(selection, event);
+      //       }
+      //     }
+      //   });
+      // }
+
+      if ($resolved.page !== 'files') {
+        actions.push();
+      }
+
       if (
         $resolved.page === 'files' &&
         $resolved.type === 'folder' &&
@@ -95,8 +98,6 @@
     const modifyActions = actions.filter((action) => action.type === 'modify');
     const arrangeActions = actions.filter((action) => action.type === 'arrange');
 
-    // return [actions.filter((action) => action.type === 'new'), actions.filter((action) => action.type === 'modify'), actions.filter((action) => action.type === 'arrange')];
-
     return {
       newActions,
       modifyActions,
@@ -134,21 +135,19 @@
     {/if}
   {/snippet}
 
-    {#key $selected}
-      {@render list($actions.newActions)}
+  {@render list($actions.newActions)}
 
-      {#if $actions.modifyActions.length > 0}
-        <FileManagerSeparator orientation="vertical" with-margin />
-      {/if}
+  {#if $actions.modifyActions.length > 0}
+    <FileManagerSeparator orientation="vertical" with-margin />
+  {/if}
 
-      {@render list($actions.modifyActions, true)}
+  {@render list($actions.modifyActions, true)}
 
-      {#if $actions.modifyActions.length > 0}
-        <FileManagerSeparator orientation="vertical" with-margin />
-      {/if}
+  {#if $actions.modifyActions.length > 0}
+    <FileManagerSeparator orientation="vertical" with-margin />
+  {/if}
 
-      {@render list($actions.arrangeActions)}
-    {/key}
+  {@render list($actions.arrangeActions)}
 </div>
 
 <style lang="scss">

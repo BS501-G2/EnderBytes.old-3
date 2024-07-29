@@ -10,6 +10,11 @@ import {
 } from "./user-authentication.js";
 import { UserManager } from "./user.js";
 
+export enum UserSessionType {
+  Browser,
+  SyncApp,
+}
+
 export interface UserSessionResource
   extends Resource<UserSessionResource, UserSessionManager> {
   expireTime: number;
@@ -19,6 +24,8 @@ export interface UserSessionResource
   encryptedPrivateKey: Uint8Array;
   encrypterPrivateKeyIv: Uint8Array;
   encrypterPrivateKeyAuthTag: Uint8Array;
+
+  type: UserSessionType;
 }
 
 export interface UnlockedUserSession extends UserSessionResource {
@@ -63,11 +70,13 @@ export class UserSessionManager extends ResourceManager<
       table.binary("encryptedPrivateKey").notNullable();
       table.binary("encrypterPrivateKeyIv").notNullable();
       table.binary("encrypterPrivateKeyAuthTag").notNullable();
+      table.integer("type").notNullable();
     }
   }
 
   public async create(
     unlockedUserAuthentication: UnlockedUserAuthentication,
+    type: UserSessionType,
     expireDuration: number = userSessionExpiryDuration
   ): Promise<UnlockedUserSession> {
     const [key, iv] = await Promise.all([randomBytes(32), randomBytes(16)]);
@@ -86,6 +95,8 @@ export class UserSessionManager extends ResourceManager<
       encryptedPrivateKey,
       encrypterPrivateKeyIv: iv,
       encrypterPrivateKeyAuthTag: authTag,
+
+      type,
     });
 
     return {

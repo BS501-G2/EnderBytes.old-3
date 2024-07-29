@@ -24,6 +24,7 @@
   import { derived, type Writable, writable } from 'svelte/store';
   import DashboardNavigation from './dashboard-navigation.svelte';
   import DashboardAppBar from './dashboard-app-bar.svelte';
+  import DashboardProfilePanel from './dashboard-profile-panel.svelte';
 
   const { children }: { children: Snippet } = $props();
 
@@ -69,15 +70,22 @@
   class:desktop={$viewMode & ViewMode.Desktop}
   class:mobile={$viewMode & ViewMode.Mobile}
 >
-  <div class="title-row">
+  <div
+    class="title-row"
+    class:desktop={$viewMode & ViewMode.Desktop}
+    class:mobile={$viewMode & ViewMode.Mobile}
+  >
     <DashboardAppBar
       entries={derived(contextMenuEntries, (entries) => entries.map(([entry]) => entry))}
     />
   </div>
-  <div class="content-row" class:desktop={$viewMode & ViewMode.Desktop}>
+  <div class="content-row" class:desktop={$viewMode & ViewMode.Desktop}
+    class:mobile={$viewMode & ViewMode.Mobile}>
     {#if $viewMode & ViewMode.Desktop}
       <div class="side-content">
         <DashboardNavigation />
+        <div class="horizontal separator"></div>
+        <DashboardProfilePanel />
       </div>
     {/if}
 
@@ -129,10 +137,19 @@
     flex-direction: row;
 
     min-width: 0px;
+  }
 
+  div.title-row.desktop {
     margin-top: env(titlebar-area-y);
     margin-left: env(titlebar-area-x);
     max-width: env(titlebar-area-width);
+  }
+
+  div.title-row.mobile {
+    background-color: var(--primaryContainer);
+    color: var(--onPrimaryContainer);
+
+    padding-top: env(titlebar-area-height);
   }
 
   div.content-row {
@@ -167,6 +184,8 @@
       border-radius: 16px;
 
       > div.main-content-inner {
+        -webkit-app-region: no-drag;
+
         flex-grow: 1;
 
         display: flex;
@@ -183,6 +202,13 @@
     gap: 8px;
   }
 
+  div.content-row.mobile {
+    > div.main-content {
+      background-color: var(--backgroundVariant);
+      color: var(--onBackgroundVariant);
+    }
+  }
+
   div.bottom-row {
     display: flex;
     flex-direction: row;
@@ -191,5 +217,14 @@
 
     background-color: var(--primaryContainer);
     color: var(--onPrimaryContainer);
+  }
+
+  div.horizontal.separator {
+    min-height: 1px;
+    max-height: 1px;
+
+    background-color: var(--primary);
+
+    margin: 0px 8px;
   }
 </style>

@@ -7,9 +7,14 @@
   class:desktop={$viewMode & ViewMode.Desktop}
   class:mobile={$viewMode & ViewMode.Mobile}
 >
-  <div class=first>
-    <h1>Seamless and Secure Access to Your Data</h1>
-    <p> </p>
+  <div class=firstGrid-Container>
+    <div class="gridInfo">
+      <h1>Secure and Private File Storage and Sharing Website <br> for Melchora Aquino Elementary School.</h1>
+    </div>
+    <div class="gridImage">
+      <img src="first (1).png" alt="first">
+    </div>
+
   </div>
 </div>
 
@@ -17,13 +22,10 @@
   div.landing{
      overflow-y: auto;
   }
-  div.first{
-    display:flex;
-    justify-content: center;
-    align-items:center;
-    text-align: center;
-    height:75vh;
-    font-size: 1.5em;
+  div.firstGrid-Container{
+    display:grid;
+    grid-template-columns: auto auto;
+    background-color: #FFFF;
   }
   div.landing.desktop {
     padding-top: 72px;

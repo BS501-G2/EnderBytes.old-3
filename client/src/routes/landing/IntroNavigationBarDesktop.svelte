@@ -7,8 +7,8 @@
   import { onMount } from 'svelte';
   import { ExternalLinkIcon } from 'svelte-feather-icons';
 
-  let scroll: number = 0;
-  let hash: string = '';
+  let scroll: number = $state(0);
+  let hash: string = $state('');
 
   onMount(() => {
     if (hash.length == 0) {
@@ -50,7 +50,7 @@
         {#each introNavigationButtons as introNavigationButton}
           {#if hash != introNavigationButton.path}
             <button
-              on:click={() => {
+              onclick={() => {
                 hash = introNavigationButton.path;
                 goto(introNavigationButton.path);
               }}>{introNavigationButton.name}</button

@@ -19,7 +19,7 @@ import {
   UserAuthenticationManager,
 } from "../db/user-authentication.js";
 import { UserManager, UserResource } from "../db/user.js";
-import { UserSessionManager } from "../db/user-session.js";
+import { UserSessionManager, UserSessionType } from "../db/user-session.js";
 import { ServerConnectionManager } from "./connection-manager.js";
 import { FileManager, FileResource, UnlockedFileResource } from "../db/file.js";
 import { FileContentManager, FileContentResource } from "../db/file-content.js";
@@ -392,7 +392,8 @@ export class ServerConnection {
         }
 
         const unlockedSession = await userSessionManager.create(
-          unlockedUserAuthentication
+          unlockedUserAuthentication,
+          UserSessionType.SyncApp
         );
 
         this.#userAuthentication = unlockedUserAuthentication;

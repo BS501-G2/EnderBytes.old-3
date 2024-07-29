@@ -89,20 +89,20 @@
     );
   }
 
-  const isConstrained: Writable<boolean> = writable(false);
+  const isWidthLimited: Writable<boolean> = writable(false);
 
-  function updateConstrainedState() {
+  function updatelimitedState() {
     const newValue = window.innerWidth < 1280;
 
-    if ($isConstrained !== newValue) {
-      $isConstrained = newValue;
+    if ($isWidthLimited !== newValue) {
+      $isWidthLimited = newValue;
     }
   }
 
-  onMount(() => updateConstrainedState());
+  onMount(() => updatelimitedState());
 </script>
 
-<svelte:window onresize={updateConstrainedState} />
+<svelte:window onresize={updatelimitedState} />
 
 {#snippet entryView(entry: NavigationEntry, selected: boolean)}
   <button
@@ -111,7 +111,7 @@
     onclick={() => goto(entry.path)}
     class:desktop={$viewMode & ViewMode.Desktop}
     class:mobile={$viewMode & ViewMode.Mobile}
-    class:constrained={$isConstrained}
+    class:limited={$isWidthLimited}
   >
     <div class="icon">
       <i class={entry.icon(selected)}></i>
@@ -124,7 +124,7 @@
   class="navigation"
   class:desktop={$viewMode & ViewMode.Desktop}
   class:mobile={$viewMode & ViewMode.Mobile}
-  class:constrained={$isConstrained}
+  class:limited={$isWidthLimited}
 >
   {#key $page}
     {#each entries as entry}
@@ -163,9 +163,9 @@
     overflow: hidden auto;
   }
 
-  div.navigation.desktop.constrained {
-    min-width: 72px;
-    max-width: 72px;
+  div.navigation.desktop.limited {
+    min-width: 64px;
+    max-width: 64px;
   }
 
   div.navigation.mobile {
@@ -219,20 +219,20 @@
       min-width: 32px;
       max-width: 32px;
 
-      font-size: 1.5em;
+      font-size: 1em;
     }
 
     > p.label {
       flex-grow: 1;
-      font-size: 1.5em;
+      font-size: 1.2em;
 
       text-align: start;
     }
   }
 
-  button.navigation-entry.desktop.constrained {
-    min-width: 72px;
-    min-height: 72px;
+  button.navigation-entry.desktop.limited {
+    min-width: 64px;
+    min-height: 64px;
 
     flex-direction: column;
     align-items: center;
@@ -240,11 +240,12 @@
 
     > div.icon {
       flex-grow: 1;
+      font-size: 1.5em;
     }
 
     > p.label {
       flex-grow: 0.5;
-      font-size: 1.2em;
+      font-size: 0.75em;
     }
   }
 

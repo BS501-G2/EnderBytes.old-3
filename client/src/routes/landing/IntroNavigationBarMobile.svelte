@@ -4,7 +4,7 @@
 
 <script lang="ts">
   import { goto } from '$app/navigation';
-  let scroll: number = 0;
+  let scroll: number = $state(0);
 </script>
 
 <svelte:window bind:scrollY={scroll} />
@@ -12,7 +12,7 @@
 
 <div class="navigation-bar">
   <div>
-    <button on:click={() => goto(introNavigationButtons[0].path)}
+    <button onclick={() => goto(introNavigationButtons[0].path)}
       >{introNavigationButtons[0].name}</button
     >
   </div>
