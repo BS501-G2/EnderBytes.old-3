@@ -15,10 +15,8 @@
   } from './dashboard.svelte';
   import { getContext, onMount, type Snippet } from 'svelte';
 
-  const { entries }: { entries: Readable<DashboardContextMenuEntry[]> } = $props();
+  const { entries }: { entries: DashboardContextMenuEntry[] } = $props();
   const { addContextMenuEntry } = getContext<DashboardContext>(DashboardContextName);
-
-  onMount(() => addContextMenuEntry('Logout', 'fa-solid fa-right-from-bracket', () => ({})));
 </script>
 
 {#snippet arrowButtonContainer(view: Snippet)}
@@ -74,7 +72,29 @@
   </p>
 {/snippet}
 
-{#snippet contextMenu()}{/snippet}
+{#snippet contextMenu()}
+  <div class="context-menu">
+    {#each entries as entry}
+      <Button outline={false} buttonClass={ButtonClass.Transparent} onClick={(event) => entry.onClick(event)}> 
+        <i class={entry.icon}></i>
+      </Button>
+    {/each}
+  </div>
+
+  {#snippet profileButtonContainer(view: Snippet)}
+    <div class="profile-button">{@render view()}</div>
+  {/snippet}
+
+  <Button
+    outline={false}
+    container={profileButtonContainer}
+    buttonClass={ButtonClass.Transparent}
+    onClick={() => {}}
+  >
+    <img class="profile-icon" src="/favicon.svg" alt="profile" />
+    <i class="fa-solid fa-angle-down"></i>
+  </Button>
+{/snippet}
 
 <div
   class="app-bar"
@@ -107,7 +127,6 @@
 
     min-height: calc(16px + 1em);
     max-height: calc(16px + 1em);
-    padding: 8px;
 
     > div.section {
       display: flex;
@@ -122,15 +141,15 @@
   }
 
   div.card {
+    -webkit-app-region: no-drag;
+
     min-height: calc(16px + 1em - 8px);
 
     display: flex;
     flex-direction: row;
 
-    align-items: center;
     justify-content: center;
 
-    gap: 8px;
     border-radius: 8px;
   }
 
@@ -157,6 +176,11 @@
   }
 
   div.title {
+    -webkit-app-region: drag;
+
+    align-items: center;
+
+    gap: 8px;
     padding: 0px 8px;
   }
 
@@ -175,5 +199,32 @@
   div.app-bar.mobile {
     background-color: var(--primaryContainer);
     color: var(--onPrimaryContainer);
+  }
+
+  img.profile-icon {
+    min-height: calc(2em);
+    max-height: calc(2em);
+    min-width: calc(2em);
+    max-width: calc(2em);
+
+    background-color: var(--primary);
+
+    border-radius: 50%;
+  }
+
+  div.context-menu {
+    display: flex;
+    flex-direction: row;
+  }
+
+  div.profile-button {
+    color: var(--primaryContainer);
+
+    display: flex;
+
+    align-items: center;
+
+    min-height: 100%;
+    max-height: 100%;
   }
 </style>

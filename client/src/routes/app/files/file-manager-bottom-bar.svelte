@@ -1,7 +1,35 @@
+<script lang="ts">
+  import { getContext } from 'svelte';
+  import { FileManagerContextName, type FileManagerContext } from './file-manager.svelte';
+  import { writable, type Writable } from 'svelte/store';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import { FileType } from '@rizzzi/enderdrive-lib/shared';
+
+  const { resolved } = getContext<FileManagerContext>(FileManagerContextName);
+
+  const files: FileResource[] =
+    $resolved.status === 'success' && !($resolved.page === 'files' && $resolved.type === 'file')
+      ? $resolved.files
+      : [];
+</script>
+
 <div class="bottom-bar">
-  <p>Bottom bar</p>
-  <p>Bottom bar</p>
-  <p>Bottom bar</p>
+  <p>
+    {files.reduce((a, b) => {
+      if (b.type === FileType.File) {
+        return a + 1;
+      }
+
+      return a;
+    }, 0)} file(s),
+    {files.reduce((a, b) => {
+      if (b.type === FileType.Folder) {
+        return a + 1;
+      }
+
+      return a;
+    }, 0)} folder(s)
+  </p>
 </div>
 
 <style lang="scss">

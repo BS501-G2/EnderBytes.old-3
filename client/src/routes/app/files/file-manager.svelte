@@ -18,6 +18,12 @@
     page: 'files' | 'shared' | 'trashed' | 'starred'
   ) => void;
   export type FileManagerOnNewCallback = (event: SourceEvent) => void;
+  export type FileManagerOnViewCallback = (event: SourceEvent) => void;
+  export type FileManagerOnClipboardCallback = (
+    event: SourceEvent,
+    files: FileResource[] | null,
+    cut: boolean
+  ) => void;
 
   export type FileManagerProps = {
     refresh: Writable<() => void>;
@@ -29,8 +35,10 @@
         page: 'files';
 
         onNew: FileManagerOnNewCallback;
+        onClipboard: FileManagerOnClipboardCallback;
 
         fileId: Readable<number | null>;
+        clipboard: Readable<[files: FileResource[], cut: boolean] | null>;
       }
     | {
         page: 'shared' | 'starred' | 'trash';
@@ -87,8 +95,10 @@
 
     resolved: Writable<FileManagerResolved>;
 
+    viewDialog: Writable<[element: HTMLElement] | null>;
+
     listViewMode: Writable<FileManagerViewMode>;
-      showSideBar: Writable<boolean>;
+    showSideBar: Writable<boolean>;
   }
 
   export type FileManagerActionGenerator = () => FileManagerAction | null;
@@ -113,12 +123,16 @@
   import { getConnection } from '$lib/client/client';
   import { persisted } from 'svelte-persisted-store';
   import FileManagerActionBar, { type FileManagerAction } from './file-manager-action-bar.svelte';
-  import FileManagerFolderList, { FileManagerViewMode, type FileManagerSelection } from './file-manager-folder-list.svelte';
+  import FileManagerFolderList, {
+    FileManagerViewMode,
+    type FileManagerSelection
+  } from './file-manager-folder-list.svelte';
   import FileManagerSideBar from './file-manager-side-bar.svelte';
   import FileManagerBottomBar from './file-manager-bottom-bar.svelte';
   import FileManagerFileView from './file-manager-file-view.svelte';
   import FileManagerSeparator from './file-manager-separator.svelte';
   import FileManagerAddressBar from './file-manager-address-bar.svelte';
+  import FileManagerView from './file-manager-view.svelte';
 
   const { ...props }: FileManagerProps = $props();
   const { refresh } = props;
@@ -141,13 +155,18 @@
   } = getConnection();
 
   setContext<FileManagerProps>(FileManagerPropsName, props);
-  const { refreshKey, resolved, showSideBar } = setContext<FileManagerContext>(FileManagerContextName, {
-    refreshKey: writable(0),
-    resolved: writable({ status: 'loading' }),
+  const { refreshKey, resolved, showSideBar, viewDialog } = setContext<FileManagerContext>(
+    FileManagerContextName,
+    {
+      refreshKey: writable(0),
+      resolved: writable({ status: 'loading' }),
 
-    listViewMode: persisted('fm-list-mode', FileManagerViewMode.Grid),
-    showSideBar: persisted('side-bar', false)
-  });
+      viewDialog: writable(null),
+
+      listViewMode: persisted('fm-list-mode', FileManagerViewMode.Grid),
+      showSideBar: persisted('side-bar', false)
+    }
+  );
 
   refresh.set(() => refreshKey.update((value) => value + 1));
 
@@ -310,6 +329,17 @@
     {/if}
   </div>
 </div>
+
+{#if $viewDialog != null}
+  {@const [element] = $viewDialog}
+
+  <FileManagerView
+    {element}
+    onDismiss={() => {
+      $viewDialog = null;
+    }}
+  />
+{/if}
 
 <style lang="scss">
   div.file-manager {

@@ -12,7 +12,7 @@
 <script lang="ts">
   import { ViewMode, viewMode } from '@rizzzi/svelte-commons';
   import FileManagerSeparator from './file-manager-separator.svelte';
-  import { getContext } from 'svelte';
+  import { getContext, onMount } from 'svelte';
   import {
     FileManagerContextName,
     FileManagerPropsName,
@@ -21,30 +21,78 @@
   } from './file-manager.svelte';
   import { FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
-  import { derived, writable } from 'svelte/store';
+  import { derived, writable, type Writable } from 'svelte/store';
+  import { DashboardContextName, type DashboardContext } from '../dashboard.svelte';
+  import { getConnection } from '$lib/client/client';
 
   const props = getContext<FileManagerProps>(FileManagerPropsName);
   const { refresh } = props;
-  const { resolved } = getContext<FileManagerContext>(FileManagerContextName);
+  const { resolved, viewDialog } = getContext<FileManagerContext>(FileManagerContextName);
+  const {
+    serverFunctions: { copyFile, moveFile, trashFile, getFile }
+  } = getConnection();
 
   function getActions(selection: FileResource[]): FileManagerAction[] {
     const actions: FileManagerAction[] = [];
     if ($resolved.status === 'success') {
-      // if (selection.length > 0) {
-      //   actions.push({
-      //     name: `Delete ${selection.length} item${selection.length > 1 ? 's' : ''}`,
-      //     icon: 'fa-solid fa-trash',
-      //     type: 'modify',
-      //     action: async (event) => {
-      //       if (props.page === 'files') {
-      //         // props.onDelete(selection, event);
-      //       }
-      //     }
-      //   });
-      // }
+      if ($viewMode & ViewMode.Desktop) {
+        actions.push({
+          name: 'View',
+          icon: 'fa-solid fa-eye',
+          type: 'arrange',
+          action: async (event) => {
+            $viewDialog = [event.currentTarget as HTMLElement];
+          }
+        });
+      }
 
-      if ($resolved.page !== 'files') {
-        actions.push();
+      if ($resolved.page === 'files' && $resolved.type === 'folder') {
+        if (props.page === 'files' && $clipboard == null) {
+          if ($selected.length > 0) {
+            actions.push({
+              name: 'Copy',
+              icon: 'fa-solid fa-copy',
+              type: 'modify',
+              action: async (event) => {
+                if (props.page === 'files') {
+                  props.onClipboard(event, $selected, false);
+                }
+              }
+            });
+          }
+        }
+
+        if (props.page === 'files' && $clipboard != null) {
+          actions.push({
+            name: 'Cancel',
+            icon: 'fa-solid fa-xmark',
+            type: 'modify',
+            action: async (event) => {
+              props.onClipboard(event, null, false);
+            }
+          });
+
+          actions.push({
+            name: 'Paste',
+            icon: 'fa-solid fa-paste',
+            type: 'modify',
+            action: async () => {
+              const parentFolder = await getFile($fileId);
+
+              if ($clipboard[1]) {
+                await moveFile(
+                  $clipboard[0].map((file) => file.id),
+                  parentFolder.id
+                );
+              } else {
+                await copyFile(
+                  $clipboard[0].map((file) => file.id),
+                  parentFolder.id
+                );
+              }
+            }
+          });
+        }
       }
 
       if (
@@ -92,6 +140,10 @@
       ? $resolved.selection
       : writable([]);
 
+  const fileId = props.page === 'files' ? props.fileId : writable(null);
+
+  const clipboard = props.page === 'files' ? props.clipboard : writable(null);
+
   const actions = derived(selected, (selected) => {
     const actions = getActions(selected);
     const newActions = actions.filter((action) => action.type === 'new');
@@ -104,6 +156,16 @@
       arrangeActions
     };
   });
+
+  const { addContextMenuEntry } = getContext<DashboardContext>(DashboardContextName);
+
+  if ($viewMode & ViewMode.Mobile) {
+    onMount(() =>
+      addContextMenuEntry('Configure File Manager', 'fa-solid fa-eye', (event) => {
+        $viewDialog = [event.currentTarget as HTMLElement];
+      })
+    );
+  }
 </script>
 
 <div

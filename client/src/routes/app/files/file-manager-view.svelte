@@ -2,17 +2,151 @@
 </script>
 
 <script lang="ts">
-  import { getContext } from 'svelte';
+  import { getContext, type Snippet } from 'svelte';
   import {
     type FileManagerContext,
     FileManagerContextName,
     type FileManagerProps,
     FileManagerPropsName
   } from './file-manager.svelte';
+  import {
+    Button,
+    ButtonClass,
+    Dialog,
+    Overlay,
+    OverlayPositionType,
+    ViewMode,
+    viewMode
+  } from '@rizzzi/svelte-commons';
+  import { fly } from 'svelte/transition';
+  import { FileManagerViewMode } from './file-manager-folder-list.svelte';
 
-  const {  } = getContext<FileManagerProps>(FileManagerPropsName);
-  const { resolved } = getContext<FileManagerContext>(FileManagerContextName);
+  const {} = getContext<FileManagerProps>(FileManagerPropsName);
+  const { resolved, showSideBar, listViewMode } =
+    getContext<FileManagerContext>(FileManagerContextName);
+
+  const { element, onDismiss }: { element: HTMLElement; onDismiss: () => void } = $props();
 </script>
 
+{#snippet buttonContainer(view: Snippet)}
+  <div class="button-container">
+    {@render view()}
+  </div>
+{/snippet}
+
+{#snippet layout()}
+  {#if $viewMode & ViewMode.Desktop}
+    <div class="row">
+      <p class="label">Sidebar</p>
+      {#each [true, false] as value}
+        {#if $showSideBar == value}
+          <Button
+            container={buttonContainer}
+            onClick={() => {
+              if ($showSideBar == value) {
+                $showSideBar = !value;
+              }
+            }}
+          >
+            <i class="fa-solid fa-{value ? 'eye' : 'eye-slash'}"></i>
+            <p>{value ? 'Visible' : 'Hidden'}</p>
+          </Button>
+        {/if}
+      {/each}
+    </div>
+  {/if}
+
+  <div class="row">
+    <p class="label">List Mode</p>
+    {#each [FileManagerViewMode.List, FileManagerViewMode.Grid] as value}
+      <Button
+        container={buttonContainer}
+        buttonClass={value === $listViewMode ? ButtonClass.Primary : ButtonClass.Transparent}
+        onClick={() => {
+          $listViewMode = value;
+        }}
+      >
+        {#if value === FileManagerViewMode.Grid}
+          <i class="fa-solid fa-th-large"></i>
+          <p>Grid</p>
+        {:else if value === FileManagerViewMode.List}
+          <i class="fa-solid fa-list"></i>
+          <p>List</p>
+        {/if}
+      </Button>
+    {/each}
+  </div>
+{/snippet}
+
+{#if $viewMode & ViewMode.Desktop}
+  <Overlay
+    position={[
+      OverlayPositionType.Offset,
+      -(window.innerWidth - element.offsetLeft - element.offsetWidth),
+      element.offsetTop + element.offsetHeight
+    ]}
+    {onDismiss}
+  >
+    <div transition:fly|global={{ duration: 250, y: -16 }} class="desktop layout">
+      {@render layout()}
+    </div>
+  </Overlay>
+{:else if $viewMode & ViewMode.Mobile}
+  <Dialog {onDismiss}>
+    {#snippet head()}{/snippet}
+    {#snippet body()}
+      <div class="mobile layout">
+        {@render layout()}
+      </div>
+    {/snippet}
+    {#snippet actions()}{/snippet}
+  </Dialog>
+{/if}
+
 <style lang="scss">
+  div.button-container {
+    margin: 8px;
+
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    align-items: center;
+  }
+
+  div.layout {
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+  }
+
+  div.desktop.layout {
+    background-color: var(--backgroundVariant);
+    color: var(--onBackgroundVariant);
+
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: var(--shadow) 2px 2px 8px;
+
+    min-width: 128px;
+  }
+
+  div.row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+
+    gap: 8px;
+
+    align-items: center;
+
+    min-width: 0px;
+    min-height: 0px;
+
+    > p.label {
+      flex-grow: 1;
+    }
+  }
 </style>

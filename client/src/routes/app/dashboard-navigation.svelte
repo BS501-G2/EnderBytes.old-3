@@ -65,10 +65,10 @@
     {
       id: 'profile',
 
-      name: 'Me',
+      name: 'Users',
       icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user`,
 
-      path: '/app/users?id=!me'
+      path: '/app/users'
     }
   ];
 
@@ -147,7 +147,6 @@
 
     min-width: 0;
     min-height: 0;
-    -webkit-app-region: no-drag;
   }
 
   div.navigation.desktop {
@@ -179,6 +178,8 @@
   }
 
   button.navigation-entry {
+    -webkit-app-region: no-drag;
+
     display: flex;
 
     align-items: center;

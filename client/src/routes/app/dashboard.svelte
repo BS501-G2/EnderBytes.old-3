@@ -2,11 +2,15 @@
   export interface DashboardContextMenuEntry {
     name: string;
     icon: string;
-    onClick: () => void;
+    onClick: (event: MouseEvent) => void;
   }
 
   export interface DashboardContext {
-    addContextMenuEntry: (name: string, icon: string, onClick: () => void) => () => void;
+    addContextMenuEntry: (
+      name: string,
+      icon: string,
+      onClick: (event: MouseEvent) => void
+    ) => () => void;
 
     setMainContent: (children: Snippet | null) => () => void;
   }
@@ -18,7 +22,7 @@
   import { getLocale } from '$lib/locale.svelte';
 
   import LogoutConfirmationDialog from './dashboard-logout-confirm.svelte';
-  import { ViewMode, currentColorScheme, viewMode } from '@rizzzi/svelte-commons';
+  import { Keyboard, ViewMode, currentColorScheme, viewMode } from '@rizzzi/svelte-commons';
   import SettingsDialog from './settings-dialog.svelte';
   import { setContext, type Snippet } from 'svelte';
   import { derived, type Writable, writable } from 'svelte/store';
@@ -46,9 +50,12 @@
 
           $contextMenuEntries.splice(index--, 1);
         }
+
+        $contextMenuEntries = $contextMenuEntries;
       };
 
       $contextMenuEntries.push([{ name, icon, onClick }, destroy]);
+      $contextMenuEntries = $contextMenuEntries;
 
       return destroy;
     },
@@ -75,12 +82,13 @@
     class:desktop={$viewMode & ViewMode.Desktop}
     class:mobile={$viewMode & ViewMode.Mobile}
   >
-    <DashboardAppBar
-      entries={derived(contextMenuEntries, (entries) => entries.map(([entry]) => entry))}
-    />
+    <DashboardAppBar entries={$contextMenuEntries.map((entry) => entry[0])} />
   </div>
-  <div class="content-row" class:desktop={$viewMode & ViewMode.Desktop}
-    class:mobile={$viewMode & ViewMode.Mobile}>
+  <div
+    class="content-row"
+    class:desktop={$viewMode & ViewMode.Desktop}
+    class:mobile={$viewMode & ViewMode.Mobile}
+  >
     {#if $viewMode & ViewMode.Desktop}
       <div class="side-content">
         <DashboardNavigation />
@@ -106,6 +114,7 @@
 
 {@render children()}
 
+<Keyboard />
 <LogoutConfirmationDialog />
 <SettingsDialog />
 
@@ -113,6 +122,8 @@
   div.dashboard {
     display: flex;
     flex-direction: column;
+
+    box-sizing: border-box;
 
     min-width: 100dvw;
     min-height: 100dvh;
@@ -123,6 +134,10 @@
   div.dashboard.desktop {
     background-color: var(--primaryContainer);
     color: var(--onPrimaryContainer);
+
+    padding: 8px;
+
+    gap: 8px;
 
     overflow: hidden;
   }
@@ -142,7 +157,7 @@
   div.title-row.desktop {
     margin-top: env(titlebar-area-y);
     margin-left: env(titlebar-area-x);
-    max-width: env(titlebar-area-width);
+    max-width: calc(env(titlebar-area-width) - 16px);
   }
 
   div.title-row.mobile {
@@ -150,6 +165,7 @@
     color: var(--onPrimaryContainer);
 
     padding-top: env(titlebar-area-height);
+    padding: 8px;
   }
 
   div.content-row {
@@ -198,7 +214,7 @@
   }
 
   div.content-row.desktop {
-    padding: 8px;
+    // padding: 8px;
     gap: 8px;
   }
 

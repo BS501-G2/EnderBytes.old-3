@@ -51,11 +51,14 @@
       ? $resolved.selection
       : writable([]);
 
-  const selection: Writable<FileManagerSelection | null> = writable(null);
+  const desktopSelection: Writable<FileManagerSelection | null> = writable(null);
+  const desktopSelectionBoxCoordinates: Writable<
+    [x: number, y: number, w: number, h: number] | null
+  > = writable(null);
 
   let list: HTMLDivElement = $state(null as never);
   let innerList: HTMLDivElement = $state(null as never);
-  let selectionBox: HTMLDivElement | null = $state(null);
+  let desktopSelectionBox: HTMLDivElement | null = $state(null);
 
   function updateSelectionSnapshot(
     ...args:
@@ -95,7 +98,7 @@
           ? 'ctrl'
           : 'normal';
 
-      $selection = {
+      $desktopSelection = {
         saved: type === 'normal' ? [] : [...$selected],
 
         type,
@@ -112,9 +115,9 @@
         boxS
       };
 
-      $selectionBoxCoordinates = calculateSelectionBoxCoordinates($selection);
+      $desktopSelectionBoxCoordinates = calculateSelectionBoxCoordinates($desktopSelection);
     } else if (args[0] === 'update') {
-      if ($selection == null) {
+      if ($desktopSelection == null) {
         return;
       }
 
@@ -129,17 +132,17 @@
         boxH != null &&
         boxS != null
       ) {
-        $selection.w = x - $selection.x;
-        $selection.h = y - $selection.y;
+        $desktopSelection.w = x - $desktopSelection.x;
+        $desktopSelection.h = y - $desktopSelection.y;
 
-        $selection.boxX = boxX;
-        $selection.boxY = boxY;
-        $selection.boxW = boxW;
-        $selection.boxH = boxH;
-        $selection.boxS = boxS;
+        $desktopSelection.boxX = boxX;
+        $desktopSelection.boxY = boxY;
+        $desktopSelection.boxW = boxW;
+        $desktopSelection.boxH = boxH;
+        $desktopSelection.boxS = boxS;
       } else {
-        const topDistance = $selection.y + $selection.h - $selection.boxS;
-        const bottomDistance = $selection.boxH - topDistance;
+        const topDistance = $desktopSelection.y + $desktopSelection.h - $desktopSelection.boxS;
+        const bottomDistance = $desktopSelection.boxH - topDistance;
 
         let increment = 0;
         if (topDistance < 128) {
@@ -155,17 +158,17 @@
           list.scrollBy(0, increment);
           const scrollAfter = list.scrollTop;
 
-          $selection.boxS = scrollAfter;
-          $selection.h += scrollAfter - scrollBefore;
+          $desktopSelection.boxS = scrollAfter;
+          $desktopSelection.h += scrollAfter - scrollBefore;
         }
       }
     } else if (args[0] === 'up') {
-      if ($selection == null) {
+      if ($desktopSelection == null) {
         return;
       }
 
-      $selection = null;
-      $selectionBoxCoordinates = null;
+      $desktopSelection = null;
+      $desktopSelectionBoxCoordinates = null;
     }
   }
 
@@ -186,7 +189,7 @@
   }
 
   function updateSelectedFiles(): void {
-    if (selectionBox == null || $selection == null) {
+    if (desktopSelectionBox == null || $desktopSelection == null) {
       return;
     }
 
@@ -196,9 +199,9 @@
       return { x, y: y + selection.boxS, width, height: height };
     }
 
-    const { x, y, width, height } = getRect(selectionBox, $selection);
+    const { x, y, width, height } = getRect(desktopSelectionBox, $desktopSelection);
 
-    const newSelectedList: FileResource[] = [...$selection.saved];
+    const newSelectedList: FileResource[] = [...$desktopSelection.saved];
 
     const fileElementCount: number = innerList.children.length;
     for (let index = 0; index < fileElementCount; index++) {
@@ -209,7 +212,7 @@
         y: elementY,
         width: elementWidth,
         height: elementHeight
-      } = getRect(element, $selection);
+      } = getRect(element, $desktopSelection);
 
       if (
         x < elementX + elementWidth &&
@@ -217,37 +220,40 @@
         y < elementY + elementHeight &&
         y + height > elementY
       ) {
-        if ($selection.type === 'ctrl') {
-          const foundIndex = newSelectedList.indexOf(files[index]);
+        const file = files[index];
+
+        if (file == null) {
+          continue;
+        }
+
+        const foundIndex = newSelectedList.indexOf(file);
+
+        if ($desktopSelection.type === 'ctrl') {
           if (foundIndex === -1) {
-            newSelectedList.push(files[foundIndex]);
+            newSelectedList.push(file);
           } else {
             newSelectedList.splice(foundIndex, 1);
           }
-        } else if ($selection.type === 'shift') {
-          const foundIndex = newSelectedList.indexOf(files[index]);
+        } else if ($desktopSelection.type === 'shift') {
           if (foundIndex === -1) {
-            newSelectedList.push(files[index]);
+            newSelectedList.push(file);
           }
         } else {
-          newSelectedList.push(files[index]);
+          newSelectedList.push(file);
         }
       }
     }
 
     $selected = newSelectedList;
   }
-
-  const selectionBoxCoordinates: Writable<[x: number, y: number, w: number, h: number] | null> =
-    writable(null);
 </script>
 
-{#if $selection != null}
+{#if $desktopSelection != null}
   <AnimationFrame
     callback={() => {
       updateSelectionSnapshot('update');
 
-      $selectionBoxCoordinates = calculateSelectionBoxCoordinates($selection!);
+      $desktopSelectionBoxCoordinates = calculateSelectionBoxCoordinates($desktopSelection!);
 
       updateSelectedFiles();
     }}
@@ -288,6 +294,44 @@
   }}
 />
 
+{#snippet fileEntryView(index: number, file: FileResource)}
+  <button
+    class="file-entry"
+    class:grid={$listViewMode === FileManagerViewMode.Grid}
+    class:list={$listViewMode === FileManagerViewMode.List}
+    class:selected={$selected.includes(file)}
+    onclick={() => {
+      if (hasKeys('control') || hasKeys('shift')) {
+        const foundIndex = $selected.indexOf(file);
+
+        if (foundIndex === -1) {
+          $selected.push(file);
+        } else {
+          $selected.splice(foundIndex, 1);
+        }
+
+        $selected = $selected;
+      } else {
+        $selected = [file];
+      }
+    }}
+  >
+    <div class="thumbnail grid">
+      {#if file.type === FileType.Folder}
+        <i class="fa-solid fa-folder"></i>
+      {:else if file.type === FileType.File}
+        <img src="/favicon.svg" alt="Thumbnail" />
+      {/if}
+    </div>
+
+    <FileManagerSeparator orientation="horizontal" with-margin />
+    <div class="file-info grid">
+      <i class="fa-regular fa-{file.type === FileType.File ? 'file' : 'folder'}"></i>
+      <p>{file.name}</p>
+    </div>
+  </button>
+{/snippet}
+
 <div class="list-container">
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -299,11 +343,11 @@
     in:scale|global={{ start: 0.9, duration: 250 }}
   >
     <div class="selection-container">
-      {#if $selectionBoxCoordinates != null}
-        {@const [x, y, w, h] = $selectionBoxCoordinates}
+      {#if $desktopSelectionBoxCoordinates != null}
+        {@const [x, y, w, h] = $desktopSelectionBoxCoordinates}
 
         <div
-          bind:this={selectionBox}
+          bind:this={desktopSelectionBox}
           class="selection"
           style:margin-left="{Math.max(x, 0)}px"
           style:margin-top="{Math.max(y, 0)}px"
@@ -313,23 +357,16 @@
       {/if}
     </div>
 
-    {#if $listViewMode === FileManagerViewMode.Grid}
-      <div class="inner-list grid" bind:this={innerList}>
-        {#each files as file}
-          <button class="file-entry grid" class:selected={$selected.includes(file)}>
-            <div class="thumbnail grid">
-              <img src="/favicon.svg" alt="Thumbnail" />
-            </div>
-
-            <FileManagerSeparator orientation="horizontal" with-margin />
-            <div class="file-info grid">
-              <i class="fa-regular fa-{file.type === FileType.File ? 'file' : 'folder'}"></i>
-              <p>{file.name}</p>
-            </div>
-          </button>
-        {/each}
-      </div>
-    {:else if $listViewMode === FileManagerViewMode.List}{/if}
+    <div
+      class="inner-list"
+      class:grid={$listViewMode === FileManagerViewMode.Grid}
+      class:list={$listViewMode === FileManagerViewMode.List}
+      bind:this={innerList}
+    >
+      {#each files as file, index}
+        {@render fileEntryView(index, file)}
+      {/each}
+    </div>
   </div>
 </div>
 
@@ -362,7 +399,16 @@
 
     background-color: var(--background);
     color: var(--onBackground);
-    border: none;
+    border: solid 1px var(--shadow);
+  }
+
+  button.file-entry.grid:hover {
+    cursor: pointer;
+
+    background-color: var(--backgroundVariant);
+    color: var(--onBackgroundVariant);
+
+    border-color: var(--onBackgroundVariant);
   }
 
   button.file-entry.grid.selected {
@@ -371,6 +417,12 @@
   }
 
   div.thumbnail.grid {
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
     min-width: 100%;
     box-sizing: border-box;
 
@@ -390,6 +442,10 @@
       box-sizing: border-box;
 
       object-fit: cover;
+    }
+
+    > i {
+      font-size: 2em;
     }
   }
 

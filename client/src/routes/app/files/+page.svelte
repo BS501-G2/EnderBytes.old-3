@@ -1,6 +1,7 @@
 <script lang="ts">
   import { derived, writable, type Writable } from 'svelte/store';
   import FileManager, {
+    type FileManagerOnClipboardCallback,
     type FileManagerOnFileIdCallback,
     type FileManagerOnNewCallback,
     type FileManagerOnPageCallback
@@ -14,6 +15,7 @@
   import { getContext, onMount } from 'svelte';
   import { DashboardContextName, type DashboardContext } from '../dashboard.svelte';
   import { Title } from '@rizzzi/svelte-commons';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 
   const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
 
@@ -44,7 +46,16 @@
     $newDialog = [event.currentTarget as HTMLElement];
   };
 
+  const onClipboard: FileManagerOnClipboardCallback = (event, files, cut) => {
+    if (files == null) {
+      $clipboard = null;
+    } else {
+      $clipboard = [files, cut];
+    }
+  };
+
   const newDialog: Writable<[element: HTMLElement] | null> = writable(null);
+  const clipboard: Writable<[files: FileResource[], cut: boolean] | null> = writable(null);
 
   const uploadNewFiles = (files: File[]): void => {
     const task = executeBackgroundTask(
@@ -98,7 +109,19 @@
   };
 
   const createNewFolder = (name: string): void => {
-    const task = executeBackgroundTask(`New Folder: ${name}`, true, async () => {}, false);
+    const task = executeBackgroundTask(
+      `New Folder: ${name}`,
+      true,
+      async (_, setStatus) => {
+        setStatus('Creating Folder');
+
+        const parentFile = await getFile($fileId);
+        await createFolder(parentFile.id, name);
+
+        setStatus('Task Completed', 1);
+      },
+      false
+    );
 
     $newDialog = null;
     void task.run();
@@ -110,7 +133,16 @@
 <Title title="My Files" />
 
 {#snippet layout()}
-  <FileManager page="files" {refresh} {onPage} {onFileId} {onNew} {fileId} />
+  <FileManager
+    page="files"
+    {refresh}
+    {onPage}
+    {onFileId}
+    {onNew}
+    {onClipboard}
+    {fileId}
+    {clipboard}
+  />
 
   {#if $newDialog != null}
     <FileManagerNew
