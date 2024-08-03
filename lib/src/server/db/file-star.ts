@@ -53,7 +53,7 @@ export class FileStarManager extends ResourceManager<
 
     if (starred && star == null) {
       star = await this.insert({ fileId: file.id, userId: user.id });
-    } else if (star != null) {
+    } else if (!starred && star != null) {
       await this.delete(star);
       star = null;
     }

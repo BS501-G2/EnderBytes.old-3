@@ -2,6 +2,8 @@
   export interface FileManagerNewProps {
     element: HTMLElement;
 
+    presetFiles?: File[];
+
     onDismiss: () => void;
 
     uploadNewFiles: (files: File[]) => void;
@@ -26,11 +28,11 @@
     viewMode,
     type TabId
   } from '@rizzzi/svelte-commons';
-  import { type Snippet } from 'svelte';
+  import { onMount, type Snippet } from 'svelte';
   import { writable, type Writable } from 'svelte/store';
   import { fly } from 'svelte/transition';
 
-  const { element, uploadNewFiles, createNewFolder, onDismiss }: FileManagerNewProps = $props();
+  const { element, uploadNewFiles, createNewFolder, onDismiss, presetFiles }: FileManagerNewProps = $props();
 
   type Action = [action: () => void, label: string];
 
@@ -62,6 +64,12 @@
   const folder: Writable<string> = writable('');
 
   const currentTabIndex: Writable<number> = writable(0);
+
+  onMount(() => {
+    if (presetFiles) {
+      files.set(presetFiles);
+    }
+  });
 </script>
 
 {#snippet dialogHead()}

@@ -36,6 +36,8 @@
       <ProfilePage {resolve} />
     {:else}
       <Title title="User List" />
+      <pre>
+
       <div class="recent-text-container">
         <p class="recent-text-paragraph">User List</p>
         <div class="recent-files-container">
@@ -83,6 +85,7 @@
           </div>
         </div>
       </div>
+      </pre>
     {/if}
   {/key}
 {/snippet}
@@ -295,9 +298,6 @@
     margin: 20px;
     border-bottom: 1px var(--onPrimaryContainerVariant) solid;
   }
-  .file:hover .more-icon {
-    visibility: visible;
-  }
   .file-icons {
     display: flex;
     align-items: center;
@@ -334,22 +334,6 @@
       grid-template-rows: 50% 50%;
       margin: 5px;
     }
-    .file-icons {
-      isplay: grid;
-      grid-template-columns: auto;
-      grid-area: 1 / 3 / 3 / 4;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .more-icon {
-      visibility: visible;
-    }
-    .fav-icon,
-    .share-icon {
-      display: none;
-    }
-
     .file-name-text {
       font-weight: bolder;
       font-size: clamp(12px, 2vw + 0.5rem, 24px);

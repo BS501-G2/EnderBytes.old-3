@@ -7,7 +7,7 @@
   class:desktop={$viewMode & ViewMode.Desktop}
   class:mobile={$viewMode & ViewMode.Mobile}
 >
-  <div class=firstGrid-Container>
+  <div class="firstGrid-Container" id="home">
     <div class="gridInfo1">
       <h1>Store, share, and collaborate <br>on files and folders across <br>your phone, tablet, or computer.</h1>
       <p>Secure and Private File Storage and Sharing Website <br> for Melchora Aquino Elementary School.</p>
@@ -24,7 +24,7 @@
 
   <hr>
 
-  <div class=secondGrid-Container>
+  <div class="secondGrid-Container">
     <div class="gridVid">
       <video src="SecurityWhiteMG.mp4" muted loop autoplay playsinline></video>
     </div>
@@ -36,7 +36,7 @@
 
   <hr>
 
-  <div class=secondGrid-Container>
+  <div class="secondGrid-Container">
      <div class="gridInfo2">
       <h1>Store, share, and collaborate <br>on files and folders across <br>your phone, tablet, or computer.</h1>
       <p>this section is for collaboration.------Secure and Private File Storage and Sharing Website <br> for Melchora Aquino Elementary School.</p>
@@ -48,7 +48,7 @@
 
   <hr>
 
-   <div class=secondGrid-Container>
+   <div class="secondGrid-Container">
      <div class="gridInfo2">
       <h1>Store, share, and collaborate <br>on files and folders across <br>your phone, tablet, or computer.</h1>
       <p>this section is for ADMIN.---------Secure and Private File Storage and Sharing Website <br> for Melchora Aquino Elementary School.</p>
@@ -60,15 +60,27 @@
 
   <hr>
 
-  <div class=Contact>
+  <div class="Contact" id="contact">
      <div class="contactDetails">
-      <h1>Contact Us</h1>
+      <h1>Contact <span class="highlight">Us</span></h1>
       <p>Have any questions? We'd love to hear from you.</p>
     </div>
-     <div class="contact-Container">
-      <div class="Email"> </div>
-      <div class="Phone"> </div>
-      <div class="Office"> </div>
+     <div class="contactGrid-Container">
+      <div class="Card">
+        <i class="fas fa-envelope"></i>
+        <h3>Email</h3>
+        <p>contact@example.com</p>
+      </div>
+      <div class="Card">
+        <i class="fas fa-phone"></i>
+        <h3>Phone</h3>
+        <p>+639 1234 567 890</p>
+      </div>
+      <div class="Card">
+        <i class="fas fa-map-marker-alt"></i>
+        <h3>Office</h3>
+        <p>123 Main Street, City, Country</p>
+      </div>
     </div>
   </div>
 
@@ -80,7 +92,9 @@
   div.landing{
     overflow-y: auto;
     background-color: #FFFF;
+    font-family: Arial, sans-serif;
   }
+
 
   div.firstGrid-Container{
     display:grid;
@@ -143,7 +157,7 @@
       background-color: #86c24fff;
       opacity: 0.5;
       margin: 20px auto;
-      width: 75%;
+      width: 75%; 
     }
   div.secondGrid-Container{
     display:grid;
@@ -184,7 +198,82 @@
   }
   div.contactDetails{
     text-align:center;
+    padding:30px;
   }
+  div.Contact {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    min-height:900px;
+  }
+  .contactDetails h1 {
+    font-size: 4em;
+    margin: 0;
+    padding:70px;
+  }
+   .contactDetails p {
+    font-size: 2em;
+    margin: 0;
+    padding:10px;
+  }
+
+  .contactDetails .highlight {
+    color: #86c24fff;
+  }
+  div.contactGrid-Container {
+    display: grid;
+    place-items: center;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 70px;
+    width: 80%;
+    max-width: 1000px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    padding:70px;
+  }
+  div.Card {
+    background-color: rgba(255, 255, 255, 0.8);
+    color: black;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
+    transition: transform 0.3s, background-color 0.3s;
+    min-height:100%;
+    min-width:100%;
+
+  }
+  .Card i {
+    font-size: 2em;
+    margin-bottom: 10px;
+    color: #86c24fff;
+    transition: color 0.3s;
+  }
+
+  .Card:hover i {
+    color: white;
+  }
+
+  div.Card:hover {
+    background-color: #86c24fff;
+    color: white;
+    transform: translateY(-5px);
+  }
+
+  div.Card h3 {
+    margin: 0 0 10px;
+    font-size: 1.5em;
+    padding:10px;
+  }
+
+  div.Card p {
+    margin: 0;
+    font-size: 1.2em;
+    padding:20px;
+  }
+
 
   div.landing.desktop {
     padding-top: 72px;

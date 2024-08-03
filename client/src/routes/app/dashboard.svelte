@@ -181,7 +181,6 @@
       display: flex;
       flex-direction: column;
 
-      min-width: 0px;
       min-height: 0px;
     }
 

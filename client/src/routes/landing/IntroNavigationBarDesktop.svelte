@@ -85,6 +85,8 @@
 
     box-shadow: #7f7f7f7f 0px 2px 8px;
 
+    z-index: 1;
+
     padding: 0px 32px 0px 32px;
     box-sizing: border-box;
 

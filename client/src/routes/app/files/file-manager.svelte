@@ -17,7 +17,7 @@
     event: SourceEvent,
     page: 'files' | 'shared' | 'trashed' | 'starred'
   ) => void;
-  export type FileManagerOnNewCallback = (event: SourceEvent) => void;
+  export type FileManagerOnNewCallback = (event: SourceEvent, presetFiles?: File[]) => void;
   export type FileManagerOnViewCallback = (event: SourceEvent) => void;
   export type FileManagerOnClipboardCallback = (
     event: SourceEvent,
@@ -67,7 +67,9 @@
               access: FileAccessResource | null;
             };
             accesses: FileAccessResource[];
+            isStarred: boolean;
             // logs: FileLogResource[];
+            selection: Writable<FileResource[]>;
           } & (
             | {
                 type: 'file';
@@ -79,7 +81,6 @@
                 type: 'folder';
 
                 files: FileResource[];
-                selection: Writable<FileResource[]>;
               }
           ))
         | {
@@ -133,6 +134,9 @@
   import FileManagerSeparator from './file-manager-separator.svelte';
   import FileManagerAddressBar from './file-manager-address-bar.svelte';
   import FileManagerView from './file-manager-view.svelte';
+  import FileManagerDeleteConfirm from './file-manager-delete-confirm.svelte';
+  import FileManagerAccessDialog from './file-manager-access-dialog.svelte';
+  import FileManagerDetailsDialog from './file-manager-details-dialog.svelte';
 
   const { ...props }: FileManagerProps = $props();
   const { refresh } = props;
@@ -144,6 +148,7 @@
       getFilePathChain,
       getMyAccess,
       listFileAccess,
+      isFileStarred,
       listFileLogs,
       listFileSnapshots,
       listFileViruses,
@@ -185,18 +190,26 @@
 
       if (props.page === 'files') {
         const file = await getFile($fileId);
-        const [filePathChain, myAccess, accesses /* logs */] = await Promise.all([
+        const [filePathChain, myAccess, accesses, isStarred /* logs */] = await Promise.all([
           getFilePathChain(file.id),
           getMyAccess(file.id),
-          listFileAccess(file.id)
+          listFileAccess(file.id),
+          isFileStarred(file.id)
           // listFileLogs(file.id)
         ]);
+        const selection = writable<FileResource[]>([]);
 
         if (file.type === FileType.File) {
           const [viruses, snapshots] = await Promise.all([
             listFileViruses(file.id),
             listFileSnapshots(file.id)
           ]);
+
+          selection.update((selected) => {
+            selected.push(file);
+
+            return selected;
+          });
 
           $resolved = {
             me,
@@ -208,7 +221,9 @@
             accesses,
             type: 'file',
             viruses,
-            snapshots
+            snapshots,
+            selection,
+            isStarred
           };
         } else if (file.type === FileType.Folder) {
           const files = await scanFolder(file.id);
@@ -223,7 +238,8 @@
             accesses,
             type: 'folder',
             files,
-            selection: writable([])
+            selection,
+            isStarred
           };
         }
       } else if (props.page === 'shared') {
@@ -239,7 +255,7 @@
         };
       } else if (props.page === 'starred') {
         const starredList = await listStarredFiles();
-        const files = await Promise.all(starredList.map((starredFile) => getFile(starredFile.id)));
+        const files = await Promise.all(starredList.map((starredFile) => getFile(starredFile.fileId)));
 
         $resolved = {
           me,
@@ -341,6 +357,10 @@
   />
 {/if}
 
+<FileManagerDeleteConfirm />
+<FileManagerAccessDialog />
+<FileManagerDetailsDialog />
+
 <style lang="scss">
   div.file-manager {
     flex-grow: 1;
@@ -361,16 +381,6 @@
   div.file-manager.mobile {
     background-color: var(--backgroundVariant);
     color: var(--onBackgroundVariant);
-  }
-
-  div.button-container {
-    display: flex;
-    flex-direction: row;
-
-    align-items: center;
-
-    padding: 4px 8px;
-    gap: 4px;
   }
 
   div.main-view {
@@ -399,11 +409,6 @@
   div.main-view.loading {
     justify-content: center;
     align-items: center;
-  }
-
-  div.main-view.preview-mode {
-    background-color: var(--primary);
-    color: var(--onPrimary);
   }
 
   div.view-row {

@@ -11,6 +11,9 @@
     currentColorScheme,
     ResponsiveLayout
   } from '@rizzzi/svelte-commons';
+  import type { Snippet } from 'svelte';
+
+  const { children }: { children: Snippet } = $props();
 </script>
 
 <svelte:head>
@@ -26,7 +29,8 @@
 </Locale>
 <ResetCSS />
 <ColorScheme colorScheme={$currentColorScheme} />
-<slot />
+
+{@render children()}
 
 <style lang="scss">
   :root {
@@ -35,7 +39,12 @@
     background-color: var(--background);
 
     color: var(--onBackground);
+    user-drag: none;
+    -webkit-user-drag: none;
     user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
 
     min-width: 320px;
   }

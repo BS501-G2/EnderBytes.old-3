@@ -4,13 +4,16 @@
   import { type FileManagerContext, FileManagerContextName } from './file-manager.svelte';
   import { writable, type Writable } from 'svelte/store';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import FileManagerDetails from './file-manager-details.svelte';
 
   const { resolved } = getContext<FileManagerContext>(FileManagerContextName);
 
   const selection: Writable<FileResource[]> =
-    $resolved.status === 'success' && !($resolved.page === 'files' && $resolved.type === 'file')
-      ? $resolved.selection
-      : writable([]);
+    $resolved.status !== 'success'
+      ? writable([])
+      : !($resolved.page === 'files' && $resolved.type === 'file')
+        ? $resolved.selection
+        : writable([$resolved.file]);
 </script>
 
 <div class="side-bar" transition:fly={{ duration: 250, x: 16 }}>
@@ -19,6 +22,10 @@
       <i class="fa-solid fa-folder-open"></i>
       <p>{$selection.length} selected</p>
     </div>
+  {:else}
+    {#key $selection}
+      <FileManagerDetails file={$selection[0]} embedded />
+    {/key}
   {/if}
 </div>
 

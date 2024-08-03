@@ -42,8 +42,8 @@
     goto(`/app/files${newFileId != null ? `?fileId=${newFileId}` : ''}`);
   };
 
-  const onNew: FileManagerOnNewCallback = (event) => {
-    $newDialog = [event.currentTarget as HTMLElement];
+  const onNew: FileManagerOnNewCallback = (event, files) => {
+    $newDialog = [event.currentTarget as HTMLElement, files];
   };
 
   const onClipboard: FileManagerOnClipboardCallback = (event, files, cut) => {
@@ -54,7 +54,7 @@
     }
   };
 
-  const newDialog: Writable<[element: HTMLElement] | null> = writable(null);
+  const newDialog: Writable<[element: HTMLElement, preset?: File[]] | null> = writable(null);
   const clipboard: Writable<[files: FileResource[], cut: boolean] | null> = writable(null);
 
   const uploadNewFiles = (files: File[]): void => {
@@ -100,6 +100,7 @@
         }
 
         setStatus('Task Completed', 1);
+        $refresh();
       },
       false
     );
@@ -116,9 +117,10 @@
         setStatus('Creating Folder');
 
         const parentFile = await getFile($fileId);
-        await createFolder(parentFile.id, name);
+        const folder = await createFolder(parentFile.id, name);
 
         setStatus('Task Completed', 1);
+        onFileId(null as never, folder.id);
       },
       false
     );
@@ -152,6 +154,7 @@
       }}
       {uploadNewFiles}
       {createNewFolder}
+      presetFiles={$newDialog[1]}
     />
   {/if}
 {/snippet}

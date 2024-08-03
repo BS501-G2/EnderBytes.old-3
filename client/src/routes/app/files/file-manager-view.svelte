@@ -56,26 +56,28 @@
     </div>
   {/if}
 
-  <div class="row">
-    <p class="label">List Mode</p>
-    {#each [FileManagerViewMode.List, FileManagerViewMode.Grid] as value}
-      <Button
-        container={buttonContainer}
-        buttonClass={value === $listViewMode ? ButtonClass.Primary : ButtonClass.Transparent}
-        onClick={() => {
-          $listViewMode = value;
-        }}
-      >
-        {#if value === FileManagerViewMode.Grid}
-          <i class="fa-solid fa-th-large"></i>
-          <p>Grid</p>
-        {:else if value === FileManagerViewMode.List}
-          <i class="fa-solid fa-list"></i>
-          <p>List</p>
-        {/if}
-      </Button>
-    {/each}
-  </div>
+  {#if $resolved.status === 'success' && !($resolved.page === 'files' && $resolved.type === 'file')}
+    <div class="row">
+      <p class="label">List Mode</p>
+      {#each [FileManagerViewMode.List, FileManagerViewMode.Grid] as value}
+        <Button
+          container={buttonContainer}
+          buttonClass={value === $listViewMode ? ButtonClass.Primary : ButtonClass.Transparent}
+          onClick={() => {
+            $listViewMode = value;
+          }}
+        >
+          {#if value === FileManagerViewMode.Grid}
+            <i class="fa-solid fa-th-large"></i>
+            <p>Grid</p>
+          {:else if value === FileManagerViewMode.List}
+            <i class="fa-solid fa-list"></i>
+            <p>List</p>
+          {/if}
+        </Button>
+      {/each}
+    </div>
+  {/if}
 {/snippet}
 
 {#if $viewMode & ViewMode.Desktop}

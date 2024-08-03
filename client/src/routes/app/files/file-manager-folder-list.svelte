@@ -23,7 +23,14 @@
 </script>
 
 <script lang="ts">
-  import { AnimationFrame, hasKeys, ViewMode, viewMode } from '@rizzzi/svelte-commons';
+  import {
+    AnimationFrame,
+    hasKeys,
+    Overlay,
+    OverlayPositionType,
+    ViewMode,
+    viewMode
+  } from '@rizzzi/svelte-commons';
   import { getContext } from 'svelte';
   import { scale } from 'svelte/transition';
   import {
@@ -47,9 +54,7 @@
       : [];
 
   const selected: Writable<FileResource[]> =
-    $resolved.status === 'success' && !($resolved.page === 'files' && $resolved.type === 'file')
-      ? $resolved.selection
-      : writable([]);
+    $resolved.status === 'success' ? $resolved.selection : writable([]);
 
   const desktopSelection: Writable<FileManagerSelection | null> = writable(null);
   const desktopSelectionBoxCoordinates: Writable<
@@ -59,6 +64,7 @@
   let list: HTMLDivElement = $state(null as never);
   let innerList: HTMLDivElement = $state(null as never);
   let desktopSelectionBox: HTMLDivElement | null = $state(null);
+  let desktopSelectionBoxContainer: HTMLDivElement | null = $state(null);
 
   function updateSelectionSnapshot(
     ...args:
@@ -244,9 +250,86 @@
       }
     }
 
+    if (newSelectedList.map((file) => file.id).join() === $selected.map((file) => file.id).join()) {
+      return;
+    }
     $selected = newSelectedList;
   }
+
+  const drag: Writable<[x: number, y: number] | null> = writable(null);
+
+  function processDragEvent(
+    event: DragEvent,
+    target: HTMLElement,
+    ...args:
+      | [event: 'enter']
+      | [event: 'leave']
+      | [event: 'over', x: number, y: number]
+      | [event: 'drop', files: File[]]
+  ) {
+    if (!(target != null && (target === list || list.contains(target as never)))) {
+      return;
+    }
+
+    if (args[0] === 'enter') {
+      $drag = null;
+    } else if (args[0] === 'leave') {
+      $drag = null;
+    } else if (args[0] === 'over') {
+      $drag = [args[1], args[2]];
+      console.log($drag);
+    } else if (args[0] === 'drop') {
+      $drag = null;
+      if (props.page === 'files') {
+        props.onNew(Object.defineProperty(event, 'currentTarget', { get: () => desktopSelectionBoxContainer! }), args[1]);
+      }
+    }
+  }
 </script>
+
+{#snippet fileEntryView(index: number, file: FileResource)}
+  <button
+    class="file-entry"
+    class:grid={$listViewMode === FileManagerViewMode.Grid}
+    class:list={$listViewMode === FileManagerViewMode.List}
+    class:selected={$selected.includes(file)}
+    ondblclick={(event) => {
+      props.onFileId(event, file.id);
+    }}
+    oncontextmenu={(event) => {
+      event.preventDefault();
+    }}
+    onclick={() => {
+      if (hasKeys('control') || hasKeys('shift')) {
+        const foundIndex = $selected.indexOf(file);
+
+        if (foundIndex === -1) {
+          $selected.push(file);
+        } else {
+          $selected.splice(foundIndex, 1);
+        }
+
+        $selected = $selected;
+      } else {
+        $selected = [file];
+      }
+    }}
+  >
+    <div class="thumbnail grid">
+      {#if file.type === FileType.Folder}
+        <i class="fa-regular fa-folder"></i>
+      {:else if file.type === FileType.File}
+        <img src="/favicon.svg" alt="Thumbnail" />
+      {/if}
+    </div>
+
+    <FileManagerSeparator orientation="horizontal" with-margin />
+    <div class="file-info grid">
+      <i class="fa-regular fa-{file.type === FileType.File ? 'file' : 'folder'}"></i>
+      <p>{file.name}</p>
+    </div>
+  </button>
+{/snippet}
 
 {#if $desktopSelection != null}
   <AnimationFrame
@@ -292,45 +375,46 @@
   onmouseup={() => {
     updateSelectionSnapshot('up');
   }}
+  ondragenter={(event) => {
+    event.preventDefault();
+    event.stopPropagation()
+    processDragEvent(event, event.target as HTMLElement, 'enter');
+  }}
+  ondragleave={(event) => {
+    event.preventDefault();
+    event.stopPropagation()
+    processDragEvent(event, event.target as HTMLElement, 'leave');
+  }}
+  ondragover={(event) => {
+    event.preventDefault();
+    event.stopPropagation()
+    processDragEvent(event, event.target as HTMLElement, 'over', event.clientX, event.clientY);
+  }}
+  ondrop={(event) => {
+    event.preventDefault();
+    event.stopPropagation()
+
+    processDragEvent(
+      event,
+      event.target as HTMLElement,
+      'drop',
+      Array.from(event.dataTransfer?.files || [])
+    );
+  }}
 />
 
-{#snippet fileEntryView(index: number, file: FileResource)}
-  <button
-    class="file-entry"
-    class:grid={$listViewMode === FileManagerViewMode.Grid}
-    class:list={$listViewMode === FileManagerViewMode.List}
-    class:selected={$selected.includes(file)}
-    onclick={() => {
-      if (hasKeys('control') || hasKeys('shift')) {
-        const foundIndex = $selected.indexOf(file);
-
-        if (foundIndex === -1) {
-          $selected.push(file);
-        } else {
-          $selected.splice(foundIndex, 1);
-        }
-
-        $selected = $selected;
-      } else {
-        $selected = [file];
-      }
+{#if $drag != null}
+  <Overlay
+    position={[OverlayPositionType.Offset, $drag![0], $drag![1]]}
+    on:dismiss={() => {
+      $drag = null;
     }}
   >
-    <div class="thumbnail grid">
-      {#if file.type === FileType.Folder}
-        <i class="fa-solid fa-folder"></i>
-      {:else if file.type === FileType.File}
-        <img src="/favicon.svg" alt="Thumbnail" />
-      {/if}
+    <div class="drag">
+      <i class="fa-solid fa-arrow-up-from-bracket"></i>
     </div>
-
-    <FileManagerSeparator orientation="horizontal" with-margin />
-    <div class="file-info grid">
-      <i class="fa-regular fa-{file.type === FileType.File ? 'file' : 'folder'}"></i>
-      <p>{file.name}</p>
-    </div>
-  </button>
-{/snippet}
+  </Overlay>
+{/if}
 
 <div class="list-container">
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -342,7 +426,7 @@
     class:desktop={$viewMode & ViewMode.Desktop}
     in:scale|global={{ start: 0.9, duration: 250 }}
   >
-    <div class="selection-container">
+    <div class="selection-container" bind:this={desktopSelectionBoxContainer}>
       {#if $desktopSelectionBoxCoordinates != null}
         {@const [x, y, w, h] = $desktopSelectionBoxCoordinates}
 
@@ -445,7 +529,7 @@
     }
 
     > i {
-      font-size: 2em;
+      font-size: 4em;
     }
   }
 
@@ -498,5 +582,22 @@
     flex-grow: 1;
     min-width: 0px;
     min-height: 0px;
+  }
+
+  div.drag {
+    pointer-events: none;
+
+    min-width: 0px;
+    min-height: 0px;
+    max-width: 0px;
+    max-height: 0px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    > i {
+      font-size: 3em;
+    }
   }
 </style>
