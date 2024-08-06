@@ -53,7 +53,7 @@ export class ServerConnection {
     this.#wrapper = wrapSocket(
       (this.#io = socket),
       this.#server,
-      (func) => this.#onMessage(func),
+      (func) => this.#onMessage(func)
       // (...message) => {
       //   console.log(...message);
       // }
@@ -697,6 +697,41 @@ export class ServerConnection {
           fileContent,
           fileSnapshot
         );
+      },
+
+      getFileTime: async (fileId) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.Read
+        );
+
+        if (file.type === FileType.Folder) {
+          const resourceStats = (await fileManager.getStats(file.id))!;
+
+          return {
+            createTime: resourceStats.createTime,
+            modifyTime: resourceStats.updateTime,
+          };
+        } else if (file.type === FileType.File) {
+          const fileContent = await fileContentManager.getMain(file);
+          const firstSnapshot = await fileSnapshotManager.getMain(
+            file,
+            fileContent
+          );
+          const latestSnapshot = await fileSnapshotManager.getLatest(
+            file,
+            fileContent
+          );
+
+          return {
+            createTime: firstSnapshot.createTime,
+            modifyTime: latestSnapshot.createTime,
+          };
+        }
+
+        throw ApiError.throw(ApiErrorType.InvalidRequest);
       },
 
       listFileViruses: async (fileId) => {

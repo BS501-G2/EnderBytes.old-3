@@ -277,7 +277,6 @@
       $drag = null;
     } else if (args[0] === 'over') {
       $drag = [args[1], args[2]];
-      console.log($drag);
     } else if (args[0] === 'drop') {
       $drag = null;
       if (props.page === 'files') {

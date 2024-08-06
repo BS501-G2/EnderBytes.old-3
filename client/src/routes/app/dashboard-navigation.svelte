@@ -14,11 +14,13 @@
   import { goto } from '$app/navigation';
 
   import { page } from '$app/stores';
+  import { getConnection } from '$lib/client/client';
+  import { UserRole } from '@rizzzi/enderdrive-lib/shared';
   import { viewMode, ViewMode } from '@rizzzi/svelte-commons';
   import { onMount } from 'svelte';
   import { writable, type Writable } from 'svelte/store';
 
-  const entries: NavigationEntry[] = [
+  let entries: NavigationEntry[] = $state([
     {
       id: 'feed',
 
@@ -65,12 +67,12 @@
     {
       id: 'profile',
 
-      name: 'Users',
+      name: 'Profile',
       icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user`,
 
-      path: '/app/users'
+      path: '/app/users?id=!me'
     }
-  ];
+  ]);
 
   function getChildNavigationEntries(navigationEntry: NavigationEntry): NavigationEntry[] {
     return entries.filter((entry) => entry.parentId === navigationEntry.id);
@@ -99,7 +101,28 @@
     }
   }
 
+  async function loading(): Promise<void> {
+    const {
+      serverFunctions: { whoAmI }
+    } = getConnection();
+    const user = await whoAmI();
+
+    if ((user?.role ?? UserRole.Member) >= UserRole.SiteAdmin) {
+      entries.push({
+        id: 'users',
+
+        name: 'Users',
+        icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user`,
+
+        path: '/app/users'
+      });
+    }
+  }
+
   onMount(() => updatelimitedState());
+  onMount(() => {
+    void loading();
+  });
 </script>
 
 <svelte:window onresize={updatelimitedState} />

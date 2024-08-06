@@ -143,18 +143,29 @@ export abstract class ResourceManager<
   }
 
   public async getStats(id: number): Promise<ResourceRecordStats | null> {
-    const earliest = await this.db
+    const earliest = (await this.db
       .table<R, R[]>(this.dataTableName)
       .select("*")
       .where("id", "=", id)
-      .where("previousDataId", "is", "null")
-      .first();
+      .where("previousDataId", "is", null)
+      .first()) as R;
 
     if (earliest == null) {
       return null;
     }
 
-    return null;
+    const latest = (await this.db
+      .table<R, R[]>(this.dataTableName)
+      .select("*")
+      .where("id", "=", id)
+      .where("nextDataId", "=", null)
+      .first()) as R;
+
+    return {
+      createTime: earliest.createTime,
+      updateTime: latest?.createTime ?? earliest.createTime,
+      id,
+    };
   }
 
   public async insert(data: Omit<R, keyof Resource>): Promise<R> {

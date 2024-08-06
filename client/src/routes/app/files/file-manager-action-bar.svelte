@@ -35,9 +35,8 @@
   } = getConnection();
 
   async function getActions(selection: FileResource[]): Promise<FileManagerAction[]> {
-    console.log('ads');
-
     const actions: FileManagerAction[] = [];
+
     if ($resolved.status === 'success') {
       if ($viewMode & ViewMode.Desktop) {
         actions.push({
@@ -119,41 +118,6 @@
           }
         }
 
-        if (props.page === 'files' && $clipboard != null) {
-          actions.push({
-            name: 'Cancel',
-            icon: 'fa-solid fa-xmark',
-            type: 'modify',
-            action: async (event) => {
-              props.onClipboard(event, null, false);
-            }
-          });
-
-          actions.push({
-            name: 'Paste',
-            icon: 'fa-solid fa-paste',
-            type: 'modify',
-            action: async () => {
-              const parentFolder = await getFile($fileId);
-
-              if ($clipboard![1]) {
-                await moveFile(
-                  $clipboard![0].map((file) => file.id),
-                  parentFolder.id
-                );
-              } else {
-                await copyFile(
-                  $clipboard![0].map((file) => file.id),
-                  parentFolder.id
-                );
-              }
-
-              $clipboard = null;
-              $refresh();
-            }
-          });
-        }
-
         if ($selected.length === 1 && $clipboard == null && $viewMode & ViewMode.Mobile) {
           actions.push({
             name: 'Properties',
@@ -167,6 +131,52 @@
           });
         }
       }
+
+      if (props.page === 'files' && $clipboard != null) {
+        actions.push({
+          name: 'Cancel',
+          icon: 'fa-solid fa-xmark',
+          type: 'modify',
+          action: async (event) => {
+            props.onClipboard(event, null, false);
+          }
+        });
+
+        actions.push({
+          name: 'Paste',
+          icon: 'fa-solid fa-paste',
+          type: 'modify',
+          action: async () => {
+            const parentFolder = await getFile($fileId);
+
+            if ($clipboard![1]) {
+              await moveFile(
+                $clipboard![0].map((file) => file.id),
+                parentFolder.id
+              );
+            } else {
+              await copyFile(
+                $clipboard![0].map((file) => file.id),
+                parentFolder.id
+              );
+            }
+
+            $clipboard = null;
+            $refresh();
+          }
+        });
+      }
+
+      // if (props.page !== 'files' && $selected.length === 1 && $clipboard == null) {
+      //   actions.push({
+      //     name: 'Location',
+      //     icon: 'fa-solid fa-location-dot',
+      //     type: 'modify',
+      //     action: async (event) => {
+      //         props.onFileId(event, $selected[0].id);
+      //     }
+      //   });
+      // }
 
       if ($viewMode & ViewMode.Desktop) {
         if (

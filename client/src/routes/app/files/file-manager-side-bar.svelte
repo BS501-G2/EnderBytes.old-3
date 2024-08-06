@@ -9,11 +9,7 @@
   const { resolved } = getContext<FileManagerContext>(FileManagerContextName);
 
   const selection: Writable<FileResource[]> =
-    $resolved.status !== 'success'
-      ? writable([])
-      : !($resolved.page === 'files' && $resolved.type === 'file')
-        ? $resolved.selection
-        : writable([$resolved.file]);
+    $resolved.status !== 'success' ? writable([]) : $resolved.selection;
 </script>
 
 <div class="side-bar" transition:fly={{ duration: 250, x: 16 }}>
@@ -39,6 +35,7 @@
     min-height: 0px;
 
     padding: 8px;
+    padding-left: 16px;
 
     overflow: auto;
   }

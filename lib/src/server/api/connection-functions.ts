@@ -90,6 +90,8 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   getFileMime: (fileId: number) => Promise<[mime: string, description: string]>;
 
+  getFileTime: (fileId: number) => Promise<{ createTime: number, modifyTime: number }>;
+
   listFileViruses: (fileId: number) => Promise<string[]>;
 
   listFileAccess: (

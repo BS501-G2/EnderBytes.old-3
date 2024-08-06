@@ -97,6 +97,7 @@
     resolved: Writable<FileManagerResolved>;
 
     viewDialog: Writable<[element: HTMLElement] | null>;
+    accessDialogs: Writable<[file: FileResource] | null>;
 
     listViewMode: Writable<FileManagerViewMode>;
     showSideBar: Writable<boolean>;
@@ -160,18 +161,17 @@
   } = getConnection();
 
   setContext<FileManagerProps>(FileManagerPropsName, props);
-  const { refreshKey, resolved, showSideBar, viewDialog } = setContext<FileManagerContext>(
-    FileManagerContextName,
-    {
+  const { refreshKey, resolved, showSideBar, viewDialog, accessDialogs } =
+    setContext<FileManagerContext>(FileManagerContextName, {
       refreshKey: writable(0),
       resolved: writable({ status: 'loading' }),
 
       viewDialog: writable(null),
+      accessDialogs: writable(null),
 
       listViewMode: persisted('fm-list-mode', FileManagerViewMode.Grid),
       showSideBar: persisted('side-bar', false)
-    }
-  );
+    });
 
   refresh.set(() => refreshKey.update((value) => value + 1));
 
@@ -255,7 +255,9 @@
         };
       } else if (props.page === 'starred') {
         const starredList = await listStarredFiles();
-        const files = await Promise.all(starredList.map((starredFile) => getFile(starredFile.fileId)));
+        const files = await Promise.all(
+          starredList.map((starredFile) => getFile(starredFile.fileId))
+        );
 
         $resolved = {
           me,
@@ -358,8 +360,16 @@
 {/if}
 
 <FileManagerDeleteConfirm />
-<FileManagerAccessDialog />
 <FileManagerDetailsDialog />
+
+{#if $accessDialogs != null}
+  <FileManagerAccessDialog
+    file={$accessDialogs[0]}
+    resolve={() => {
+      $accessDialogs = null;
+    }}
+  />
+{/if}
 
 <style lang="scss">
   div.file-manager {

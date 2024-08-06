@@ -29,10 +29,11 @@
 </script>
 
 {#if props.class == null}
-  <svelte:self user={props.user} class={UserClass.Link} initials={false} />
+  <svelte:self {...props} user={props.user} class={UserClass.Link} />
 {:else if props.class == UserClass.Link}
   {@const initials = props.initials ?? true}
   {@const hyperlink = props.hyperlink ?? true}
+
   <a class:nolink={!hyperlink} href={hyperlink ? `/app/users?id=@${props.user.username}` : null}>
     {props.user.lastName}, {initials ? `${props.user.firstName[0]}.` : props.user.firstName}{props
       .user.middleName
