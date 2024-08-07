@@ -127,4 +127,25 @@ export class VirusScanner extends Service<
     );
     return result.viruses;
   }
+
+  public async scanBuffer(buffer: Uint8Array): Promise<string[]> {
+    let position = 0;
+
+    const stream = new Readable({
+      read: (size) => {
+        const read = buffer.subarray(position, position + size);
+        stream.push(read);
+        position += read.length;
+
+        if (position >= buffer.length) {
+          stream.push(null);
+        }
+      },
+    });
+
+    const result = await this.#clam.scanStream(stream);
+    stream.destroy();
+
+    return result.viruses;
+  }
 }

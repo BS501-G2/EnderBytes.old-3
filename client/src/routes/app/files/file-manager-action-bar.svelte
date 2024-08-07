@@ -21,7 +21,7 @@
   } from './file-manager.svelte';
   import { FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
-  import { derived, get, writable, type Writable } from 'svelte/store';
+  import { writable, type Writable } from 'svelte/store';
   import { DashboardContextName, type DashboardContext } from '../dashboard.svelte';
   import { getConnection } from '$lib/client/client';
   import { deleteConfirm } from './file-manager-delete-confirm.svelte';
@@ -31,10 +31,19 @@
   const { refresh } = props;
   const { resolved, viewDialog } = getContext<FileManagerContext>(FileManagerContextName);
   const {
-    serverFunctions: { copyFile, moveFile, trashFile, getFile, setFileStar, isFileStarred }
+    serverFunctions: {
+      copyFile,
+      moveFile,
+      trashFile,
+      getFile,
+      setFileStar,
+      isFileStarred,
+      restoreFile,
+      purgeFile
+    }
   } = getConnection();
 
-  async function getActions(selection: FileResource[]): Promise<FileManagerAction[]> {
+  async function getActions(): Promise<FileManagerAction[]> {
     const actions: FileManagerAction[] = [];
 
     if ($resolved.status === 'success') {
@@ -205,6 +214,34 @@
           }
         });
       }
+
+      if (props.page === 'trash') {
+        if ($selected.length > 0) {
+          actions.push({
+            name: 'Restore',
+            icon: 'fa-solid fa-rotate',
+            type: 'modify',
+            action: async () => {
+              await restoreFile($selected.map((file) => file.id));
+              $refresh?.();
+            }
+          });
+
+          actions.push({
+            name: 'Permanently Delete',
+            icon: 'fa-solid fa-trash',
+            type: 'modify',
+            action: async () => {
+              const files = [...$selected];
+              if (await deleteConfirm(files)) {
+                await purgeFile(files.map((file) => file.id));
+                $selected = [];
+                $refresh?.();
+              }
+            }
+          })
+        }
+      }
     } else if ($resolved.status === 'error') {
       actions.push({
         name: 'Retry',
@@ -324,7 +361,7 @@
   {#key $selected}
     {#key $clipboard}
       {#key $actionsKey}
-        {#await getActions($selected)}
+        {#await getActions()}
           <div class="loading-bar">
             <LoadingSpinner size="1.2em" />
           </div>

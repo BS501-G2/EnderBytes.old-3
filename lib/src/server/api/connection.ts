@@ -493,6 +493,25 @@ export class ServerConnection {
         return await userManager.setSuspended(user, isSuspended);
       },
 
+      updateFile: async (
+        fileId: number,
+        bounds: [offset: number, length: number][]
+      ) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.ReadWrite
+        );
+
+        if (
+          getUploadBufferSize() !==
+          bounds.reduce((size, [, length]) => size + length, 0)
+        ) {
+          ApiError.throw(ApiErrorType.InvalidRequest, "Invalid bounds");
+        }
+      },
+
       createFile: async (folderId, name) => {
         const authentication = requireAuthenticated(true);
 
@@ -501,6 +520,14 @@ export class ServerConnection {
         }
 
         const buffer = consumeUploadBuffer();
+        const viruses = await this.#manager.server.virusScanner.scanBuffer(
+          buffer
+        );
+
+        // if (viruses.length > 0) {
+        //   ApiError.throw(ApiErrorType.InvalidRequest, "File contains viruses");
+        // }
+
         const folder = await getFile(
           folderId,
           authentication,
@@ -1165,8 +1192,19 @@ export class ServerConnection {
         return await fileManager.listTrashed(user, { offset, limit });
       },
 
-      listSharedFiles: async (offset, limit) => {
+      listSharedFiles: async (targetUserId, sharerUserId, offset, limit) => {
         const authentication = requireAuthenticated(true);
+
+        const targetUser = targetUserId != null ? await resolveUser([
+          UserResolveType.UserId,
+          targetUserId,
+        ]) : null;
+
+        const sharerUser = sharerUserId != null ? await resolveUser([
+          UserResolveType.UserId,
+          sharerUserId,
+        ]) : null;
+
         const fileAccesses = await fileAccessManager.read({
           where: [
             ["userId", "=", authentication.userId],

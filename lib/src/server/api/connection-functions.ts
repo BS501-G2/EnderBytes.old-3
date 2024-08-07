@@ -90,7 +90,9 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   getFileMime: (fileId: number) => Promise<[mime: string, description: string]>;
 
-  getFileTime: (fileId: number) => Promise<{ createTime: number, modifyTime: number }>;
+  getFileTime: (
+    fileId: number
+  ) => Promise<{ createTime: number; modifyTime: number }>;
 
   listFileViruses: (fileId: number) => Promise<string[]>;
 
@@ -156,6 +158,9 @@ export interface ServerFunctions extends ConnectionFunctions {
   ) => Promise<FileResource[]>;
 
   listSharedFiles: (
+    targetUserId?: number,
+    sharerUserId?: number,
+
     offset?: number,
     limit?: number
   ) => Promise<FileAccessResource[]>;

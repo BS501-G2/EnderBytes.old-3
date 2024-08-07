@@ -324,7 +324,7 @@
 
       <div class="view-row">
         {#if $resolved.page === 'files' && $resolved.type === 'file'}
-          <FileManagerFileView />
+          <FileManagerFileView fileId={$fileId!} />
         {:else}
           <FileManagerFolderList />
         {/if}
