@@ -1,7 +1,6 @@
-<script lang="ts" context=module>
-  export interface DashboardProfilePanelProps {
-  }
+<script lang="ts" context="module">
 </script>
+
 <script lang="ts">
   import { ViewMode, viewMode } from '@rizzzi/svelte-commons';
   import { getContext } from 'svelte';

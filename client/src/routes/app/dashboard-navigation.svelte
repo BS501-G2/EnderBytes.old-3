@@ -7,6 +7,8 @@
     name: string;
 
     icon: (selected: boolean) => string;
+
+    check?: (entry: NavigationEntry) => boolean;
   }
 </script>
 
@@ -82,12 +84,14 @@
     const {
       url: { pathname: currentPath }
     } = $page;
-    console.log(currentPath, navigationEntry.path.split('?')[0]);
 
-    return !!(
-      currentPath === navigationEntry.path.split('?')[0] ||
-      ($viewMode & ViewMode.Mobile &&
-        getChildNavigationEntries(navigationEntry).some((entry) => isSelected(entry)))
+    return (
+      navigationEntry?.check?.(navigationEntry) ??
+      !!(
+        currentPath === navigationEntry.path ||
+        ($viewMode & ViewMode.Mobile &&
+          getChildNavigationEntries(navigationEntry).some((entry) => isSelected(entry)))
+      )
     );
   }
 
@@ -107,14 +111,23 @@
     } = getConnection();
     const user = await whoAmI();
 
+    entries.push({
+      id: 'users',
+
+      name: 'Users',
+      icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user`,
+
+      path: '/app/users'
+    });
+
     if ((user?.role ?? UserRole.Member) >= UserRole.SiteAdmin) {
       entries.push({
-        id: 'users',
+        id: 'admin',
 
-        name: 'Users',
-        icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user`,
+        name: 'Admin',
+        icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user-shield`,
 
-        path: '/app/users'
+        path: '/app/admin'
       });
     }
   }

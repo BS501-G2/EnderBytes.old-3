@@ -245,18 +245,18 @@ export class Database extends Service<
     level: LogLevel,
     query: T
   ): T {
-    return query;
-
-    // const a = query.toSQL();
-
-    // for (const { sql } of Array.isArray(a) ? a : [a]) {
-    //   if (sql.length === 0) {
-    //     continue;
-    //   }
-
-    //   this.log(level, sql);
-    // }
-
     // return query;
+
+    const a = query.toSQL();
+
+    for (const { sql } of Array.isArray(a) ? a : [a]) {
+      if (sql.length === 0) {
+        continue;
+      }
+
+      this.log(level, sql);
+    }
+
+    return query;
   }
 }

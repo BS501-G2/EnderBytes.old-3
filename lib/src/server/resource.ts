@@ -464,7 +464,10 @@ export abstract class ResourceManager<
   public async read(options?: QueryOptions<R, M>): Promise<R[]> {
     const result: R[] = [];
 
-    for await (const record of this.readStream(options)) {
+    for await (const record of this.readStream({
+      ...options,
+      includeDeleted: false,
+    })) {
       result.push(record);
     }
 
@@ -488,28 +491,31 @@ export abstract class ResourceManager<
     while (yielded < (options?.limit ?? Infinity)) {
       let query = this.db.table<R, R[]>(this.#DATA_TABLE).select("*");
 
-      if (options?.where != null) {
-        query = options.where.reduce((query, where) => {
-          if (where == null) {
-            return query;
-          }
+      query.andWhere((query) => {
+        query.where("nextDataId", "is", null);
 
-          const [key, op, value] = where;
-          return query.where(key as never, op, value as never);
-        }, query);
-      }
-
-      if (options?.search != null) {
-        for (const searchableColumn of this.searchableColumns) {
-          query = query.orWhere(
-            searchableColumn,
-            "like",
-            `%${options.search}%`
-          );
+        if (options?.search != null) {
+          query.andWhere((query) => {
+            for (const searchableColumn of this.searchableColumns) {
+              query.orWhere(searchableColumn, "like", `%${options.search}%`);
+            }
+          });
         }
-      }
+      });
 
-      query = query.where("nextDataId", "is", null);
+      if (options?.where != null) {
+        query.andWhere((query) => {
+          options.where!.reduce((query, where) => {
+            if (where == null) {
+              return query;
+            }
+
+            const [key, op, value] = where;
+            return query.where(key as never, op, value as never);
+          }, query);
+          return query;
+        });
+      }
 
       if (options?.orderBy != null) {
         query = options.orderBy.reduce(

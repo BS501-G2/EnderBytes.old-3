@@ -1,23 +1,30 @@
 <script lang="ts" context="module">
   import type { UserResource } from '@rizzzi/enderdrive-lib/server';
   import { getConnection } from './client';
+  import { UserResolveType } from '@rizzzi/enderdrive-lib/shared';
 
   export enum UserClass {
     Link
   }
 
-  export type UserProps = {
-    user: UserResource;
-  } & (
+  export type UserProps = (
     | {
-        class: UserClass.Link;
-        initials?: boolean;
-        hyperlink?: boolean;
+        user: UserResource;
       }
     | {
-        class?: undefined;
+        userId: number;
       }
-  );
+  ) &
+    (
+      | {
+          class: UserClass.Link;
+          initials?: boolean;
+          hyperlink?: boolean;
+        }
+      | {
+          class?: undefined;
+        }
+    );
 </script>
 
 <script lang="ts">
@@ -28,7 +35,20 @@
   } = getConnection();
 </script>
 
-{#if props.class == null}
+{#if 'userId' in props}
+  {@const { userId } = props}
+
+  {#await getUser([UserResolveType.UserId, userId]) then user}
+    <svelte:self
+      {...((props) => {
+        delete (props as any).userId;
+
+        return props;
+      })({ ...props })}
+      {user}
+    />
+  {/await}
+{:else if props.class == null}
   <svelte:self {...props} user={props.user} class={UserClass.Link} />
 {:else if props.class == UserClass.Link}
   {@const initials = props.initials ?? true}

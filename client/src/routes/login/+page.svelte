@@ -12,7 +12,8 @@
   } from '@rizzzi/svelte-commons';
   import { type Writable, writable } from 'svelte/store';
   import { type Snippet } from 'svelte';
-    import { authenticateWithPassword } from '$lib/client/client';
+  import { authenticateWithPassword } from '$lib/client/client';
+  import { goto } from '$app/navigation';
 
   const {}: {} = $props();
 
@@ -72,6 +73,7 @@
         onClick={async () => {
           try {
             await authenticateWithPassword($username, $password);
+            await goto('/app');
           } catch (error: any) {
             $errorStore = error;
           }

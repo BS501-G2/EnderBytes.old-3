@@ -13,6 +13,8 @@
     ) => () => void;
 
     setMainContent: (children: Snippet | null) => () => void;
+
+    openOperations: Writable<boolean>;
   }
 
   export const DashboardContextName = 'dashboard-context';
@@ -28,7 +30,7 @@
   import { derived, type Writable, writable } from 'svelte/store';
   import DashboardNavigation from './dashboard-navigation.svelte';
   import DashboardAppBar from './dashboard-app-bar.svelte';
-  import DashboardProfilePanel from './dashboard-profile-panel.svelte';
+  import DashboardOperations from './dashboard-operations.svelte';
 
   const { children }: { children: Snippet } = $props();
 
@@ -64,7 +66,9 @@
       $mainContent = children;
 
       return () => ($mainContent = null);
-    }
+    },
+
+    openOperations: writable(false)
   });
 </script>
 
@@ -93,7 +97,7 @@
       <div class="side-content">
         <DashboardNavigation />
         <div class="horizontal separator"></div>
-        <DashboardProfilePanel />
+        <DashboardOperations />
       </div>
     {/if}
 

@@ -25,6 +25,7 @@
   } from '@rizzzi/svelte-commons';
   import { getContext, onMount, type Snippet } from 'svelte';
   import { type FileManagerContext, FileManagerContextName } from './file-manager.svelte';
+  import Action from '../admin/logs/action.svelte';
 
   const { accessDialogs } = getContext<FileManagerContext>(FileManagerContextName);
 
@@ -215,13 +216,8 @@
 {#snippet logs(result: Data)}
   {@const logs = result.logs}
   <div class="file-logs">
-    {#each logs as log}
-      <div class="file-log">
-        <p class="action"><b>{FileLogType[log[0].type]}</b></p>
-        <p class="actor"><User user={log[1]} hyperlink /></p>
-
-        <p class="date">{new Date(log[0].createTime).toLocaleString()}</p>
-      </div>
+    {#each logs as [log]}
+      <Action {log} />
     {/each}
   </div>
 {/snippet}

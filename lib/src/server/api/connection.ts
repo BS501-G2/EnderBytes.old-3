@@ -490,6 +490,10 @@ export class ServerConnection {
         await requireRole(requireAuthenticated(true), UserRole.SiteAdmin);
         const user = await resolveUser([UserResolveType.UserId, id]);
 
+        if (user.role >= UserRole.SiteAdmin) {
+          ApiError.throw(ApiErrorType.Forbidden, "Cannot suspend site admin");
+        }
+
         return await userManager.setSuspended(user, isSuspended);
       },
 
@@ -662,6 +666,18 @@ export class ServerConnection {
         );
 
         return (await fileManager.getById(file.id))!;
+      },
+
+      adminGetFile: async (fileId: number) => {
+        const authentication = requireAuthenticated(true);
+        await requireRole(authentication, UserRole.SiteAdmin);
+
+        const file = await fileManager.getById(fileId);
+        if (file == null) {
+          ApiError.throw(ApiErrorType.NotFound, "File not found");
+        }
+
+        return file;
       },
 
       getFilePathChain: async (fileId: number) => {
@@ -1195,15 +1211,15 @@ export class ServerConnection {
       listSharedFiles: async (targetUserId, sharerUserId, offset, limit) => {
         const authentication = requireAuthenticated(true);
 
-        const targetUser = targetUserId != null ? await resolveUser([
-          UserResolveType.UserId,
-          targetUserId,
-        ]) : null;
+        const targetUser =
+          targetUserId != null
+            ? await resolveUser([UserResolveType.UserId, targetUserId])
+            : null;
 
-        const sharerUser = sharerUserId != null ? await resolveUser([
-          UserResolveType.UserId,
-          sharerUserId,
-        ]) : null;
+        const sharerUser =
+          sharerUserId != null
+            ? await resolveUser([UserResolveType.UserId, sharerUserId])
+            : null;
 
         const fileAccesses = await fileAccessManager.read({
           where: [
