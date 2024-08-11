@@ -59,10 +59,11 @@
               $firstName,
               $middleName || null,
               $lastName,
+              $password,
               UserRole.Member
             );
 
-            goto(`/app/users?id=@${user.username}`);
+            await goto(`/app/users?id=@${user.username}`);
           }}
         >
           <div class="submit-button">

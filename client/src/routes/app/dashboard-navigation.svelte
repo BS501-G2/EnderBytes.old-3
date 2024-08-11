@@ -19,8 +19,9 @@
   import { getConnection } from '$lib/client/client';
   import { UserRole } from '@rizzzi/enderdrive-lib/shared';
   import { viewMode, ViewMode } from '@rizzzi/svelte-commons';
-  import { onMount } from 'svelte';
+  import { getContext, onMount } from 'svelte';
   import { writable, type Writable } from 'svelte/store';
+  import { type DashboardContext, DashboardContextName } from './dashboard.svelte';
 
   let entries: NavigationEntry[] = $state([
     {
@@ -95,7 +96,9 @@
     );
   }
 
-  const isWidthLimited: Writable<boolean> = writable(false);
+  // const isWidthLimited: Writable<boolean> = writable(false);
+
+  const { isWidthLimited } = getContext<DashboardContext>(DashboardContextName);
 
   function updatelimitedState() {
     const newValue = window.innerWidth < 1280;

@@ -15,6 +15,8 @@
     setMainContent: (children: Snippet | null) => () => void;
 
     openOperations: Writable<boolean>;
+    openSettings: Writable<boolean>;
+      isWidthLimited: Writable<boolean>;
   }
 
   export const DashboardContextName = 'dashboard-context';
@@ -38,7 +40,7 @@
     writable([]);
   const mainContent: Writable<Snippet | null> = writable(null);
 
-  setContext<DashboardContext>(DashboardContextName, {
+  const { openSettings, openOperations } = setContext<DashboardContext>(DashboardContextName, {
     addContextMenuEntry: (name, icon, onClick) => {
       const destroy = () => {
         for (let index = 0; index < $contextMenuEntries.length; index++) {
@@ -68,7 +70,10 @@
       return () => ($mainContent = null);
     },
 
-    openOperations: writable(false)
+    openOperations: writable(false),
+    openSettings: writable(false),
+
+    isWidthLimited: writable(false)
   });
 </script>
 

@@ -5,27 +5,61 @@
   import type { FileLogResource } from '@rizzzi/enderdrive-lib/server';
   import { FileLogType, FileType } from '@rizzzi/enderdrive-lib/shared';
   import { LoadingSpinner } from '@rizzzi/svelte-commons';
+  import type { Snippet } from 'svelte';
 
   const {
     log,
-    'include-file': includeFile = false
-  }: { log: FileLogResource; 'include-file'?: boolean } = $props();
+    'include-file': includeFile = false,
+    hoverControls = []
+  }: {
+    log: FileLogResource;
+    'include-file'?: boolean;
+    hoverControls?: Snippet[];
+  } = $props();
+
   const {
     serverFunctions: { adminGetFile }
   } = getConnection();
+
+  let isHovered: boolean = $state(false);
+  let actionElement: HTMLDivElement = $state(null as never);
 </script>
 
 <div
+  bind:this={actionElement}
+  role="listitem"
   class="action"
+  onmouseenter={(event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.target === actionElement) {
+      isHovered = true;
+    }
+  }}
+  onmouseleave={(event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.target === actionElement) {
+      isHovered = false;
+    }
+  }}
 >
   <div class="side">
     <img src="/favicon.svg" alt="logo" />
   </div>
 
   <div class="main">
-    <p>
-      <User userId={log.actorUserId} /> performed <b>{FileLogType[log.type]}</b> action.
-    </p>
+    <div class="top">
+      <p class="message">
+        <User userId={log.actorUserId} /> performed <b>{FileLogType[log.type]}</b> action.
+      </p>
+
+      <div class="actions" style={isHovered ? 'opacity: 1' : 'opacity: 0'}>
+        {#each hoverControls as control}
+          {@render control()}
+        {/each}
+      </div>
+    </div>
 
     {#if includeFile}
       <button class="file" onclick={() => goto(`/app/files?fileId=${log.targetFileId}`)}>
@@ -67,6 +101,17 @@
       flex-direction: column;
 
       gap: 8px;
+
+      > div.top {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+
+        > p.message {
+          flex-grow: 1;
+        }
+      }
 
       > button.file {
         display: flex;

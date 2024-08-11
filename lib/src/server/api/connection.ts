@@ -453,16 +453,23 @@ export class ServerConnection {
         return users;
       },
 
-      createUser: async (username, firstName, middleName, lastName, role) => {
+      createUser: async (
+        username,
+        firstName,
+        middleName,
+        lastName,
+        password,
+        role
+      ) => {
         await requireRole(requireAuthenticated(true), UserRole.SiteAdmin);
 
         const [users] = database.getManagers(UserManager);
-        const [user, unlockedUserKey, password] = await users.create(
+        const [user, unlockedUserKey] = await users.create(
           username,
           firstName,
           middleName,
           lastName,
-          undefined,
+          password,
           role
         );
 
@@ -843,30 +850,49 @@ export class ServerConnection {
         return await fileSnapshotManager.list(file, fileContent);
       },
 
-      listFileLogs: async (fileId, userId, offset, limit) => {
+      listFileLogs: async (fileId, userIds, types, offset, limit) => {
         const authentication = requireAuthenticated(true);
         const logs: FileLogResource[] = [];
 
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.Read
+        );
+
         for await (const log of fileLogManager.readStream({
           where: [
-            fileId != null ? ["targetFileId", "=", fileId] : null,
-            userId != null ? ["actorUserId", "=", userId] : null,
+            ["targetFileId", "=", file.id],
+            userIds != null ? ["actorUserId", "in", userIds] : null,
+            types != null ? ["type", "in", types] : null,
           ],
           offset,
           limit,
           orderBy: [["id", true]],
         })) {
-          try {
-            await getFile(
-              log.targetFileId,
-              authentication,
-              FileAccessLevel.Read
-            );
+          logs.push(log);
+        }
 
-            logs.push(log);
-          } catch {
-            continue;
-          }
+        return logs;
+      },
+
+      adminListFileLogs: async (fileIds, userIds, types, offset, limit) => {
+        const authentication = requireAuthenticated(true);
+        await requireRole(authentication, UserRole.SiteAdmin);
+
+        const logs: FileLogResource[] = [];
+
+        for await (const log of fileLogManager.readStream({
+          where: [
+            fileIds != null ? ["targetFileId", "in", fileIds] : null,
+            userIds != null ? ["actorUserId", "in", userIds] : null,
+            types != null ? ["type", "in", types] : null,
+          ],
+          offset,
+          limit,
+          orderBy: [["id", true]],
+        })) {
+          logs.push(log);
         }
 
         return logs;
@@ -1218,7 +1244,11 @@ export class ServerConnection {
 
         const sharerUser =
           sharerUserId != null
-            ? await resolveUser([UserResolveType.UserId, sharerUserId])
+            ? await Promise.all(
+                sharerUserId.map((userId) =>
+                  resolveUser([UserResolveType.UserId, userId])
+                )
+              )
             : null;
 
         const fileAccesses = await fileAccessManager.read({

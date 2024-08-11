@@ -1,6 +1,6 @@
 import { authenticateWithPassword, getAuthentication } from '$lib/client/client';
 import { ClientConnection } from '@rizzzi/enderdrive-lib/client';
-import { UserAuthenticationType } from '@rizzzi/enderdrive-lib/shared';
+import { UserAuthenticationType, UserRole } from '@rizzzi/enderdrive-lib/shared';
 import { Buffer } from 'buffer';
 
 type TestFunctions = [string, (log: (data: any) => void) => any | Promise<any>][];
@@ -12,22 +12,13 @@ const adminMiddleName = 'G';
 const adminLastName = 'Rection';
 
 export const testFunctions = ({
-  serverFunctions: { echo, getServerStatus, register, updateUser, listUsers, whoAmI }
+  serverFunctions: { echo, getServerStatus, register, updateUser, listUsers, whoAmI, createUser }
 }: ClientConnection): TestFunctions => [
   ['Hello', () => 'hello'],
   ['World', () => 'world'],
   [
     'Echo',
     async (log) => {
-      // const bytes = new Uint8Array(1024 * 1024 * 8);
-      // log(`Sending random ${bytes.length} bytes.`);
-
-      // for (let i = 0; i < bytes.length; i++) {
-      //   bytes[i] = Math.floor(Math.random() * 256);
-      // }
-
-      // log(await echo(bytes));
-
       const encoder = new TextEncoder();
       const decoder = new TextDecoder();
 
@@ -61,8 +52,28 @@ export const testFunctions = ({
     async () => {
       const result = await authenticateWithPassword(adminUser, adminPassword);
 
-      console.log(result);
+      return result;
+    }
+  ],
+  [
+    'Create Test User',
+    async () => {
+      const result = await createUser(
+        'testtest2',
+        'Test',
+        'Test',
+        'Test',
+        'test',
+        UserRole.Member
+      );
 
+      return result;
+    }
+  ],
+  [
+    'Login as Test User',
+    async () => {
+      const result = await authenticateWithPassword('testtest2', 'test');
       return result;
     }
   ],

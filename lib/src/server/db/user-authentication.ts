@@ -116,6 +116,10 @@ export class UserAuthenticationManager extends ResourceManager<
     payload: Uint8Array
   ): Promise<UnlockedUserAuthentication | null> {
     for await (const key of this.list(user, type)) {
+      if (key.userId !== user.dataId) {
+        continue;
+      }
+
       try {
         const unlocked = await this.unlock(key, payload);
 

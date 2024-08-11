@@ -2,6 +2,7 @@ import {
   Authentication,
   ConnectionFunctions,
   FileAccessLevel,
+  FileLogType,
   UserAuthenticationType,
   UserResolvePayload,
   UserRole,
@@ -52,6 +53,7 @@ export interface ServerFunctions extends ConnectionFunctions {
     firstName: string,
     middleName: string | null,
     lastName: string,
+    password: string,
     role: UserRole
   ) => Promise<
     [
@@ -111,8 +113,19 @@ export interface ServerFunctions extends ConnectionFunctions {
   ) => Promise<FileSnapshotResource[]>;
 
   listFileLogs: (
-    targetFileId?: number,
-    actorUserId?: number,
+    targetFileId: number,
+    actorUserIds?: number[],
+    types?: FileLogType[],
+
+    offset?: number,
+    limit?: number
+  ) => Promise<FileLogResource[]>;
+
+  adminListFileLogs: (
+    targetFileIds?: number[],
+    actorUserIds?: number[],
+    types?: FileLogType[],
+
     offset?: number,
     limit?: number
   ) => Promise<FileLogResource[]>;
@@ -161,7 +174,7 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   listSharedFiles: (
     targetUserId?: number,
-    sharerUserId?: number,
+    sharerUserIds?: number[],
 
     offset?: number,
     limit?: number

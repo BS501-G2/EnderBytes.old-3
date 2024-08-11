@@ -644,11 +644,13 @@ export type WhereClause<
   R extends Resource<R, M>,
   M extends ResourceManager<R, M>,
   T extends keyof R = keyof R
-> = [
-  T,
-  "=" | ">" | ">=" | "<" | "<=" | "<>" | "!=" | "is" | "is not" | "like",
-  R[T]
-];
+> =
+  | [
+      T,
+      "=" | ">" | ">=" | "<" | "<=" | "<>" | "!=" | "is" | "is not" | "like",
+      R[T]
+    ]
+  | [T, "in", R[T][]];
 
 export type OrderByClause<
   R extends Resource<R, M>,

@@ -5,6 +5,8 @@
     setMainContent: (layout: Snippet) => () => void;
 
     pushTopContent: (view: Snippet) => () => void;
+
+    pushToolboxContext: (view: Snippet) => () => void;
   }
 
   export const AdminContextName = 'adm-context';
@@ -19,6 +21,7 @@
   const { children }: { children: Snippet } = $props();
 
   let topContent: Snippet[] = $state([]);
+  let toolboxContent: Snippet[] = $state([]);
   let mainContent: Snippet | null = $state(null as never);
 
   setContext<AdminContext>(AdminContextName, {
@@ -43,6 +46,21 @@
         topContent.splice(index, 1);
         topContent = topContent;
       };
+    },
+
+    pushToolboxContext: (view) => {
+      toolboxContent.push(view);
+      toolboxContent = toolboxContent;
+
+      return () => {
+        const index = toolboxContent.indexOf(view);
+        if (index === -1) {
+          return;
+        }
+
+        toolboxContent.splice(index, 1);
+        toolboxContent = toolboxContent;
+      };
     }
   });
 
@@ -55,6 +73,12 @@
       <h2>Admin</h2>
 
       <Navigation />
+
+      {#each toolboxContent as toolboxContentEntry}
+        <div class="toolbox">
+          {@render toolboxContentEntry()}
+        </div>
+      {/each}
     </div>
 
     <div class="main">
@@ -128,5 +152,16 @@
 
       min-height: 0px;
     }
+  }
+
+  div.toolbox {
+    display: flex;
+    flex-direction: column;
+
+    background-color: var(--backgroundVariant);
+    color: var(--onBackgroundVariant);
+
+    padding: 16px;
+    border-radius: 8px;
   }
 </style>
