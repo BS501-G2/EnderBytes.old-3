@@ -94,6 +94,7 @@
             updateStatus(index, file.name, offset + buffer.size, file.size, uploaded, total);
 
             await feedUploadBuffer(new Uint8Array(await buffer.arrayBuffer()));
+            uploaded += buffer.size;
           }
 
           await createFile(parentFile.id, file.name);

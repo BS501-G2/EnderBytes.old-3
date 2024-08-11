@@ -16,7 +16,7 @@
 
     openOperations: Writable<boolean>;
     openSettings: Writable<boolean>;
-      isWidthLimited: Writable<boolean>;
+    isWidthLimited: Writable<boolean>;
   }
 
   export const DashboardContextName = 'dashboard-context';
@@ -33,6 +33,7 @@
   import DashboardNavigation from './dashboard-navigation.svelte';
   import DashboardAppBar from './dashboard-app-bar.svelte';
   import DashboardOperations from './dashboard-operations.svelte';
+  import { backgroundTasks } from '$lib/background-task.svelte';
 
   const { children }: { children: Snippet } = $props();
 
@@ -101,8 +102,7 @@
     {#if $viewMode & ViewMode.Desktop}
       <div class="side-content">
         <DashboardNavigation />
-        <div class="horizontal separator"></div>
-        <DashboardOperations />
+
       </div>
     {/if}
 

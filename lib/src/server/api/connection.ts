@@ -531,9 +531,9 @@ export class ServerConnection {
         }
 
         const buffer = consumeUploadBuffer();
-        const viruses = await this.#manager.server.virusScanner.scanBuffer(
-          buffer
-        );
+        // const viruses = await this.#manager.server.virusScanner.scanBuffer(
+        //   buffer
+        // );
 
         // if (viruses.length > 0) {
         //   ApiError.throw(ApiErrorType.InvalidRequest, "File contains viruses");
