@@ -7,13 +7,14 @@ export async function load(): Promise<void> {
   } = getConnection();
 
   const status = await getServerStatus();
-
   if (status.setupRequired) {
     await goto('/setup', { replaceState: true });
     return;
   }
 
   const authentication = await whoAmI();
+
+  console.log(authentication);
 
   if (authentication == null) {
     await goto('/login', { replaceState: true });

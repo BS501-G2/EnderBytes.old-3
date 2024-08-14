@@ -115,6 +115,9 @@
   div.side {
     min-width: 256px;
     max-width: 256px;
+    min-height: 0px;
+
+    overflow: hidden auto;
 
     display: flex;
     flex-direction: column;

@@ -62,6 +62,8 @@
       'File Upload',
       true,
       async (_, setStatus) => {
+        // throw new Error('Test Failure');
+
         const updateStatus = (
           index: number,
           name: string,
@@ -78,7 +80,7 @@
 
         const parentFile = await getFile($fileId);
 
-        const bufferSize = 1024 * 1024;
+        const bufferSize = 1024 * 256;
 
         const total = files.reduce((total, file) => total + file.size, 0);
         let uploaded = 0;

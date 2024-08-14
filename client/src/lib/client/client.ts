@@ -45,7 +45,7 @@ export async function authenticateWithPassword(username: string, password: strin
   const result = await authenticate(
     [UserResolveType.Username, username],
     UserAuthenticationType.Password,
-    Buffer.from(password, 'utf-8')as unknown as Uint8Array
+    Buffer.from(password, 'utf-8') as unknown as Uint8Array
   );
 
   authentication.set(result);
@@ -60,7 +60,9 @@ export function getConnection() {
   let client = get(connection);
 
   if (client == null) {
-    connection.set((client = new ClientConnection(() => get(authentication), authentication.set)));
+    client = new ClientConnection(() => get(authentication), authentication.set);
+
+    connection.set(client);
   }
 
   return client;

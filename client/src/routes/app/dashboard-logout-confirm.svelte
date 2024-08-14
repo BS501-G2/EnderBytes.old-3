@@ -7,7 +7,7 @@
 <script lang="ts">
   import { Button, Dialog, DialogClass, ButtonClass } from '@rizzzi/svelte-commons';
   import { goto } from '$app/navigation';
-    import { clearAuthentication } from '$lib/client/client';
+  import { clearAuthentication } from '$lib/client/client';
 </script>
 
 {#if $enabled}

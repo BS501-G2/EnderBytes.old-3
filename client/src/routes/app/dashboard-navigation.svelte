@@ -72,6 +72,7 @@
 
       name: 'Profile',
       icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user`,
+      check: (entry) => $page.url.pathname === entry.path.split('?')[0] && $page.url.searchParams.get('id') === '!me',
 
       path: '/app/users?id=!me'
     }
@@ -96,8 +97,6 @@
     );
   }
 
-  // const isWidthLimited: Writable<boolean> = writable(false);
-
   const { isWidthLimited } = getContext<DashboardContext>(DashboardContextName);
 
   function updatelimitedState() {
@@ -120,6 +119,8 @@
       name: 'Users',
       icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user`,
 
+      check: (entry) => $page.url.pathname === entry.path && $page.url.searchParams.get('id') == null,
+
       path: '/app/users'
     });
 
@@ -128,7 +129,8 @@
         id: 'admin',
 
         name: 'Admin',
-        icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user-shield`,
+        icon: (selected) => `fa-solid fa-user-shield`,
+        check: (entry) => $page.url.pathname.startsWith(entry.path),
 
         path: '/app/admin'
       });

@@ -75,7 +75,7 @@
 {#snippet contextMenu()}
   <div class="context-menu">
     {#each entries as entry}
-      <Button outline={false} buttonClass={ButtonClass.Transparent} onClick={(event) => entry.onClick(event)}> 
+      <Button outline={false} buttonClass={ButtonClass.Transparent} onClick={(event) => entry.onClick(event)}>
         <i class={entry.icon}></i>
       </Button>
     {/each}

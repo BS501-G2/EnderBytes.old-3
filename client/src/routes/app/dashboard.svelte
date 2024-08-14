@@ -14,6 +14,8 @@
 
     setMainContent: (children: Snippet | null) => () => void;
 
+    pushOverlayContent: (children: Snippet) => () => void;
+
     openOperations: Writable<boolean>;
     openSettings: Writable<boolean>;
     isWidthLimited: Writable<boolean>;
@@ -29,19 +31,35 @@
   import { Keyboard, ViewMode, currentColorScheme, viewMode } from '@rizzzi/svelte-commons';
   import SettingsDialog from './settings-dialog.svelte';
   import { setContext, type Snippet } from 'svelte';
-  import { derived, type Writable, writable } from 'svelte/store';
+  import { type Writable, writable } from 'svelte/store';
   import DashboardNavigation from './dashboard-navigation.svelte';
   import DashboardAppBar from './dashboard-app-bar.svelte';
-  import DashboardOperations from './dashboard-operations.svelte';
-  import { backgroundTasks } from '$lib/background-task.svelte';
+  import DashboardOverlay from './dashboard-overlay.svelte';
 
   const { children }: { children: Snippet } = $props();
+
+  const overlayContent: Writable<Snippet[]> = writable([]);
 
   const contextMenuEntries: Writable<[entry: DashboardContextMenuEntry, onDestroy: () => void][]> =
     writable([]);
   const mainContent: Writable<Snippet | null> = writable(null);
 
-  const { openSettings, openOperations } = setContext<DashboardContext>(DashboardContextName, {
+  setContext<DashboardContext>(DashboardContextName, {
+    pushOverlayContent: (children) => {
+      $overlayContent.push(children);
+      $overlayContent = $overlayContent;
+
+      return () => {
+        const index = $overlayContent.indexOf(children);
+        if (index === -1) {
+          return;
+        }
+
+        $overlayContent.splice(index, 1);
+        $overlayContent = $overlayContent;
+      };
+    },
+
     addContextMenuEntry: (name, icon, onClick) => {
       const destroy = () => {
         for (let index = 0; index < $contextMenuEntries.length; index++) {
@@ -102,7 +120,6 @@
     {#if $viewMode & ViewMode.Desktop}
       <div class="side-content">
         <DashboardNavigation />
-
       </div>
     {/if}
 
@@ -126,6 +143,7 @@
 <Keyboard />
 <LogoutConfirmationDialog />
 <SettingsDialog />
+<DashboardOverlay children={$overlayContent} />
 
 <style lang="scss">
   div.dashboard {
@@ -241,14 +259,5 @@
 
     background-color: var(--primaryContainer);
     color: var(--onPrimaryContainer);
-  }
-
-  div.horizontal.separator {
-    min-height: 1px;
-    max-height: 1px;
-
-    background-color: var(--primary);
-
-    margin: 0px 8px;
   }
 </style>

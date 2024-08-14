@@ -53,35 +53,39 @@
   </Dialog>
 {/if}
 
-<div class="container{$viewMode & ViewMode.Mobile ? ' mobile' : ''}">
-  <ResponsiveLayout>
-    {#snippet desktop()}
-      <div class="banner"></div>
-    {/snippet}
-  </ResponsiveLayout>
+<div class="page">
+  <div class="top-bar"></div>
 
-  <div class="form{$viewMode & ViewMode.Mobile ? ' mobile' : ''}">
-    <div class="site-logo">
-      <img src="/favicon.svg" alt="logo" />
-      <h2>EnderDrive</h2>
-    </div>
-    <div class="fields">
-      <Input type={InputType.Text} name="Username" value={username} />
-      <Input type={InputType.Password} name="Password" value={password} />
-      <Button
-        buttonClass={ButtonClass.Primary}
-        onClick={async () => {
-          try {
-            await authenticateWithPassword($username, $password);
-            await goto('/app');
-          } catch (error: any) {
-            $errorStore = error;
-          }
-        }}
-        container={buttonContainer}
-      >
-        Login
-      </Button>
+  <div class="container" class:mobile={$viewMode & ViewMode.Mobile}>
+    <ResponsiveLayout>
+      {#snippet desktop()}
+        <div class="banner"></div>
+      {/snippet}
+    </ResponsiveLayout>
+
+    <div class="form" class:mobile={$viewMode & ViewMode.Mobile}>
+      <div class="site-logo">
+        <img src="/favicon.svg" alt="logo" />
+        <h2>EnderDrive</h2>
+      </div>
+      <div class="fields">
+        <Input type={InputType.Text} name="Username" value={username} />
+        <Input type={InputType.Password} name="Password" value={password} />
+        <Button
+          buttonClass={ButtonClass.Primary}
+          onClick={async () => {
+            try {
+              await authenticateWithPassword($username, $password);
+              await goto('/app');
+            } catch (error: any) {
+              $errorStore = error;
+            }
+          }}
+          container={buttonContainer}
+        >
+          Login
+        </Button>
+      </div>
     </div>
   </div>
 </div>
@@ -93,7 +97,26 @@
     justify-content: safe center;
   }
 
+  div.page {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 100vw;
+    max-width: 100vw;
+
+    min-height: 100vh;
+    max-height: 100vh;
+  }
+
+  div.top-bar {
+    min-height: env(titlebar-area-height);
+
+    background-color: var(--primaryContainer);
+  }
+
   div.container {
+    -webkit-app-region: no-drag;
+
     max-width: 1280px;
     min-width: 0px;
 

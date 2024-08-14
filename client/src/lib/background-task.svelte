@@ -45,6 +45,7 @@
     Ready,
     Running,
     Failed,
+    Cancelled,
     Done
   }
 
@@ -207,6 +208,12 @@
           }
         };
 
+        if (client.status === BackgroundTaskStatus.Failed && !client.retryable) {
+          return () => {
+            throw new Error('Operation cannot be retried.');
+          };
+        }
+
         return async () => {
           try {
             return await (task = run(client));
@@ -285,7 +292,7 @@
   import { RefreshCwIcon, XIcon, PlayIcon } from 'svelte-feather-icons';
   import { onDestroy, onMount } from 'svelte';
   import { LoadingBar } from '@rizzzi/svelte-commons';
-    import { authentication } from './client/client';
+  import { authentication } from './client/client';
 
   export let maxCount: number = -1;
 

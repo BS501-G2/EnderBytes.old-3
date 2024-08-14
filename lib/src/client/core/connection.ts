@@ -21,7 +21,7 @@ export class ClientConnection {
     this.#wrapper = wrapSocket(
       (this.#io = io("/", {})),
       this.#client,
-      undefined,
+      undefined
       // (...message) => {
       //   console.log(...message);
       // }
@@ -36,11 +36,11 @@ export class ClientConnection {
   async #restore(authentication: Authentication | null): Promise<void> {
     const { restore } = this.#server;
 
-    if (authentication == null) {
-      return;
-    }
-
     try {
+      if (authentication == null) {
+        return;
+      }
+
       await restore(authentication);
     } finally {
       for (const preConnext of this.#preConnect.splice(
