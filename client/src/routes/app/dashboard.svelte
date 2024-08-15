@@ -16,8 +16,12 @@
 
     pushOverlayContent: (children: Snippet) => () => void;
 
-    openOperations: Writable<boolean>;
     openSettings: Writable<boolean>;
+    openLogoutConfirm: Writable<boolean>;
+    openExtraContextMenuOverlay: Writable<
+      [element: HTMLElement, entries: DashboardContextMenuEntry[], onDismiss: () => void] | null
+    >;
+
     isWidthLimited: Writable<boolean>;
   }
 
@@ -30,11 +34,13 @@
   import LogoutConfirmationDialog from './dashboard-logout-confirm.svelte';
   import { Keyboard, ViewMode, currentColorScheme, viewMode } from '@rizzzi/svelte-commons';
   import SettingsDialog from './settings-dialog.svelte';
-  import { setContext, type Snippet } from 'svelte';
+  import { onMount, setContext, type Snippet } from 'svelte';
   import { type Writable, writable } from 'svelte/store';
   import DashboardNavigation from './dashboard-navigation.svelte';
   import DashboardAppBar from './dashboard-app-bar.svelte';
   import DashboardOverlay from './dashboard-overlay.svelte';
+  import DashboardSideCard from './dashboard-side-card.svelte';
+  import ExtraContextMenu from './extra-context-menu.svelte';
 
   const { children }: { children: Snippet } = $props();
 
@@ -44,7 +50,13 @@
     writable([]);
   const mainContent: Writable<Snippet | null> = writable(null);
 
-  setContext<DashboardContext>(DashboardContextName, {
+  const {
+    addContextMenuEntry,
+    openLogoutConfirm,
+    openSettings,
+    openExtraContextMenuOverlay,
+    isWidthLimited
+  } = setContext<DashboardContext>(DashboardContextName, {
     pushOverlayContent: (children) => {
       $overlayContent.push(children);
       $overlayContent = $overlayContent;
@@ -89,11 +101,14 @@
       return () => ($mainContent = null);
     },
 
-    openOperations: writable(false),
     openSettings: writable(false),
+    openLogoutConfirm: writable(false),
+    openExtraContextMenuOverlay: writable(null),
 
     isWidthLimited: writable(false)
   });
+
+  onMount(() => addContextMenuEntry('Test', 'fa-solid fa-bug', () => {}));
 </script>
 
 <svelte:head>
@@ -110,7 +125,7 @@
     class:desktop={$viewMode & ViewMode.Desktop}
     class:mobile={$viewMode & ViewMode.Mobile}
   >
-    <DashboardAppBar entries={$contextMenuEntries.map((entry) => entry[0])} />
+    <DashboardAppBar contextMenuEntries={$contextMenuEntries.map((entry) => entry[0])} />
   </div>
   <div
     class="content-row"
@@ -118,8 +133,9 @@
     class:mobile={$viewMode & ViewMode.Mobile}
   >
     {#if $viewMode & ViewMode.Desktop}
-      <div class="side-content">
+      <div class="side-content" class:limited={$isWidthLimited}>
         <DashboardNavigation />
+        <DashboardSideCard entries={$contextMenuEntries.map((entry) => entry[0])} />
       </div>
     {/if}
 
@@ -141,8 +157,19 @@
 {@render children()}
 
 <Keyboard />
-<LogoutConfirmationDialog />
-<SettingsDialog />
+
+{#if $openLogoutConfirm}
+  <LogoutConfirmationDialog onDismiss={() => ($openLogoutConfirm = false)} />
+{/if}
+{#if $openSettings}
+  <SettingsDialog onDismiss={() => ($openSettings = false)} />
+{/if}
+{#if $openExtraContextMenuOverlay != null}
+  {@const [element, entries, onDismiss] = $openExtraContextMenuOverlay}
+
+  <ExtraContextMenu {element} {entries} {onDismiss} />
+{/if}
+
 <DashboardOverlay children={$overlayContent} />
 
 <style lang="scss">
@@ -208,7 +235,10 @@
       display: flex;
       flex-direction: column;
 
+      gap: 8px;
       min-height: 0px;
+
+      overflow: hidden auto;
     }
 
     > div.main-content {
@@ -224,6 +254,8 @@
       min-height: 0px;
 
       border-radius: 16px;
+
+      overflow: hidden auto;
 
       > div.main-content-inner {
         -webkit-app-region: no-drag;

@@ -1,23 +1,18 @@
 <script lang="ts">
-  import { RootState } from '$lib/states/root-state';
-
   import NavigationBarDesktop from './IntroNavigationBarDesktop.svelte';
   import NavigationBarMobile from './IntroNavigationBarMobile.svelte';
   import Locale, { LocaleKey } from '$lib/locale.svelte';
-  import { ResponsiveLayout, Title } from '@rizzzi/svelte-commons';
+  import { Title, viewMode, ViewMode } from '@rizzzi/svelte-commons';
   import { type Snippet } from 'svelte';
 
   const { children }: { children: Snippet } = $props();
 </script>
 
-<ResponsiveLayout>
-  {#snippet desktop()}
-    <NavigationBarDesktop></NavigationBarDesktop>
-  {/snippet}
-  {#snippet mobile()}
-    <NavigationBarMobile></NavigationBarMobile>
-  {/snippet}
-</ResponsiveLayout>
+{#if $viewMode & ViewMode.Desktop}
+  <NavigationBarDesktop></NavigationBarDesktop>
+{:else if $viewMode & ViewMode.Mobile}
+  <NavigationBarMobile></NavigationBarMobile>
+{/if}
 
 <svelte:head>
   <Locale string={[[LocaleKey.AppName], [LocaleKey.AppTagline]]}>

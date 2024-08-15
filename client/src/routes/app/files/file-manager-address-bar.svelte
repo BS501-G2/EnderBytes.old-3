@@ -42,11 +42,9 @@
 
     {#snippet button(icon: string, name: string)}
       <i class="fa-solid {icon}"></i>
-      <ResponsiveLayout>
-        {#snippet desktop()}
-          <p class="address-bar-root-button">{name}</p>
-        {/snippet}
-      </ResponsiveLayout>
+      {#if $viewMode & ViewMode.Desktop}
+        <p class="address-bar-root-button">{name}</p>
+      {/if}
     {/snippet}
 
     <Button

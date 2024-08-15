@@ -38,7 +38,7 @@
             href={homeNavigationEntry.path}
             ><li class="nav-entry">
               {#if !homeNavigationEntry.path.startsWith('#')}
-                <ExternalLinkIcon size="20em" />
+              <i class="fa-solid fa-link"></i>
               {/if}
               <p>{homeNavigationEntry.name}</p>
             </li></a

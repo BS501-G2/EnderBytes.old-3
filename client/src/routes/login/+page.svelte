@@ -57,11 +57,9 @@
   <div class="top-bar"></div>
 
   <div class="container" class:mobile={$viewMode & ViewMode.Mobile}>
-    <ResponsiveLayout>
-      {#snippet desktop()}
-        <div class="banner"></div>
-      {/snippet}
-    </ResponsiveLayout>
+    {#if $viewMode & ViewMode.Desktop}
+      <div class="banner"></div>
+    {/if}
 
     <div class="form" class:mobile={$viewMode & ViewMode.Mobile}>
       <div class="site-logo">

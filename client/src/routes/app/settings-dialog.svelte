@@ -1,17 +1,3 @@
-<script lang="ts" context="module">
-  export interface SettingsDialogState {}
-
-  export const settingsDialogState: Writable<SettingsDialogState | null> = writable(null);
-
-  export function hideSettingsDialog() {
-    settingsDialogState.set(null);
-  }
-
-  export function showSettingsDialog() {
-    settingsDialogState.set({});
-  }
-</script>
-
 <script lang="ts">
   import Locale, {
     LocaleKey,
@@ -35,9 +21,12 @@
     colors,
     setColorScheme,
     type ColorSchemeName,
-    type TabItem
+    type TabItem,
+    type SetTabFunction
   } from '@rizzzi/svelte-commons';
   import { writable, type Writable } from 'svelte/store';
+
+  const { onDismiss }: { onDismiss: () => void } = $props();
 
   function getLanguageList(): LocaleType[] {
     return [LocaleType.en_US, LocaleType.tl_PH];
@@ -69,8 +58,8 @@
       class="value"
       value={getLocale()}
       onchange={({ currentTarget }) => {
-        setLocale(currentTarget.value as LocaleType)
-        $appSettingsChanged = true
+        setLocale(currentTarget.value as LocaleType);
+        $appSettingsChanged = true;
       }}
     >
       {#each getLanguageList() as language}
@@ -86,8 +75,8 @@
       class="value"
       value={$currentColorScheme}
       onchange={({ currentTarget }) => {
-        setColorScheme(currentTarget.value as ColorSchemeName)
-        $appSettingsChanged = true
+        setColorScheme(currentTarget.value as ColorSchemeName);
+        $appSettingsChanged = true;
       }}
     >
       {#each Object.keys(colors) as key}
@@ -97,7 +86,7 @@
   </div>
 {/snippet}
 
-{#snippet host(tabs: SettingsTabItem[], currentTabIndex:  number, setTab: (index: number) => void)}
+{#snippet host(tabs: SettingsTabItem[], currentTabIndex: number, setTab: SetTabFunction)}
   <div class="tab-host">
     {#each tabs as tab, tabIndex}
       <Button
@@ -113,41 +102,36 @@
     {/each}
   </div>
 {/snippet}
+<Dialog {onDismiss}>
+  {#snippet head()}
+    <div class="head">
+      <h2>Settings</h2>
 
-{#if $settingsDialogState != null}
-  <Dialog onDismiss={hideSettingsDialog}>
-    {#snippet head()}
-      <div class="head">
-        <h2>Settings</h2>
-
-        <ResponsiveLayout>
-          {#snippet desktop()}
-            <Tab id={tabId} {host}>
-              {#snippet view()}{/snippet}
-            </Tab>
-          {/snippet}
-        </ResponsiveLayout>
-      </div>
-    {/snippet}
-    {#snippet body()}
-      <div class="dialog{$viewMode & ViewMode.Desktop ? ' desktop' : ''}">
-        <Tab id={tabId} host={$viewMode & ViewMode.Mobile ? host : undefined}>
-          {#snippet container(_, content)}
-            <div class="tab">
-              {@render content()}
-            </div>
-          {/snippet}
-
-          {#snippet view(view)}
-            <div class="tab-view">
-              {@render view()}
-            </div>
-          {/snippet}
+      {#if $viewMode & ViewMode.Desktop}
+        <Tab id={tabId} {host}>
+          {#snippet view()}{/snippet}
         </Tab>
-      </div>
-    {/snippet}
-  </Dialog>
-{/if}
+      {/if}
+    </div>
+  {/snippet}
+  {#snippet body()}
+    <div class="dialog{$viewMode & ViewMode.Desktop ? ' desktop' : ''}">
+      <Tab id={tabId} host={$viewMode & ViewMode.Mobile ? host : undefined}>
+        {#snippet container(_, content)}
+          <div class="tab">
+            {@render content()}
+          </div>
+        {/snippet}
+
+        {#snippet view(view)}
+          <div class="tab-view">
+            {@render view()}
+          </div>
+        {/snippet}
+      </Tab>
+    </div>
+  {/snippet}
+</Dialog>
 
 <style lang="scss">
   div.head {

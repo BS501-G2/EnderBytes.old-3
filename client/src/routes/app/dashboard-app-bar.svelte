@@ -2,12 +2,14 @@
   import {
     Button,
     ButtonClass,
+    Input,
+    InputType,
     titleStack,
     titleString,
     ViewMode,
     viewMode
   } from '@rizzzi/svelte-commons';
-  import { type Readable } from 'svelte/store';
+  import { writable, type Readable } from 'svelte/store';
   import {
     DashboardContextName,
     type DashboardContext,
@@ -15,12 +17,11 @@
   } from './dashboard.svelte';
   import { getContext, onMount, type Snippet } from 'svelte';
 
-  const { entries }: { entries: DashboardContextMenuEntry[] } = $props();
-  const { addContextMenuEntry } = getContext<DashboardContext>(DashboardContextName);
+  const { contextMenuEntries }: { contextMenuEntries: DashboardContextMenuEntry[] } = $props();
 </script>
 
-{#snippet arrowButtonContainer(view: Snippet)}
-  <div class="arrow-button">
+{#snippet topBarButtonContainer(view: Snippet)}
+  <div class="top-bar-button">
     {@render view()}
   </div>
 {/snippet}
@@ -40,7 +41,7 @@
     outline={false}
     buttonClass={$viewMode & ViewMode.Mobile ? ButtonClass.Transparent : ButtonClass.Primary}
     onClick={() => window.history.back()}
-    container={arrowButtonContainer}
+    container={topBarButtonContainer}
   >
     <i class="fa-solid fa-chevron-left"></i>
   </Button>
@@ -51,16 +52,18 @@
     outline={false}
     buttonClass={$viewMode & ViewMode.Mobile ? ButtonClass.Transparent : ButtonClass.Primary}
     onClick={() => window.history.forward()}
-    container={arrowButtonContainer}
+    container={topBarButtonContainer}
   >
     <i class="fa-solid fa-chevron-right"></i>
   </Button>
 {/snippet}
 
 {#snippet titleCard()}
-  <img class="title-icon" src="/favicon.svg" alt="logo" />
+  {#if $viewMode & ViewMode.Desktop}
+    <img class="title-icon" src="/favicon.svg" alt="logo" />
+  {/if}
 
-  <p class="title-text">
+  <p class="title-text" class:mobile={$viewMode & ViewMode.Mobile}>
     {#if $viewMode & ViewMode.Desktop}
       EnderDrive
     {:else if $viewMode & ViewMode.Mobile}
@@ -72,28 +75,14 @@
   </p>
 {/snippet}
 
-{#snippet contextMenu()}
-  <div class="context-menu">
-    {#each entries as entry}
-      <Button outline={false} buttonClass={ButtonClass.Transparent} onClick={(event) => entry.onClick(event)}>
-        <i class={entry.icon}></i>
-      </Button>
-    {/each}
-  </div>
-
-  {#snippet profileButtonContainer(view: Snippet)}
-    <div class="profile-button">{@render view()}</div>
-  {/snippet}
-
-  <Button
-    outline={false}
-    container={profileButtonContainer}
-    buttonClass={ButtonClass.Transparent}
-    onClick={() => {}}
-  >
-    <img class="profile-icon" src="/favicon.svg" alt="profile" />
-    <i class="fa-solid fa-angle-down"></i>
+{#snippet rightTopBar()}
+  <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => {}} container={topBarButtonContainer}>
+    <i class="fa-solid fa-search"></i>
   </Button>
+  <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => {}} container={topBarButtonContainer}>
+    <i class="fa-solid fa-ellipsis-vertical"></i>
+  </Button>
+
 {/snippet}
 
 <div
@@ -101,7 +90,11 @@
   class:desktop={$viewMode & ViewMode.Desktop}
   class:mobile={$viewMode & ViewMode.Mobile}
 >
-  <div class="left section">
+  <div
+    class="left section"
+    class:mobile={$viewMode & ViewMode.Mobile}
+    class:desktop={$viewMode & ViewMode.Desktop}
+  >
     {@render card('arrows', leftArrowCard)}
 
     {#if $viewMode & ViewMode.Desktop}
@@ -111,10 +104,23 @@
     {@render card('title', titleCard)}
   </div>
 
-  <div class="center section"></div>
-
-  <div class="right section">
-    {@render card('context-menu', contextMenu)}
+  <div
+    class="right section"
+    class:mobile={$viewMode & ViewMode.Mobile}
+    class:desktop={$viewMode & ViewMode.Desktop}
+  >
+    {#if $viewMode & ViewMode.Desktop}
+      <div class="search">
+        <Input
+          type={InputType.Text}
+          icon="fa-solid fa-magnifying-glass"
+          placeholder="Search..."
+          value={writable('')}
+        />
+      </div>
+    {:else if $viewMode & ViewMode.Mobile}
+      {@render card('right', rightTopBar)}
+    {/if}
   </div>
 </div>
 
@@ -128,6 +134,8 @@
     min-height: calc(16px + 1em);
     max-height: calc(16px + 1em);
 
+    gap: 8px;
+
     > div.section {
       display: flex;
       flex-direction: row;
@@ -135,7 +143,26 @@
       gap: 8px;
     }
 
-    > div.section.center {
+    > div.section.mobile {
+      gap: 0;
+    }
+
+    > div.section.left {
+      min-width: 256px;
+      max-width: 256px;
+    }
+
+    > div.section.right.desktop {
+      flex-grow: 1;
+
+      justify-content: safe center;
+    }
+
+    > div.section.right.mobile {
+      justify-content: flex-end;
+    }
+
+    > div.section.mobile {
       flex-grow: 1;
     }
   }
@@ -162,7 +189,7 @@
     align-items: unset;
   }
 
-  div.arrow-button {
+  div.top-bar-button {
     flex-grow: 1;
 
     display: flex;
@@ -196,20 +223,14 @@
     line-height: 1em;
   }
 
+  p.title-text.mobile {
+    font-size: 1em;
+    font-weight: bold;
+  }
+
   div.app-bar.mobile {
     background-color: var(--primaryContainer);
     color: var(--onPrimaryContainer);
-  }
-
-  img.profile-icon {
-    min-height: calc(2em);
-    max-height: calc(2em);
-    min-width: calc(2em);
-    max-width: calc(2em);
-
-    background-color: var(--primary);
-
-    border-radius: 50%;
   }
 
   div.context-menu {
@@ -226,5 +247,16 @@
 
     min-height: 100%;
     max-height: 100%;
+  }
+
+  div.search {
+    min-width: min(512px, 100%);
+    width: 50%;
+    max-width: 50%;
+
+    display: flex;
+    flex-direction: column;
+
+    -webkit-app-region: no-drag;
   }
 </style>

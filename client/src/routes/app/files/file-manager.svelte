@@ -399,7 +399,9 @@
 
     flex-grow: 1;
 
-    min-height: 0px;
+    min-height: 256px;
+
+    overflow: hidden auto;
 
     div.main-view-error {
       > pre {

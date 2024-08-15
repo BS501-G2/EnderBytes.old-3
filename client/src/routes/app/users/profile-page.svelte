@@ -1,12 +1,15 @@
 <script lang="ts">
   import { Title, Awaiter, Button, ButtonClass } from '@rizzzi/svelte-commons';
-  import { showSettingsDialog } from '../settings-dialog.svelte';
   import { UserResolveType, type UserResolvePayload } from '@rizzzi/enderdrive-lib/shared';
   import { getConnection } from '$lib/client/client';
+  import { DashboardContextName, type DashboardContext } from '../dashboard.svelte';
+  import { getContext } from 'svelte';
 
   const {
     serverFunctions: { getUser }
   } = getConnection();
+
+  const { openSettings } = getContext<DashboardContext>(DashboardContextName);
 
   export let resolve: UserResolvePayload;
   let userPromise: Promise<any> | null;
@@ -49,7 +52,7 @@
             <Button
               buttonClass={ButtonClass.PrimaryContainer}
               onClick={() => {
-                showSettingsDialog();
+                $openSettings = true;
               }}>Edit Profile</Button
             >
           </div>

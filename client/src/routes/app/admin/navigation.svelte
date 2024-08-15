@@ -15,8 +15,8 @@
 {/snippet}
 
 <div class="navigation-list">
-  {@render navigationEntry('Users', 'fa-solid fa-user', '/app/admin/users')}
-  {@render navigationEntry('Logs', 'fa-solid fa-file-lines', '/app/admin/logs')}
+  {@render navigationEntry('Manage Users', 'fa-solid fa-user', '/app/admin/users')}
+  {@render navigationEntry('View File Audit Logs', 'fa-solid fa-file-lines', '/app/admin/logs')}
 </div>
 
 <style lang="scss">
@@ -45,6 +45,8 @@
 
     > p {
       flex-grow: 1;
+
+      text-align: start;
     }
   }
 

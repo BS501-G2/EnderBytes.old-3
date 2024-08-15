@@ -1,17 +1,3 @@
-<script lang="ts" context="module">
-  export interface NavigationEntry {
-    id: string;
-    parentId?: string;
-
-    path: string;
-    name: string;
-
-    icon: (selected: boolean) => string;
-
-    check?: (entry: NavigationEntry) => boolean;
-  }
-</script>
-
 <script lang="ts">
   import { goto } from '$app/navigation';
 
@@ -20,82 +6,8 @@
   import { UserRole } from '@rizzzi/enderdrive-lib/shared';
   import { viewMode, ViewMode } from '@rizzzi/svelte-commons';
   import { getContext, onMount } from 'svelte';
-  import { writable, type Writable } from 'svelte/store';
   import { type DashboardContext, DashboardContextName } from './dashboard.svelte';
-
-  let entries: NavigationEntry[] = $state([
-    {
-      id: 'feed',
-
-      name: 'Feed',
-      icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-newspaper`,
-
-      path: '/app/feed'
-    },
-    {
-      id: 'files',
-
-      name: 'Files',
-      icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-folder`,
-
-      path: '/app/files'
-    },
-    {
-      id: 'starred',
-      parentId: 'files',
-
-      name: 'Starred',
-      icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-star`,
-
-      path: '/app/starred'
-    },
-    {
-      id: 'shared',
-      parentId: 'files',
-
-      name: 'Shared',
-      icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-share-from-square`,
-
-      path: '/app/shared'
-    },
-    {
-      id: 'trash',
-      parentId: 'files',
-
-      name: 'Trash',
-      icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-trash-can`,
-
-      path: '/app/trash'
-    },
-    {
-      id: 'profile',
-
-      name: 'Profile',
-      icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user`,
-      check: (entry) => $page.url.pathname === entry.path.split('?')[0] && $page.url.searchParams.get('id') === '!me',
-
-      path: '/app/users?id=!me'
-    }
-  ]);
-
-  function getChildNavigationEntries(navigationEntry: NavigationEntry): NavigationEntry[] {
-    return entries.filter((entry) => entry.parentId === navigationEntry.id);
-  }
-
-  function isSelected(navigationEntry: NavigationEntry): boolean {
-    const {
-      url: { pathname: currentPath }
-    } = $page;
-
-    return (
-      navigationEntry?.check?.(navigationEntry) ??
-      !!(
-        currentPath === navigationEntry.path ||
-        ($viewMode & ViewMode.Mobile &&
-          getChildNavigationEntries(navigationEntry).some((entry) => isSelected(entry)))
-      )
-    );
-  }
+  import type { UserResource } from '@rizzzi/enderdrive-lib/server';
 
   const { isWidthLimited } = getContext<DashboardContext>(DashboardContextName);
 
@@ -107,57 +19,38 @@
     }
   }
 
-  async function loading(): Promise<void> {
-    const {
-      serverFunctions: { whoAmI }
-    } = getConnection();
-    const user = await whoAmI();
+  const {
+    serverFunctions: { whoAmI }
+  } = getConnection();
 
-    entries.push({
-      id: 'users',
-
-      name: 'Users',
-      icon: (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user`,
-
-      check: (entry) => $page.url.pathname === entry.path && $page.url.searchParams.get('id') == null,
-
-      path: '/app/users'
-    });
-
-    if ((user?.role ?? UserRole.Member) >= UserRole.SiteAdmin) {
-      entries.push({
-        id: 'admin',
-
-        name: 'Admin',
-        icon: (selected) => `fa-solid fa-user-shield`,
-        check: (entry) => $page.url.pathname.startsWith(entry.path),
-
-        path: '/app/admin'
-      });
-    }
-  }
+  let userPromise: Promise<UserResource | null> | null = $state(null);
 
   onMount(() => updatelimitedState());
-  onMount(() => {
-    void loading();
-  });
+
+  type IconGenerator = (selected: boolean) => string;
+  type NavigationCallback = () => void;
 </script>
 
 <svelte:window onresize={updatelimitedState} />
 
-{#snippet entryView(entry: NavigationEntry, selected: boolean)}
+{#snippet navigationButton(
+  name: string,
+  icon: IconGenerator,
+  selected: boolean,
+  onclick: NavigationCallback
+)}
   <button
     class="navigation-entry"
     class:selected
-    onclick={() => goto(entry.path)}
+    {onclick}
     class:desktop={$viewMode & ViewMode.Desktop}
     class:mobile={$viewMode & ViewMode.Mobile}
     class:limited={$isWidthLimited}
   >
     <div class="icon">
-      <i class={entry.icon(selected)}></i>
+      <i class={icon(selected)}></i>
     </div>
-    <p class="label">{entry.name}</p>
+    <p class="label">{name}</p>
   </button>
 {/snippet}
 
@@ -168,17 +61,65 @@
   class:limited={$isWidthLimited}
 >
   {#key $page}
-    {#each entries as entry}
-      {@const selected = isSelected(entry)}
+    {@render navigationButton(
+      'Feed',
+      (selected) => `fa-${selected ? 'solid' : 'regular'} fa-newspaper`,
+      $page.url.pathname === '/app/feed',
+      () => goto('/app/feed')
+    )}
+    {@render navigationButton(
+      'Files',
+      (selected) => `fa-${selected ? 'solid' : 'regular'} fa-folder`,
+      $viewMode & ViewMode.Desktop
+        ? $page.url.pathname === '/app/files'
+        : $page.url.pathname === '/app/files' ||
+            $page.url.pathname === '/app/shared' ||
+            $page.url.pathname === '/app/trash' ||
+            $page.url.pathname === '/app/starred',
+      () => goto('/app/files')
+    )}
+    {#if $viewMode & ViewMode.Desktop}
+      {@render navigationButton(
+        'Starred',
+        (selected) => `fa-${selected ? 'solid' : 'regular'} fa-star`,
+        $page.url.pathname === '/app/starred',
+        () => goto('/app/starred')
+      )}
 
-      {#if $viewMode & ViewMode.Desktop}
-        {@render entryView(entry, selected)}
-      {:else if $viewMode & ViewMode.Mobile}
-        {#if entry.parentId == null}
-          {@render entryView(entry, selected)}
+      {@render navigationButton(
+        'Shared',
+        (selected) => `fa-${selected ? 'solid' : 'regular'} fa-share-from-square`,
+        $page.url.pathname === '/app/shared',
+        () => goto('/app/shared')
+      )}
+
+      {@render navigationButton(
+        'Trash',
+        (selected) => `fa-${selected ? 'solid' : 'regular'} fa-trash-can`,
+        $page.url.pathname === '/app/trash',
+        () => goto('/app/trash')
+      )}
+    {/if}
+
+    {@render navigationButton(
+      'Profile',
+      (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user`,
+      $page.url.pathname === '/app/users' && $page.url.searchParams.get('id') === '!me',
+      () => goto('/app/users?id=!me')
+    )}
+
+    {#if $viewMode & ViewMode.Desktop}
+      {#await (userPromise ??= whoAmI()) then user}
+        {#if user != null && user.role >= UserRole.SiteAdmin}
+          {@render navigationButton(
+            'Admin',
+            (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user-shield`,
+            $page.url.pathname.startsWith('/app/admin'),
+            () => goto('/app/admin')
+          )}
         {/if}
-      {/if}
-    {/each}
+      {/await}
+    {/if}
   {/key}
 </div>
 
@@ -187,7 +128,7 @@
     display: flex;
 
     min-width: 0;
-    min-height: 0;
+    min-height: 128px;
   }
 
   div.navigation.desktop {
@@ -204,8 +145,8 @@
   }
 
   div.navigation.desktop.limited {
-    min-width: 64px;
-    max-width: 64px;
+    min-width: unset;
+    max-width: unset;
   }
 
   div.navigation.mobile {
@@ -273,7 +214,7 @@
   }
 
   button.navigation-entry.desktop.limited {
-    min-width: 64px;
+    min-width: 48px;
     min-height: 64px;
 
     flex-direction: column;

@@ -16,6 +16,7 @@
   import { getContext, onMount, setContext, type Snippet } from 'svelte';
   import { DashboardContextName, type DashboardContext } from '../dashboard.svelte';
   import Navigation from './navigation.svelte';
+    import { Title } from '@rizzzi/svelte-commons';
 
   const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
   const { children }: { children: Snippet } = $props();
@@ -66,6 +67,8 @@
 
   onMount(() => setMainContent(layout));
 </script>
+
+<Title title="Admin Interface" />
 
 {#snippet layout()}
   <div class="admin">
