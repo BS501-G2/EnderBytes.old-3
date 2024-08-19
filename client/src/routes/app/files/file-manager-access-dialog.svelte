@@ -23,6 +23,7 @@
   import { writable, type Writable } from 'svelte/store';
   import { onDestroy, type Snippet } from 'svelte';
   import { FileAccessLevel, UserResolveType } from '@rizzzi/enderdrive-lib/shared';
+  import Icon from '$lib/ui/icon.svelte';
 
   const {
     serverFunctions: { listFileAccess, listUsers, setUserAccess, getUser, whoAmI }
@@ -129,7 +130,7 @@
               <div class="user-row">
                 <Button
                   onClick={async () => {
-                    await setUserAccess(file.id, user.id, FileAccessLevel.None);
+                    await setUserAccess(file.id, user.id, FileAccessLevel.Read);
                     $search = '';
                   }}
                   outline={false}
@@ -137,7 +138,8 @@
                   container={buttonContainer}
                 >
                   <div class="user-entry">
-                    <i class="fa-solid fa-user"></i>
+                    <!-- <i class="fa-solid fa-user"></i> -->
+                    <Icon icon="user" thickness="solid"></Icon>
                     <p>
                       <User hyperlink={false} {user} initials></User>
                     </p>
@@ -157,7 +159,7 @@
 {/snippet}
 
 {#snippet userRow(user: UserResource, access?: FileAccessResource)}
-  <div class="user-row">
+  <div class="user-row list-entry">
     <div class="user-icon"></div>
     <div class="user-name">
       <User hyperlink={false} {user} initials></User>
@@ -196,14 +198,6 @@
     padding: 8px;
   }
 
-  div.head {
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-
-    align-items: center;
-  }
-
   div.search {
     flex-grow: 1;
 
@@ -237,13 +231,7 @@
 
   div.user-row {
     display: flex;
-    flex-direction: row;
-
-    align-items: center;
-
-    > div.user-name {
-      flex-grow: 1;
-    }
+    flex-direction: column;
   }
 
   div.user-entry {
@@ -255,6 +243,22 @@
 
     > p {
       flex-grow: 1;
+    }
+  }
+
+  div.user-row.list-entry {
+    flex-direction: row;
+
+    align-items: center;
+
+    > div.user-name {
+      flex-grow: 1;
+    }
+
+    > div.user-access {
+      > select {
+        padding: 8px;
+      }
     }
   }
 </style>

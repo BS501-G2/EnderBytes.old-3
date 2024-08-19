@@ -9,7 +9,8 @@ export async function load(): Promise<void> {
   const serverStatus = await getServerStatus();
 
   if (serverStatus.setupRequired) {
-    return await goto('/setup', { replaceState: true });
+    await goto('/setup', { replaceState: true });
+    return
   }
 
   const { searchParams } = new URL(window.location.href);
@@ -17,6 +18,7 @@ export async function load(): Promise<void> {
   const authentication = await whoAmI();
 
   if (authentication != null) {
-    return await goto(searchParams.get('return') ?? '/app', { replaceState: true });
+    await goto(searchParams.get('return') ?? '/app', { replaceState: true });
+    return
   }
 }

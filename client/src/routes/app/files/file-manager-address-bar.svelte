@@ -1,13 +1,5 @@
 <script lang="ts">
-  import type { UserResource, FileResource } from '@rizzzi/enderdrive-lib/server';
-  import {
-    Button,
-    ButtonClass,
-    LoadingSpinner,
-    ResponsiveLayout,
-    viewMode,
-    ViewMode
-  } from '@rizzzi/svelte-commons';
+  import { Button, ButtonClass, LoadingSpinner, viewMode, ViewMode } from '@rizzzi/svelte-commons';
   import { getContext, type Snippet } from 'svelte';
   import {
     FileManagerContextName,
@@ -16,9 +8,14 @@
     type FileManagerContext
   } from './file-manager.svelte';
   import FileManagerSeparator from './file-manager-separator.svelte';
+  import { getConnection } from '$lib/client/client';
 
   const { onFileId } = getContext<FileManagerProps>(FileManagerPropsName);
-  const { resolved } = getContext<FileManagerContext>(FileManagerContextName);
+  const { resolved, addressBarMenu } = getContext<FileManagerContext>(FileManagerContextName);
+
+  const {
+    serverFunctions: { getFile }
+  } = getConnection();
 </script>
 
 {#snippet buttonContainer(view: Snippet)}
@@ -68,7 +65,15 @@
       {#each filePathChain as file}
         <div class="address-bar-entry" class:desktop={$viewMode & ViewMode.Desktop}>
           {#if $viewMode & ViewMode.Desktop}
-            <button class="arrow">
+            <button
+              class="arrow"
+              onclick={async (event) => {
+                $addressBarMenu = [
+                  event.currentTarget as HTMLElement,
+                  await getFile(file.parentFileId)
+                ];
+              }}
+            >
               <i class="fa-solid fa-chevron-right"></i>
             </button>
           {:else}
@@ -77,7 +82,13 @@
             </div>
           {/if}
 
-          <button class="file" class:mobile={$viewMode & ViewMode.Mobile}>{file.name}</button>
+          <button
+            class="file"
+            class:mobile={$viewMode & ViewMode.Mobile}
+            onclick={(event) => onFileId(event, file.id)}
+          >
+            {file.name}
+          </button>
         </div>
       {/each}
     </div>

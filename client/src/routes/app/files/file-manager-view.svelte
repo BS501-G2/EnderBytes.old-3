@@ -26,6 +26,8 @@
     getContext<FileManagerContext>(FileManagerContextName);
 
   const { element, onDismiss }: { element: HTMLElement; onDismiss: () => void } = $props();
+
+  let sort: string = $state('name');
 </script>
 
 {#snippet buttonContainer(view: Snippet)}
@@ -55,6 +57,29 @@
       {/each}
     </div>
   {/if}
+
+  <div class="row">
+    <p class="label">Sort</p>
+
+    {#snippet button(name: string, value: string, icon: string)}
+      <Button
+        container={buttonContainer}
+        buttonClass={value === sort ? ButtonClass.Primary : ButtonClass.Transparent}
+        onClick={() => {
+          sort = value;
+        }}
+      >
+        <i class={icon}></i>
+        <p>
+          {name}
+        </p>
+      </Button>
+    {/snippet}
+
+    {@render button('Name', 'name', 'fa-regular fa-rectangle-list')}
+    {@render button('Size', 'size', 'fa-regular fa-rectangle-list')}
+    {@render button('Date', 'date', 'fa-regular fa-rectangle-list')}
+  </div>
 
   {#if $resolved.status === 'success' && !($resolved.page === 'files' && $resolved.type === 'file')}
     <div class="row">

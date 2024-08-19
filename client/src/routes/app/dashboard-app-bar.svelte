@@ -17,7 +17,11 @@
   } from './dashboard.svelte';
   import { getContext, onMount, type Snippet } from 'svelte';
 
+  const { openExtraContextMenuOverlay } = getContext<DashboardContext>(DashboardContextName);
+
   const { contextMenuEntries }: { contextMenuEntries: DashboardContextMenuEntry[] } = $props();
+
+  let appBarElement: HTMLDivElement = $state(null as never);
 </script>
 
 {#snippet topBarButtonContainer(view: Snippet)}
@@ -76,19 +80,37 @@
 {/snippet}
 
 {#snippet rightTopBar()}
-  <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => {}} container={topBarButtonContainer}>
+  <Button
+    buttonClass={ButtonClass.Transparent}
+    outline={false}
+    onClick={(event) => {}}
+    container={topBarButtonContainer}
+  >
     <i class="fa-solid fa-search"></i>
   </Button>
-  <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => {}} container={topBarButtonContainer}>
+  <Button
+    buttonClass={ButtonClass.Transparent}
+    outline={false}
+    onClick={({ currentTarget }) => {
+      $openExtraContextMenuOverlay = [
+        appBarElement,
+        contextMenuEntries,
+        () => {
+          $openExtraContextMenuOverlay = null;
+        }
+      ];
+    }}
+    container={topBarButtonContainer}
+  >
     <i class="fa-solid fa-ellipsis-vertical"></i>
   </Button>
-
 {/snippet}
 
 <div
   class="app-bar"
   class:desktop={$viewMode & ViewMode.Desktop}
   class:mobile={$viewMode & ViewMode.Mobile}
+  bind:this={appBarElement}
 >
   <div
     class="left section"
@@ -145,11 +167,6 @@
 
     > div.section.mobile {
       gap: 0;
-    }
-
-    > div.section.left {
-      min-width: 256px;
-      max-width: 256px;
     }
 
     > div.section.right.desktop {

@@ -144,6 +144,8 @@
         {#if $mainContent !== null}
           {@render $mainContent()}
         {/if}
+
+        {@render children()}
       </div>
     </div>
   </div>
@@ -153,8 +155,6 @@
     </div>
   {/if}
 </div>
-
-{@render children()}
 
 <Keyboard />
 
@@ -237,6 +237,7 @@
 
       gap: 8px;
       min-height: 0px;
+      flex-shrink: 0;
 
       overflow: hidden auto;
     }

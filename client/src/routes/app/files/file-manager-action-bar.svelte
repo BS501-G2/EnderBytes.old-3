@@ -19,8 +19,7 @@
     type FileManagerContext,
     type FileManagerProps
   } from './file-manager.svelte';
-  import { FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
-  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import { FileAccessLevel, FileType } from '@rizzzi/enderdrive-lib/shared';
   import { writable, type Writable } from 'svelte/store';
   import { DashboardContextName, type DashboardContext } from '../dashboard.svelte';
   import { getConnection } from '$lib/client/client';
@@ -49,8 +48,8 @@
     if ($resolved.status === 'success') {
       if ($viewMode & ViewMode.Desktop) {
         actions.push({
-          name: 'View',
-          icon: 'fa-solid fa-eye',
+          name: 'Configure',
+          icon: 'fa-solid fa-cog',
           type: 'arrange',
           action: async (event) => {
             $viewDialog = [event.currentTarget as HTMLElement];
@@ -84,7 +83,12 @@
         });
       }
 
-      if ($resolved.page === 'files' && props.page === 'files' && $clipboard == null) {
+      if (
+        $resolved.page === 'files' &&
+        $resolved.type !== 'file' &&
+        props.page === 'files' &&
+        $clipboard == null
+      ) {
         if ($selected.length > 0 && $resolved.myAccess.level > FileAccessLevel.Read) {
           actions.push({
             name: 'Copy',
@@ -120,6 +124,7 @@
                 if (await deleteConfirm(files)) {
                   await trashFile(files.map((file) => file.id));
                   $selected = [];
+
                   $refresh();
                 }
               }
@@ -132,7 +137,7 @@
             name: 'Properties',
             icon: 'fa-solid fa-info',
             type: $viewMode & ViewMode.Mobile ? 'arrange' : 'modify',
-            action: async (event) => {
+            action: async () => {
               if (props.page === 'files') {
                 await openDetails($selected[0]);
               }
@@ -175,17 +180,6 @@
           }
         });
       }
-
-      // if (props.page !== 'files' && $selected.length === 1 && $clipboard == null) {
-      //   actions.push({
-      //     name: 'Location',
-      //     icon: 'fa-solid fa-location-dot',
-      //     type: 'modify',
-      //     action: async (event) => {
-      //         props.onFileId(event, $selected[0].id);
-      //     }
-      //   });
-      // }
 
       if ($viewMode & ViewMode.Desktop) {
         if (
@@ -239,7 +233,7 @@
                 $refresh?.();
               }
             }
-          })
+          });
         }
       }
     } else if ($resolved.status === 'error') {
@@ -274,12 +268,6 @@
 
   if ($viewMode & ViewMode.Mobile) {
     onMount(() =>
-      addContextMenuEntry('Configure File Manager', 'fa-solid fa-eye', (event) => {
-        $viewDialog = [event.currentTarget as HTMLElement];
-      })
-    );
-
-    onMount(() =>
       addContextMenuEntry('New', 'fa-solid fa-plus', (event) => {
         if (props.page === 'files') {
           props.onNew(event);
@@ -290,6 +278,12 @@
     onMount(() =>
       addContextMenuEntry('Refresh', 'fa-solid fa-rotate', () => {
         $refresh?.();
+      })
+    );
+
+    onMount(() =>
+      addContextMenuEntry('Configure File Manager', 'fa-solid fa-cog', (event) => {
+        $viewDialog = [event.currentTarget as HTMLElement];
       })
     );
   }

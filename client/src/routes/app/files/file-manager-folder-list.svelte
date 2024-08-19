@@ -280,7 +280,12 @@
     } else if (args[0] === 'drop') {
       $drag = null;
       if (props.page === 'files') {
-        props.onNew(Object.defineProperty(event, 'currentTarget', { get: () => desktopSelectionBoxContainer! }), args[1]);
+        props.onNew(
+          Object.defineProperty(event, 'currentTarget', {
+            get: () => desktopSelectionBoxContainer!
+          }),
+          args[1]
+        );
       }
     }
   }
@@ -298,7 +303,10 @@
     oncontextmenu={(event) => {
       event.preventDefault();
     }}
-    onclick={() => {
+    ontouchend={(event) => {
+      props.onFileId(event, file.id);
+    }}
+    onclick={(event) => {
       if (hasKeys('control') || hasKeys('shift')) {
         const foundIndex = $selected.indexOf(file);
 
@@ -310,6 +318,10 @@
 
         $selected = $selected;
       } else {
+        if ($selected.length === 1 && $selected[0] === file) {
+          return;
+        }
+
         $selected = [file];
       }
     }}
@@ -376,22 +388,22 @@
   }}
   ondragenter={(event) => {
     event.preventDefault();
-    event.stopPropagation()
+    event.stopPropagation();
     processDragEvent(event, event.target as HTMLElement, 'enter');
   }}
   ondragleave={(event) => {
     event.preventDefault();
-    event.stopPropagation()
+    event.stopPropagation();
     processDragEvent(event, event.target as HTMLElement, 'leave');
   }}
   ondragover={(event) => {
     event.preventDefault();
-    event.stopPropagation()
+    event.stopPropagation();
     processDragEvent(event, event.target as HTMLElement, 'over', event.clientX, event.clientY);
   }}
   ondrop={(event) => {
     event.preventDefault();
-    event.stopPropagation()
+    event.stopPropagation();
 
     processDragEvent(
       event,

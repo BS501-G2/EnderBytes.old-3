@@ -117,7 +117,7 @@
     throw new Error('Unknown file type');
   }
 
-  let tab: number = $state(0);
+  let tab: number = $state(1);
   let refreshKey: number = $state(0);
 </script>
 
@@ -417,16 +417,5 @@
     min-height: 0px;
 
     gap: 4px;
-  }
-
-  div.file-log {
-    display: flex;
-    flex-direction: column;
-
-    > p.date {
-      font-style: italic;
-      font-size: 0.8em;
-      font-weight: lighter;
-    }
   }
 </style>

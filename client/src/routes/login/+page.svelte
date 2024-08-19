@@ -21,6 +21,10 @@
   const password: Writable<string> = writable('');
 
   const errorStore: Writable<Error | null> = writable(null);
+
+  let loginButton: () => void = $state(null as never);
+
+  let passFocus: () => void = $state(null as never);
 </script>
 
 {#snippet buttonContainer(view: Snippet)}
@@ -67,9 +71,16 @@
         <h2>EnderDrive</h2>
       </div>
       <div class="fields">
-        <Input type={InputType.Text} name="Username" value={username} />
-        <Input type={InputType.Password} name="Password" value={password} />
+        <Input type={InputType.Text} name="Username" value={username} onSubmit={passFocus} />
+        <Input
+          type={InputType.Password}
+          name="Password"
+          value={password}
+          bind:focus={passFocus}
+          onSubmit={loginButton}
+        />
         <Button
+          bind:click={loginButton}
           buttonClass={ButtonClass.Primary}
           onClick={async () => {
             try {
@@ -98,6 +109,7 @@
   div.page {
     display: flex;
     flex-direction: column;
+    align-items: center;
 
     min-width: 100vw;
     max-width: 100vw;
@@ -115,8 +127,10 @@
   div.container {
     -webkit-app-region: no-drag;
 
-    max-width: 1280px;
+    max-width: min(1280px, 100%);
+    width: 100%;
     min-width: 0px;
+    box-sizing: border-box;
 
     flex-grow: 1;
     display: flex;

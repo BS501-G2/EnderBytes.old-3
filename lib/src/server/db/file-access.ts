@@ -79,7 +79,7 @@ export class FileAccessManager extends ResourceManager<
       userId: targetUser.id,
       level,
       encryptedKey: userKeys.encrypt(userKey, fileKey),
-      granterUserId: granterUser.id
+      granterUserId: granterUser.id,
     });
 
     return {
@@ -100,5 +100,31 @@ export class FileAccessManager extends ResourceManager<
     );
 
     return { ...fileAccess, key: unlockedKey };
+  }
+
+  public async setUserAccess<T extends FileAccessLevel>(
+    file: UnlockedFileResource,
+    targetUser: UserResource,
+    level: T,
+    granterUser: UserResource
+  ): Promise<void> {
+    if (file.ownerUserId === targetUser.id) {
+      return;
+    }
+
+    const fileAccess = await this.first({
+      where: [
+        ["fileId", "=", file.id],
+        ["userId", "=", targetUser.id],
+      ],
+    });
+
+    if (fileAccess != null) {
+      await this.delete(fileAccess);
+    }
+
+    if (level > FileAccessLevel.None) {
+      await this.create(file, targetUser, level, granterUser);
+    }
   }
 }

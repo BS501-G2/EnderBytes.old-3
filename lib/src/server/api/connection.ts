@@ -623,44 +623,14 @@ export class ServerConnection {
           authentication.userId,
         ]);
         const user = await resolveUser([UserResolveType.UserId, targetUserId]);
-        let accessLevel =
-          (await fileAccessManager.first({
-            where: [
-              ["userId", "=", user.id],
-              ["fileId", "=", file.id],
-            ],
-          })) ?? file.ownerUserId === user.id
-            ? FileAccessLevel.Full
-            : FileAccessLevel.None;
 
-        if (level != null) {
-          if (file.ownerUserId === user.id) {
-            ApiError.throw(
-              ApiErrorType.InvalidRequest,
-              "Owner access level cannot be altered"
-            );
-          }
-
-          await fileAccessManager.deleteWhere([
-            ["fileId", "=", file.id],
-            ["userId", "=", user.id],
-          ]);
-
-          if (FileAccessLevel[level] == null) {
-            ApiError.throw(
-              ApiErrorType.InvalidRequest,
-              "Invalid file access level"
-            );
-          }
-
-          if (level === FileAccessLevel.None) {
-            accessLevel = (
-              await fileAccessManager.create(file, user, level, granterUser)
-            ).level;
-          }
-        }
-
-        return accessLevel;
+        await fileAccessManager.setUserAccess(
+          file,
+          user,
+          level ?? FileAccessLevel.None,
+          granterUser
+        );
+        return level ?? FileAccessLevel.None;
       },
 
       getFile: async (fileId: number | null) => {

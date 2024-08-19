@@ -10,9 +10,10 @@
   {#snippet actions()}
     <Button
       onClick={async () => {
-        onDismiss();
         clearAuthentication();
-        await goto('/login', { replaceState: true });
+        onDismiss();
+
+        location.reload();
       }}
       buttonClass={ButtonClass.Primary}
     >

@@ -15,7 +15,7 @@ const authentication: Writable<Authentication | null> = persisted(
 
 const readonlyAuthentication = derived(authentication, (value) => value);
 
-export function clearAuthentication() {
+export function clearAuthentication(): void {
   authentication.set(null);
 }
 

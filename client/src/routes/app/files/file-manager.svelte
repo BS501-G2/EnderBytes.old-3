@@ -7,10 +7,10 @@
     UserResource
   } from '@rizzzi/enderdrive-lib/server';
   import { FileType, type FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
-  import { setContext, type Snippet } from 'svelte';
-  import { get, writable, type Readable, type Writable } from 'svelte/store';
+  import { setContext } from 'svelte';
+  import { writable, type Readable, type Writable } from 'svelte/store';
 
-  export type SourceEvent = MouseEvent;
+  export type SourceEvent = MouseEvent | TouchEvent;
 
   export type FileManagerOnFileIdCallback = (event: SourceEvent, fileId: number | null) => void;
   export type FileManagerOnPageCallback = (
@@ -101,6 +101,7 @@
 
     listViewMode: Writable<FileManagerViewMode>;
     showSideBar: Writable<boolean>;
+    addressBarMenu: Writable<[element: HTMLElement, file: FileResource] | null>;
   }
 
   export type FileManagerActionGenerator = () => FileManagerAction | null;
@@ -114,10 +115,7 @@
     Awaiter,
     Banner,
     BannerClass,
-    Button,
-    ButtonClass,
     LoadingSpinner,
-    ResponsiveLayout,
     ViewMode,
     viewMode
   } from '@rizzzi/svelte-commons';
@@ -125,10 +123,7 @@
   import { getConnection } from '$lib/client/client';
   import { persisted } from 'svelte-persisted-store';
   import FileManagerActionBar, { type FileManagerAction } from './file-manager-action-bar.svelte';
-  import FileManagerFolderList, {
-    FileManagerViewMode,
-    type FileManagerSelection
-  } from './file-manager-folder-list.svelte';
+  import FileManagerFolderList, { FileManagerViewMode } from './file-manager-folder-list.svelte';
   import FileManagerSideBar from './file-manager-side-bar.svelte';
   import FileManagerBottomBar from './file-manager-bottom-bar.svelte';
   import FileManagerFileView from './file-manager-file-view.svelte';
@@ -138,6 +133,7 @@
   import FileManagerDeleteConfirm from './file-manager-delete-confirm.svelte';
   import FileManagerAccessDialog from './file-manager-access-dialog.svelte';
   import FileManagerDetailsDialog from './file-manager-details-dialog.svelte';
+  import FileManagerAddressBarMenu from './file-manager-address-bar-menu.svelte';
 
   const { ...props }: FileManagerProps = $props();
   const { refresh } = props;
@@ -161,7 +157,7 @@
   } = getConnection();
 
   setContext<FileManagerProps>(FileManagerPropsName, props);
-  const { refreshKey, resolved, showSideBar, viewDialog, accessDialogs } =
+  const { refreshKey, resolved, showSideBar, viewDialog, accessDialogs, addressBarMenu } =
     setContext<FileManagerContext>(FileManagerContextName, {
       refreshKey: writable(0),
       resolved: writable({ status: 'loading' }),
@@ -170,7 +166,8 @@
       accessDialogs: writable(null),
 
       listViewMode: persisted('fm-list-mode', FileManagerViewMode.Grid),
-      showSideBar: persisted('side-bar', false)
+      showSideBar: persisted('side-bar', false),
+      addressBarMenu: writable(null)
     });
 
   refresh.set(() => refreshKey.update((value) => value + 1));
@@ -244,7 +241,7 @@
         }
       } else if (props.page === 'shared') {
         const shareList = await listSharedFiles();
-        const files = await Promise.all(shareList.map((sharedFile) => getFile(sharedFile.id)));
+        const files = await Promise.all(shareList.map((sharedFile) => getFile(sharedFile.fileId)));
 
         $resolved = {
           me,
@@ -367,6 +364,16 @@
     file={$accessDialogs[0]}
     resolve={() => {
       $accessDialogs = null;
+    }}
+  />
+{/if}
+
+{#if $addressBarMenu != null}
+  <FileManagerAddressBarMenu
+    element={$addressBarMenu[0]}
+    file={$addressBarMenu[1]}
+    onDismiss={() => {
+      $addressBarMenu = null;
     }}
   />
 {/if}
