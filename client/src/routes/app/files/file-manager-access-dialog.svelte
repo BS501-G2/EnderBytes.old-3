@@ -26,7 +26,7 @@
   import Icon from '$lib/ui/icon.svelte';
 
   const {
-    serverFunctions: { listFileAccess, listUsers, setUserAccess, getUser, whoAmI }
+    serverFunctions: { listFileAccess, listUsers, setUserAccess, getUser, whoAmI, getMyAccess }
   } = getConnection();
 
   const { resolve, file }: { resolve: () => void; file: FileResource } = $props();
@@ -63,7 +63,7 @@
       <h3>Existing access</h3>
 
       {#await getUser([UserResolveType.UserId, file.ownerUserId])}
-        <LoadingSpinner />
+        <LoadingSpinner size="1em" />
       {:then user}
         {@render userRow(user)}
       {/await}
@@ -81,7 +81,7 @@
 
           return out;
         })()}
-          <LoadingSpinner />
+          <LoadingSpinner size="1em" />
         {:then accesses}
           {#if accesses.length === 0}
             <p>No access other users found.</p>
@@ -166,20 +166,26 @@
     </div>
     <div class="user-access">
       {#if access != null}
-        <select
-          onchange={async ({ currentTarget: { value } }) => {
-            const level: FileAccessLevel = Number(value) as FileAccessLevel;
+        {#await getMyAccess(access.fileId) then { level }}
+          {#if level >= FileAccessLevel.Manage}
+            <select
+              onchange={async ({ currentTarget: { value } }) => {
+                const level: FileAccessLevel = Number(value) as FileAccessLevel;
 
-            await setUserAccess(file.id, user.id, level);
-            refreshKey++;
-          }}
-        >
-          {@render option(FileAccessLevel.None)}
-          {@render option(FileAccessLevel.Read)}
-          {@render option(FileAccessLevel.ReadWrite)}
-          {@render option(FileAccessLevel.Manage)}
-          {@render option(FileAccessLevel.Full)}
-        </select>
+                await setUserAccess(file.id, user.id, level);
+                refreshKey++;
+              }}
+            >
+              {@render option(FileAccessLevel.None)}
+              {@render option(FileAccessLevel.Read)}
+              {@render option(FileAccessLevel.ReadWrite)}
+              {@render option(FileAccessLevel.Manage)}
+              {@render option(FileAccessLevel.Full)}
+            </select>
+          {:else}
+            <p><i>{FileAccessLevel[access.level]}</i></p>
+          {/if}
+        {/await}
       {:else}
         <p><i>Owner</i></p>
       {/if}

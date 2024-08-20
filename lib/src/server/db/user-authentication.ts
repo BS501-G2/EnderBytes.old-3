@@ -57,7 +57,6 @@ export class UserAuthenticationManager extends ResourceManager<
       table.string("salt").notNullable();
       table.string("iv").notNullable();
 
-
       table.binary("encryptedPrivateKey").notNullable();
       table.binary("encryptedPrivateKeyAuthTag").notNullable();
       table.binary("publicKey").notNullable();
@@ -82,7 +81,7 @@ export class UserAuthenticationManager extends ResourceManager<
     );
 
     const userKey = await this.insert({
-      userId: user.dataId,
+      userId: user.id,
       type,
 
       iterations: 10000,
@@ -105,7 +104,7 @@ export class UserAuthenticationManager extends ResourceManager<
     return this.readStream({
       where: [
         filterType != null ? ["type", "=", filterType] : null,
-        ["userId", "=", user.dataId],
+        ["userId", "=", user.id],
       ],
     });
   }
@@ -116,7 +115,7 @@ export class UserAuthenticationManager extends ResourceManager<
     payload: Uint8Array
   ): Promise<UnlockedUserAuthentication | null> {
     for await (const key of this.list(user, type)) {
-      if (key.userId !== user.dataId) {
+      if (key.userId !== user.id) {
         continue;
       }
 
@@ -192,7 +191,10 @@ export class UserAuthenticationManager extends ResourceManager<
     throw new Error("User has no password");
   }
 
-  public decrypt(key: UnlockedUserAuthentication, payload: Uint8Array): Uint8Array {
+  public decrypt(
+    key: UnlockedUserAuthentication,
+    payload: Uint8Array
+  ): Uint8Array {
     return decryptAsymmetric(key.privateKey, payload);
   }
 

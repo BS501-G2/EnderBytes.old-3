@@ -81,8 +81,6 @@ export class ApiError extends Error {
 
     this.status = status;
     this.stack = stack;
-
-    console.table({ status, message, stack });
   }
 
   public readonly rawMessage: string;

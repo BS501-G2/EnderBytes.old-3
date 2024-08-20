@@ -64,6 +64,15 @@ export class ServerConnectionManager extends Service<
     return context;
   }
 
+  public *getConnectionsFromUser(userId: number) {
+    for (const connectionId in this.#data.connections) {
+      const connection = this.#data.connections[connectionId];
+      if (connection.currentUserId === userId) {
+        yield connection;
+      }
+    }
+  }
+
   async run(
     setData: ServiceSetDataCallback<ServerConnectionManagerData>,
     onReady: ServiceReadyCallback,
@@ -91,7 +100,7 @@ export class ServerConnectionManager extends Service<
           connections[connection.id] = connection;
         },
         io: new SocketIO.Server({
-          maxHttpBufferSize: 1024 * 1024 * 256
+          maxHttpBufferSize: 1024 * 1024 * 256,
         }),
       });
 

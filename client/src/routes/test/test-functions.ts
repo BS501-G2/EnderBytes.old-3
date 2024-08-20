@@ -7,9 +7,9 @@ type TestFunctions = [string, (log: (data: any) => void) => any | Promise<any>][
 
 const adminUser = 'testuser';
 const adminPassword = 'testuser123;';
-const adminFirstName = 'Hugh';
-const adminMiddleName = 'G';
-const adminLastName = 'Rection';
+const adminFirstName = 'Test';
+const adminMiddleName = 'Test';
+const adminLastName = 'Test';
 
 export const testFunctions = ({
   serverFunctions: { echo, getServerStatus, register, updateUser, listUsers, whoAmI, createUser }

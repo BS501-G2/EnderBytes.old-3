@@ -10,7 +10,7 @@
 </script>
 
 <script lang="ts">
-  import { LoadingSpinner, ViewMode, viewMode } from '@rizzzi/svelte-commons';
+  import { AnimationFrame, LoadingSpinner, ViewMode, viewMode } from '@rizzzi/svelte-commons';
   import FileManagerSeparator from './file-manager-separator.svelte';
   import { getContext, onMount } from 'svelte';
   import {
@@ -25,6 +25,7 @@
   import { getConnection } from '$lib/client/client';
   import { deleteConfirm } from './file-manager-delete-confirm.svelte';
   import { openDetails } from './file-manager-details-dialog.svelte';
+  import { fly } from 'svelte/transition';
 
   const props = getContext<FileManagerProps>(FileManagerPropsName);
   const { refresh } = props;
@@ -290,7 +291,6 @@
 
   const actionsKey: Writable<number> = writable(0);
 </script>
-
 {#snippet layout(originalList: FileManagerAction[])}
   {#if originalList.length > 0}
     <div

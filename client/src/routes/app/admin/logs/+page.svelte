@@ -169,11 +169,11 @@
       {/snippet}
 
       {@render button('View User', 'fa-solid fa-user', () => {
-        return goto(`/app/users/?userId=${log.actorUserId}`);
+        return goto(`/app/users/?id=:${log.actorUserId}`);
       })}
 
       {@render button('View File', 'fa-solid fa-file', () => {
-        return goto(`/app/files/?fileId=${log.targetFileId}`);
+        return goto(`/app/files/?id=:${log.targetFileId}`);
       })}
     {/snippet}
 

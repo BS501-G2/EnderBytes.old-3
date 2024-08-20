@@ -65,6 +65,15 @@
   let innerList: HTMLDivElement = $state(null as never);
   let desktopSelectionBox: HTMLDivElement | null = $state(null);
   let desktopSelectionBoxContainer: HTMLDivElement | null = $state(null);
+  let isWindowWIdthLimited: boolean = $state(isWindowWidthLimitedChecker());
+
+  function isWindowWidthLimitedChecker(): boolean {
+    return window.innerWidth < 416
+  }
+
+  $effect(() => {
+    console.log('isWindowWidthLimited', isWindowWIdthLimited);
+  })
 
   function updateSelectionSnapshot(
     ...args:
@@ -412,6 +421,7 @@
       Array.from(event.dataTransfer?.files || [])
     );
   }}
+  onresize={() => isWindowWIdthLimited = isWindowWidthLimitedChecker()}
 />
 
 {#if $drag != null}
@@ -456,6 +466,7 @@
       class="inner-list"
       class:grid={$listViewMode === FileManagerViewMode.Grid}
       class:list={$listViewMode === FileManagerViewMode.List}
+      class:limited={isWindowWIdthLimited}
       bind:this={innerList}
     >
       {#each files as file, index}
@@ -482,6 +493,10 @@
     grid-template-columns: repeat(auto-fill, minmax(192px, 1fr));
 
     padding: 16px;
+  }
+
+  div.inner-list.grid.limited {
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
   }
 
   button.file-entry.grid {

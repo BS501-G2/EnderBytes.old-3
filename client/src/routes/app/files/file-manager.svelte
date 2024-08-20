@@ -241,7 +241,13 @@
         }
       } else if (props.page === 'shared') {
         const shareList = await listSharedFiles();
-        const files = await Promise.all(shareList.map((sharedFile) => getFile(sharedFile.fileId)));
+        const files: FileResource[] = [];
+        for (const sharedFile of shareList) {
+          try {
+            const file = await getFile(sharedFile.fileId);
+            files.push(file);
+          } catch {}
+        }
 
         $resolved = {
           me,
@@ -252,9 +258,13 @@
         };
       } else if (props.page === 'starred') {
         const starredList = await listStarredFiles();
-        const files = await Promise.all(
-          starredList.map((starredFile) => getFile(starredFile.fileId))
-        );
+        const files: FileResource[] = [];
+        for (const starredFile of starredList) {
+          try {
+            const file = await getFile(starredFile.fileId);
+            files.push(file);
+          } catch {}
+        }
 
         $resolved = {
           me,

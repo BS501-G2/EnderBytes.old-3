@@ -28,7 +28,7 @@
   {/snippet}
 </Locale>
 <ResetCSS />
-<ColorScheme colorScheme={$currentColorScheme} />
+<ColorScheme />
 
 {@render children()}
 

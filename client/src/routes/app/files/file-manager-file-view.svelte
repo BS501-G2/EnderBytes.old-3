@@ -2,28 +2,86 @@
   export interface Data {
     mime: [mime: string, description: string];
     viruses: string[];
+    snapshots: FileSnapshotResource[];
   }
 </script>
 
 <script lang="ts">
   import { getConnection } from '$lib/client/client';
   import Icon from '$lib/ui/icon.svelte';
-  import { FileType } from '@rizzzi/enderdrive-lib/shared';
-  import { LoadingSpinner } from '@rizzzi/svelte-commons';
+  import type { FileSnapshotResource } from '@rizzzi/enderdrive-lib/server';
+  import { AnimationFrame, Button, ButtonClass, ViewMode, viewMode } from '@rizzzi/svelte-commons';
+  import { type Snippet } from 'svelte';
+  import { fly, scale } from 'svelte/transition';
 
   const { fileId }: { fileId: number } = $props();
 
   const {
-    serverFunctions: { getFileMime, listFileViruses }
+    serverFunctions: { getFileMime, listFileViruses, listFileSnapshots }
   } = getConnection();
+
+  let snapshotId: number | null = $state(null as never);
+  let tab: number = $state(0);
+
+  let lastHover: number = $state(Date.now());
+  let showActions: boolean = $state(true);
+
+  let fileViewElement: HTMLDivElement = $state(null as never);
 
   async function load(): Promise<Data> {
     const mime = await getFileMime(fileId);
     const viruses = await listFileViruses(fileId);
+    const snapshots = await listFileSnapshots(fileId);
 
-    return { mime, viruses };
+    return { mime, viruses, snapshots };
+  }
+
+  function updateHover(currentTarget: EventTarget, target: EventTarget | null) {
+    if (currentTarget !== target) {
+      return;
+    }
+
+    lastHover = Date.now();
+    checkHover();
+  }
+
+  function checkHover() {
+    showActions = Date.now() - lastHover < 2500;
   }
 </script>
+
+<AnimationFrame callback={checkHover} />
+
+{#snippet bar(position: 'bottom' | 'top', view: Snippet)}
+  <div
+    class="bar-container"
+    transition:fly={{ y: position === 'bottom' ? 32 : -32 }}
+    class:fullscreen={$viewMode & ViewMode.Mobile || $viewMode & ViewMode.Fullscreen}
+  >
+    <div
+      class="{position} bar"
+      class:fullscreen={$viewMode & ViewMode.Mobile || $viewMode & ViewMode.Fullscreen}
+    >
+      {@render view()}
+    </div>
+  </div>
+{/snippet}
+
+{#snippet topActions()}
+  {#if $viewMode & ViewMode.Mobile}
+    <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => {}}>
+      <Icon icon="chevron-left" thickness="solid" />
+    </Button>
+  {/if}
+{/snippet}
+
+{#snippet bottomActions()}
+  <Button buttonClass={ButtonClass.Transparent} onClick={() => {}}>asd</Button>
+{/snippet}
+
+{#snippet content()}
+  <div class="content"></div>
+{/snippet}
 
 {#snippet card(header: string, message: string)}
   <div class="message-card-container">
@@ -50,7 +108,17 @@
   </div>
 {/snippet}
 
-<div class="file-view">
+<div
+  bind:this={fileViewElement}
+  class="file-view"
+  class:fullscreen={$viewMode & ViewMode.Mobile || $viewMode & ViewMode.Fullscreen}
+  role="document"
+  in:scale|global={{ duration: 200, start: 0.95 }}
+  onmousemove={({ currentTarget, target }) => updateHover(currentTarget, target)}
+  ontouchend={({ currentTarget, target }) => updateHover(currentTarget, target)}
+  class:dark={$viewMode & ViewMode.Desktop}
+  class:main={tab === 0}
+>
   {#await load() then { mime: [mime, description], viruses }}
     {#if viruses.length > 0}
       {@render card(
@@ -58,16 +126,51 @@
         'This file cannot be viewed because it contains one or more virus(es):\n' +
           viruses.map((virus, index) => `${index + 1}. ${virus}`).join('\n')
       )}
+    {:else if showActions}
+      {@render bar('top', topActions)}
+      {@render content()}
+      {@render bar('bottom', bottomActions)}
     {/if}
   {/await}
 </div>
 
 <style lang="scss">
   div.file-view {
+    overflow: hidden;
+
     flex-grow: 1;
 
     display: flex;
     flex-direction: column;
+
+    margin: 8px;
+    border-radius: 8px;
+  }
+
+  div.file-view.main {
+    background-color: var(--shadow);
+    color: var(--onBackground);
+  }
+
+  div.file-view.fullscreen {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    min-width: 100dvw;
+    min-height: 100dvh;
+    max-width: 100dvw;
+    max-height: 100dvh;
+
+    margin: 0;
+
+    box-sizing: border-box;
+
+    border-radius: 0;
+
+    background-color: #0f0f0f;
+    color: white;
   }
 
   div.message-card-container {
@@ -99,6 +202,8 @@
     padding: 16px;
     border-radius: 8px;
 
+    box-shadow: 2px 2px 8px var(--shadow);
+
     > div.side,
     > div.main {
       display: flex;
@@ -108,5 +213,58 @@
     > div.main {
       flex-grow: 1;
     }
+  }
+
+  div.bar-container {
+    min-height: 0;
+    max-height: 0;
+  }
+
+  div.bar {
+    min-height: 24px;
+    max-height: 24px;
+
+    display: flex;
+    flex-direction: row;
+
+    // align-items: center;
+
+    gap: 8px;
+
+    padding: 8px;
+    margin: 8px;
+    border-radius: 4px;
+
+    background-color: var(--primaryContainer);
+    color: var(--onPrimaryContainer);
+
+    overflow: hidden;
+  }
+
+  div.bar.top.fullscreen {
+    border-bottom: 1px solid var(--onPrimaryContainer);
+  }
+  div.bar.bottom.fullscreen {
+    border-top: 1px solid var(--onPrimaryContainer);
+  }
+
+  div.bar.fullscreen {
+    min-height: 32px;
+    max-height: 32px;
+
+    font-size: 1.2rem;
+
+    margin: 0;
+
+    border-radius: 0;
+
+    background-color: transparent;
+    color: inherit;
+  }
+
+  div.content {
+    flex-grow: 1;
+
+    display: flex;
   }
 </style>

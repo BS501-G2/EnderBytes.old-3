@@ -71,9 +71,11 @@
         <h2>EnderDrive</h2>
       </div>
       <div class="fields">
-        <Input type={InputType.Text} name="Username" value={username} onSubmit={passFocus} />
+        <Input type={InputType.Text} 
+        icon="fa-circle-user fa-solid" name="Username" value={username} onSubmit={passFocus} />
         <Input
           type={InputType.Password}
+          icon="fa-key fa-solid"
           name="Password"
           value={password}
           bind:focus={passFocus}

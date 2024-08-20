@@ -102,6 +102,24 @@ export class FileAccessManager extends ResourceManager<
     return { ...fileAccess, key: unlockedKey };
   }
 
+  public async getAccessLevel(
+    file: UnlockedFileResource,
+    user: UserResource
+  ): Promise<FileAccessLevel> {
+    if (file.ownerUserId === user.id) {
+      return FileAccessLevel.Full;
+    }
+
+    const fileAccess = await this.first({
+      where: [
+        ["fileId", "=", file.id],
+        ["userId", "=", user.id],
+      ],
+    });
+
+    return fileAccess?.level ?? FileAccessLevel.None;
+  }
+
   public async setUserAccess<T extends FileAccessLevel>(
     file: UnlockedFileResource,
     targetUser: UserResource,
@@ -112,15 +130,15 @@ export class FileAccessManager extends ResourceManager<
       return;
     }
 
-    const fileAccess = await this.first({
+    const targetFileAccess = await this.first({
       where: [
         ["fileId", "=", file.id],
         ["userId", "=", targetUser.id],
       ],
     });
 
-    if (fileAccess != null) {
-      await this.delete(fileAccess);
+    if (targetFileAccess != null) {
+      await this.delete(targetFileAccess);
     }
 
     if (level > FileAccessLevel.None) {

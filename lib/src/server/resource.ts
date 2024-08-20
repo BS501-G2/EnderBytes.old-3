@@ -465,8 +465,8 @@ export abstract class ResourceManager<
     const result: R[] = [];
 
     for await (const record of this.readStream({
-      ...options,
       includeDeleted: false,
+      ...options,
     })) {
       result.push(record);
     }

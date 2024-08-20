@@ -9,6 +9,7 @@
   import { writable, type Writable } from 'svelte/store';
   import { testFunctions } from './test-functions';
   import { getConnection } from '$lib/client/client'
+  import { viewMode, ViewMode } from '@rizzzi/svelte-commons'
 
   const returnedData: Writable<any> = writable(null);
   const messages: Writable<any[]> = writable([]);
@@ -34,6 +35,7 @@
     $error = null;
   }
 </script>
+
 
 {#snippet button(onClick: ButtonCallback, label: string)}
   <Button {onClick}>

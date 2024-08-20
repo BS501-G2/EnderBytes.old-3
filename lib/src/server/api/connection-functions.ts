@@ -70,7 +70,7 @@ export interface ServerFunctions extends ConnectionFunctions {
     role?: UserRole;
   }) => Promise<UserResource>;
 
-  setSuspend: (id: number, isSuspended: boolean) => Promise<UserResource>;
+  setSuspend: (id: number, isSuspended: boolean) => Promise<void>;
 
   createFile: (parentFolderId: number, name: string) => Promise<FileResource>;
 
@@ -90,15 +90,21 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   getFilePathChain: (fileId: number) => Promise<FileResource[]>;
 
-  getFileSize: (fileId: number) => Promise<number>;
+  getFileSize: (fileId: number, fileSnapshotId?: number) => Promise<number>;
 
-  getFileMime: (fileId: number) => Promise<[mime: string, description: string]>;
+  getFileMime: (
+    fileId: number,
+    fileSnapshotId?: number
+  ) => Promise<[mime: string, description: string]>;
 
   getFileTime: (
     fileId: number
   ) => Promise<{ createTime: number; modifyTime: number }>;
 
-  listFileViruses: (fileId: number) => Promise<string[]>;
+  listFileViruses: (
+    fileId: number,
+    fileSnapshotId?: number
+  ) => Promise<string[]>;
 
   listFileAccess: (
     fileId: number,
@@ -159,7 +165,11 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   moveFile: (fileIds: number[], toParentId: number) => Promise<void>;
 
-  copyFile: (fileIds: number[], toParentId: number) => Promise<void>;
+  copyFile: (
+    fileIds: number[],
+    toParentId: number,
+    fileSnapshotId?: number
+  ) => Promise<void>;
 
   restoreFile: (fileIds: number[], newParentId?: number) => Promise<void>;
 

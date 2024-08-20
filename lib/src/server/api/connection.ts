@@ -8,6 +8,7 @@ import {
   fileIoSize,
   FileLogType,
   FileType,
+  LogLevel,
   SocketWrapper,
   UserResolvePayload,
   UserResolveType,
@@ -52,7 +53,24 @@ export class ServerConnection {
     this.#id = id;
     this.#wrapper = wrapSocket(
       (this.#io = socket),
-      this.#server,
+      new Proxy(this.#server, {
+        get: (target, prop) => {
+          return async (...args: Array<any>) => {
+            try {
+              return await target[prop as keyof ServerFunctions](...args);
+            } catch (error) {
+              this.#manager.log(
+                LogLevel.Error,
+                error instanceof Error
+                  ? error.stack ?? error.message
+                  : `${error}`
+              );
+
+              throw error;
+            }
+          };
+        },
+      }),
       (func) => this.#onMessage(func)
       // (...message) => {
       //   console.log(...message);
@@ -383,9 +401,13 @@ export class ServerConnection {
           unlockedUserAuthentication = null;
         }
 
+        console.table({ user, unlockedUserAuthentication });
+
         if (unlockedUserAuthentication == null || user == null) {
           ApiError.throw(ApiErrorType.Unauthorized, "Invalid credentials");
         }
+
+        console.table({ suspended: user.isSuspended });
 
         if (user.isSuspended) {
           ApiError.throw(ApiErrorType.Forbidden, "User is currently suspended");
@@ -498,10 +520,20 @@ export class ServerConnection {
         const user = await resolveUser([UserResolveType.UserId, id]);
 
         if (user.role >= UserRole.SiteAdmin) {
-          ApiError.throw(ApiErrorType.Forbidden, "Cannot suspend site admin");
+          ApiError.throw(
+            ApiErrorType.InvalidRequest,
+            "Cannot suspend site admin"
+          );
         }
 
-        return await userManager.setSuspended(user, isSuspended);
+        await userManager.setSuspended(user, isSuspended);
+        if (isSuspended) {
+          for (const connection of this.#manager.getConnectionsFromUser(
+            user.id
+          )) {
+            connection.#io.disconnect();
+          }
+        }
       },
 
       updateFile: async (
@@ -622,6 +654,16 @@ export class ServerConnection {
           UserResolveType.UserId,
           authentication.userId,
         ]);
+
+        const granterAccess = await fileAccessManager.getAccessLevel(
+          file,
+          granterUser
+        );
+
+        if (granterAccess < FileAccessLevel.Manage) {
+          ApiError.throw(ApiErrorType.Forbidden, "Insufficient access level");
+        }
+
         const user = await resolveUser([UserResolveType.UserId, targetUserId]);
 
         await fileAccessManager.setUserAccess(
@@ -698,7 +740,7 @@ export class ServerConnection {
         return fileSnapshot.size;
       },
 
-      getFileMime: async (fileId) => {
+      getFileMime: async (fileId, fileSnapshotId) => {
         const authentication = requireAuthenticated(true);
         const file = await getFile(
           fileId,
@@ -754,7 +796,7 @@ export class ServerConnection {
         throw ApiError.throw(ApiErrorType.InvalidRequest);
       },
 
-      listFileViruses: async (fileId) => {
+      listFileViruses: async (fileId, fileSnapshotId) => {
         const authentication = requireAuthenticated(true);
         const file = await getFile(
           fileId,
@@ -1026,7 +1068,7 @@ export class ServerConnection {
         }
       },
 
-      copyFile: async (fileIds, toParentId) => {
+      copyFile: async (fileIds, toParentId, fileSnapshotId) => {
         const authentication = requireAuthenticated(true);
 
         for (const fileId of fileIds) {
