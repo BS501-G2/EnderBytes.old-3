@@ -8,10 +8,12 @@
   } from '../files/file-manager.svelte';
   import { Title } from '@rizzzi/svelte-commons';
   import { goto } from '$app/navigation';
+  import { ScanFolderSortType } from '@rizzzi/enderdrive-lib/shared';
 
   const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
 
   const refresh: Writable<() => void> = writable(null as never);
+  const sort: Writable<ScanFolderSortType> = writable(ScanFolderSortType.FileName);
 
   const onPage: FileManagerOnPageCallback = (...[, page]) => {
     goto(`/app/${page}`);
@@ -27,5 +29,5 @@
 <Title title="Shared Files" />
 
 {#snippet layout()}
-  <FileManager page="shared" {onPage} {onFileId} {refresh} />
+  <FileManager page="shared" {onPage} {onFileId} {refresh} {sort} />
 {/snippet}

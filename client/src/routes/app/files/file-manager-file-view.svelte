@@ -1,5 +1,10 @@
 <script lang="ts" context="module">
-  export interface Data {
+  export interface FileViewContext {
+  }
+
+  export const FileViewContextName = 'file-view-context';
+
+  export interface FileViewData {
     file: FileResource;
     mime: [mime: string, description: string];
     viruses: string[];
@@ -12,14 +17,17 @@
   import Icon from '$lib/ui/icon.svelte';
   import type { FileResource, FileSnapshotResource } from '@rizzzi/enderdrive-lib/server';
   import { AnimationFrame, Button, ButtonClass, ViewMode, viewMode } from '@rizzzi/svelte-commons';
-  import { type Snippet } from 'svelte';
+  import { setContext, type Snippet } from 'svelte';
   import { fly, scale } from 'svelte/transition';
+  import FileManagerFileViewContent from './file-manager-file-view-content.svelte';
 
   const { fileId }: { fileId: number } = $props();
 
   const {
     serverFunctions: { getFile, getFileMime, listFileViruses, listFileSnapshots }
   } = getConnection();
+
+  const {} = setContext<FileViewContext>(FileViewContextName, {});
 
   let snapshotId: number | null = $state(null as never);
   let tab: number = $state(0);
@@ -29,7 +37,7 @@
 
   let fileViewElement: HTMLDivElement = $state(null as never);
 
-  async function load(): Promise<Data> {
+  async function load(): Promise<FileViewData> {
     const file = await getFile(fileId);
     const mime = await getFileMime(fileId);
     const viruses = await listFileViruses(fileId);
@@ -51,7 +59,7 @@
 
 <AnimationFrame callback={checkHover} />
 
-{#snippet bar(data: Data, position: 'bottom' | 'top', view: Snippet<[data: Data]>)}
+{#snippet bar(data: FileViewData, position: 'bottom' | 'top', view: Snippet<[data: FileViewData]>)}
   <div
     class="bar-container"
     class:bottom={position === 'bottom'}
@@ -67,7 +75,7 @@
   </div>
 {/snippet}
 
-{#snippet topActions(data: Data)}
+{#snippet topActions(data: FileViewData)}
   {#if $viewMode & ViewMode.Mobile}
     <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => history.back()}>
       <Icon icon="chevron-left" thickness="solid" />
@@ -77,18 +85,12 @@
       {data.file.name}
     </div>
 
-    <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => {}}>
-      asd
-    </Button>
+    <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => {}}>asd</Button>
   {/if}
 {/snippet}
 
-{#snippet bottomActions(data: Data)}
+{#snippet bottomActions(data: FileViewData)}
   <Button buttonClass={ButtonClass.Transparent} onClick={() => {}}>asd</Button>
-{/snippet}
-
-{#snippet content()}
-  <div class="content"></div>
 {/snippet}
 
 {#snippet card(header: string, message: string)}
@@ -128,21 +130,23 @@
   class:main={tab === 0}
 >
   {#await load() then data}
-    {@const {
-      mime: [mime, description],
-      viruses
-    } = data}
+    {@const { viruses } = data}
     {#if viruses.length > 0}
       {@render card(
         'This file cannot be viewed.',
-        'This file cannot be viewed because it contains one or more virus(es):\n' +
+        'Viewing of this file has been disabled because it contains one or more virus(es):\n' +
           viruses.map((virus, index) => `${index + 1}. ${virus}`).join('\n')
       )}
     {:else if showActions}
       {@render bar(data, 'top', topActions)}
-      {@render content()}
+      <FileManagerFileViewContent {...data} />
       {@render bar(data, 'bottom', bottomActions)}
     {/if}
+    {:catch error}
+      {@render card(
+        'An error has occured trying to view this file.',
+        ''
+      )}
   {/await}
 </div>
 
@@ -260,9 +264,9 @@
 
     padding: 8px;
     margin: 8px;
-    border-radius: 4px;
+    border-radius: 8px;
 
-    background-color: rgba($color: #000000, $alpha:0.50);
+    background-color: rgba($color: #000000, $alpha: 0.5);
     color: white;
 
     overflow: hidden;

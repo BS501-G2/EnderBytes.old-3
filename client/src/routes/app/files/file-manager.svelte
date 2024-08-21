@@ -6,7 +6,7 @@
     FileSnapshotResource,
     UserResource
   } from '@rizzzi/enderdrive-lib/server';
-  import { FileType, type FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
+  import { FileType, ScanFolderSortType, type FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
   import { setContext } from 'svelte';
   import { writable, type Readable, type Writable } from 'svelte/store';
 
@@ -30,6 +30,8 @@
 
     onFileId: FileManagerOnFileIdCallback;
     onPage: FileManagerOnPageCallback;
+
+    sort: Readable<ScanFolderSortType>;
   } & (
     | {
         page: 'files';

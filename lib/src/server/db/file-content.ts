@@ -1,7 +1,7 @@
 import { Knex } from "knex";
 import { Database } from "../database.js";
 import { ResourceManager, Resource } from "../resource.js";
-import { FileManager, UnlockedFileResource } from "./file.js";
+import { FileManager, FileResource, UnlockedFileResource } from "./file.js";
 import { FileType } from "../../shared/db/file.js";
 
 export interface FileContentResource
@@ -34,17 +34,15 @@ export class FileContentManager extends ResourceManager<
       table.boolean("isMain").notNullable();
     }
   }
-  public async create(
-    unlockedFile: UnlockedFileResource
-  ): Promise<FileContentResource> {
+  public async create(file: FileResource): Promise<FileContentResource> {
     return this.insert({
-      fileId: unlockedFile.id,
+      fileId: file.id,
       isMain: false,
     });
   }
 
-  public async getMain(unlockedFile: UnlockedFileResource) {
-    if (unlockedFile.type === FileType.Folder) {
+  public async getMain(file: FileResource) {
+    if (file.type === FileType.Folder) {
       throw new Error("File is a folder.");
     }
 
@@ -52,13 +50,13 @@ export class FileContentManager extends ResourceManager<
       (
         await this.read({
           where: [
-            ["fileId", "=", unlockedFile.id],
+            ["fileId", "=", file.id],
             ["isMain", "=", true],
           ],
         })
       )[0] ??
       (await this.insert({
-        fileId: unlockedFile.id,
+        fileId: file.id,
         isMain: true,
       }))
     );

@@ -3,6 +3,7 @@ import {
   ConnectionFunctions,
   FileAccessLevel,
   FileLogType,
+  ScanFolderSortType,
   UserAuthenticationType,
   UserResolvePayload,
   UserRole,
@@ -76,7 +77,10 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   createFolder: (parentFolderId: number, name: string) => Promise<FileResource>;
 
-  scanFolder: (folderId: number | null) => Promise<FileResource[]>;
+  scanFolder: (
+    folderId: number | null,
+    sort?: [type: ScanFolderSortType, desc: boolean]
+  ) => Promise<FileResource[]>;
 
   setUserAccess: (
     fileId: number,
@@ -88,7 +92,10 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   adminGetFile: (fileId: number) => Promise<FileResource>;
 
-  adminScanFolder: (fileId: number) => Promise<FileResource[]>;
+  adminScanFolder: (
+    fileId: number,
+    sort?: [type: ScanFolderSortType, desc: boolean]
+  ) => Promise<FileResource[]>;
 
   getFilePathChain: (fileId: number) => Promise<FileResource[]>;
 

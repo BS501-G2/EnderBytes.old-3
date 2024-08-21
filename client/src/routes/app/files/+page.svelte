@@ -11,7 +11,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { executeBackgroundTask } from '$lib/background-task.svelte';
-  import { byteUnit } from '@rizzzi/enderdrive-lib/shared';
+  import { byteUnit, ScanFolderSortType } from '@rizzzi/enderdrive-lib/shared';
   import { getContext, onMount } from 'svelte';
   import { DashboardContextName, type DashboardContext } from '../dashboard.svelte';
   import { Title } from '@rizzzi/svelte-commons';
@@ -24,6 +24,7 @@
   } = getConnection();
 
   const refresh: Writable<() => void> = writable(null as never);
+  const sort: Writable<ScanFolderSortType> = writable(ScanFolderSortType.FileName);
   const fileId = derived(page, ({ url: { searchParams } }) => {
     try {
       const fileId = Number.parseInt(searchParams.get('fileId') ?? '') || null;
@@ -147,6 +148,7 @@
     {onClipboard}
     {fileId}
     {clipboard}
+    {sort}
   />
 
   {#if $newDialog != null}

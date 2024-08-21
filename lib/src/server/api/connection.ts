@@ -9,6 +9,7 @@ import {
   FileLogType,
   FileType,
   LogLevel,
+  ScanFolderSortType,
   SocketWrapper,
   UserResolvePayload,
   UserResolveType,
@@ -24,7 +25,10 @@ import { UserSessionManager, UserSessionType } from "../db/user-session.js";
 import { ServerConnectionManager } from "./connection-manager.js";
 import { FileManager, FileResource, UnlockedFileResource } from "../db/file.js";
 import { FileContentManager, FileContentResource } from "../db/file-content.js";
-import { FileSnapshotManager } from "../db/file-snapshot.js";
+import {
+  FileSnapshotManager,
+  FileSnapshotResource,
+} from "../db/file-snapshot.js";
 import { FileDataManager } from "../db/file-data.js";
 import { FileLogManager, FileLogResource } from "../db/file-log.js";
 import { FileAccessManager, FileAccessResource } from "../db/file-access.js";
@@ -269,6 +273,66 @@ export class ServerConnection {
 
     const currentUser = (authentication: UnlockedUserAuthentication) =>
       resolveUser([UserResolveType.UserId, authentication.userId]);
+
+    const sortFiles = async (
+      files: FileResource[],
+      sort: [type: ScanFolderSortType, desc: boolean]
+    ): Promise<FileResource[]> => {
+      const [sortType, sortDesc] = sort;
+
+      if (sortType === ScanFolderSortType.FileName) {
+        return files.sort((a, b) =>
+          sortDesc ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)
+        );
+      } else if (
+        sortType === ScanFolderSortType.DateModified ||
+        sortType === ScanFolderSortType.ContentSize
+      ) {
+        const filesWithData = await Promise.all(
+          files.map(async (file) => {
+            const fileContent = await fileContentManager.getMain(file);
+            const latestSnapshot = await fileSnapshotManager.getLatest(
+              file,
+              fileContent
+            );
+
+            return [file, latestSnapshot] as [
+              file: FileResource,
+              snapshot: FileSnapshotResource
+            ];
+          })
+        );
+
+        return filesWithData
+          .toSorted((a, b) => {
+            const [, aSnapshot] = a;
+            const [, bSnapshot] = b;
+
+            if (sortType === ScanFolderSortType.DateModified) {
+              if (sortDesc) {
+                return bSnapshot.createTime - aSnapshot.createTime;
+              } else {
+                return aSnapshot.createTime - bSnapshot.createTime;
+              }
+            } else if (sortType === ScanFolderSortType.ContentSize) {
+              if (sortDesc) {
+                return bSnapshot.size - aSnapshot.size;
+              } else {
+                return aSnapshot.size - bSnapshot.size;
+              }
+            } else {
+              if (sortDesc) {
+                return bSnapshot.id - aSnapshot.id;
+              } else {
+                return aSnapshot.id - bSnapshot.id;
+              }
+            }
+          })
+          .map(([file]) => file);
+      }
+
+      return files;
+    };
 
     const serverFunctions: ServerFunctions = {
       ...baseConnectionFunctions,
@@ -581,7 +645,7 @@ export class ServerConnection {
         );
 
         const fileContent = await fileContentManager.getMain(file);
-        const fileSnapshot = await fileSnapshotManager.getMain(
+        const fileSnapshot = await fileSnapshotManager.getRoot(
           file,
           fileContent
         );
@@ -626,7 +690,7 @@ export class ServerConnection {
         return (await fileManager.getById(folder.id))!;
       },
 
-      scanFolder: async (folderId) => {
+      scanFolder: async (folderId, sort) => {
         const authentication = requireAuthenticated(true);
         const folder = await getFile(
           folderId,
@@ -640,7 +704,13 @@ export class ServerConnection {
         ]);
 
         await fileLogManager.push(folder, user, FileLogType.Access);
-        return await fileManager.scanFolder(folder);
+        const files = await fileManager.scanFolder(folder);
+
+        if (sort == null) {
+          return files;
+        }
+
+        return await sortFiles(files, sort);
       },
 
       setUserAccess: async (fileId, targetUserId, level) => {
@@ -695,7 +765,7 @@ export class ServerConnection {
         return file;
       },
 
-      adminScanFolder: async (fileId: number) => {
+      adminScanFolder: async (fileId: number, sort) => {
         const authentication = requireAuthenticated(true);
         await requireRole(authentication, UserRole.SiteAdmin);
 
@@ -708,7 +778,13 @@ export class ServerConnection {
           ApiError.throw(ApiErrorType.InvalidRequest, "Not a folder");
         }
 
-        return await fileManager.scanFolder(file);
+        const files = await fileManager.scanFolder(file);
+
+        if (sort == null) {
+          return files
+        }
+
+        return await sortFiles(files, sort);
       },
 
       getFilePathChain: async (fileId: number) => {
@@ -744,7 +820,7 @@ export class ServerConnection {
         );
 
         const fileContent = await fileContentManager.getMain(file);
-        const fileSnapshot = await fileSnapshotManager.getMain(
+        const fileSnapshot = await fileSnapshotManager.getRoot(
           file,
           fileContent
         );
@@ -761,7 +837,7 @@ export class ServerConnection {
           FileType.File
         );
         const fileContent = await fileContentManager.getMain(file);
-        const fileSnapshot = await fileSnapshotManager.getMain(
+        const fileSnapshot = await fileSnapshotManager.getRoot(
           file,
           fileContent
         );
@@ -790,7 +866,7 @@ export class ServerConnection {
           };
         } else if (file.type === FileType.File) {
           const fileContent = await fileContentManager.getMain(file);
-          const firstSnapshot = await fileSnapshotManager.getMain(
+          const firstSnapshot = await fileSnapshotManager.getRoot(
             file,
             fileContent
           );
@@ -817,7 +893,7 @@ export class ServerConnection {
           FileType.File
         );
         const fileContent = await fileContentManager.getMain(file);
-        const fileSnapshot = await fileSnapshotManager.getMain(
+        const fileSnapshot = await fileSnapshotManager.getRoot(
           file,
           fileContent
         );
@@ -1115,7 +1191,7 @@ export class ServerConnection {
                 FileType.File
               );
               const newFileContent = await fileContentManager.getMain(newFile);
-              const newFileSnapshot = await fileSnapshotManager.getMain(
+              const newFileSnapshot = await fileSnapshotManager.getRoot(
                 newFile,
                 newFileContent
               );

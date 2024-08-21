@@ -6,6 +6,12 @@ export enum AuthenticationType {
 export type AuthenticationPayload =
   | [type: AuthenticationType.Password, password: string];
 
+export enum ScanFolderSortType {
+  FileName,
+  DateModified,
+  ContentSize,
+}
+
 export interface Authentication {
   userId: number;
 

@@ -1,7 +1,7 @@
 import { Knex } from "knex";
 import { Resource, ResourceManager } from "../resource.js";
 import { Database } from "../database.js";
-import { FileManager, UnlockedFileResource } from "./file.js";
+import { FileManager, FileResource, UnlockedFileResource } from "./file.js";
 import { FileContentManager, FileContentResource } from "./file-content.js";
 import { UserManager, UserResource } from "./user.js";
 import { UnlockedUserAuthentication } from "./user-authentication.js";
@@ -63,13 +63,13 @@ export class FileSnapshotManager extends ResourceManager<
   }
 
   public async create(
-    unlockedFile: UnlockedFileResource,
+    file: FileResource,
     fileContent: FileContentResource,
     baseFileSnapshot: FileSnapshotResource,
     authorUser: UserResource
   ): Promise<FileSnapshotResource> {
     return this.insert({
-      fileId: unlockedFile.id,
+      fileId: file.id,
       fileContentId: fileContent.id,
       baseFileSnapshotId: baseFileSnapshot.id,
       creatorUserId: authorUser.id,
@@ -77,38 +77,38 @@ export class FileSnapshotManager extends ResourceManager<
     });
   }
 
-  public async getMain(
-    unlockedFile: UnlockedFileResource,
+  public async getRoot(
+    file: FileResource,
     fileContent: FileContentResource
   ): Promise<FileSnapshotResource> {
     return (
       (
         await this.read({
           where: [
-            ["fileId", "=", unlockedFile.id],
+            ["fileId", "=", file.id],
             ["fileContentId", "=", fileContent.id],
             ["baseFileSnapshotId", "is", null],
           ],
         })
       )[0] ??
       (await this.insert({
-        fileId: unlockedFile.id,
+        fileId: file.id,
         fileContentId: fileContent.id,
         baseFileSnapshotId: null,
-        creatorUserId: unlockedFile.creatorUserId,
+        creatorUserId: file.creatorUserId,
         size: 0,
       }))
     );
   }
 
   public async getByFileAndId(
-    unlockedFile: UnlockedFileResource,
+    file: FileResource,
     fileContent: FileContentResource,
     snapshotId: number
   ) {
     return await this.first({
       where: [
-        ["fileId", "=", unlockedFile.id],
+        ["fileId", "=", file.id],
         ["fileContentId", "=", fileContent.id],
         ["id", "=", snapshotId],
       ],
@@ -116,27 +116,27 @@ export class FileSnapshotManager extends ResourceManager<
   }
 
   public async getLatest(
-    unlockedFile: UnlockedFileResource,
+    file: FileResource,
     fileContent: FileContentResource
   ): Promise<FileSnapshotResource> {
     return (
-      (await this.getLeaves(unlockedFile, fileContent)).reduce(
+      (await this.getLeaves(file, fileContent)).reduce(
         (latestSnapshot, snapshot) =>
           (latestSnapshot?.id ?? 0) < snapshot.id ? snapshot : latestSnapshot,
         null as FileSnapshotResource | null
-      ) ?? (await this.getMain(unlockedFile, fileContent))
+      ) ?? (await this.getRoot(file, fileContent))
     );
   }
 
   public async getLeaves(
-    unlockedFile: UnlockedFileResource,
+    file: FileResource,
     fileContent: FileContentResource
   ): Promise<FileSnapshotResource[]> {
     const snapshots: FileSnapshotResource[] = [];
 
     for await (const snapshot of this.readStream({
       where: [
-        ["fileId", "=", unlockedFile.id],
+        ["fileId", "=", file.id],
         ["fileContentId", "=", fileContent.id],
       ],
     })) {
