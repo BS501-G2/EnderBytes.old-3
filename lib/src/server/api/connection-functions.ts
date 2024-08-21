@@ -88,6 +88,8 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   adminGetFile: (fileId: number) => Promise<FileResource>;
 
+  adminScanFolder: (fileId: number) => Promise<FileResource[]>;
+
   getFilePathChain: (fileId: number) => Promise<FileResource[]>;
 
   getFileSize: (fileId: number, fileSnapshotId?: number) => Promise<number>;

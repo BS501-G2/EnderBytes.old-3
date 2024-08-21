@@ -1,5 +1,6 @@
 <script lang="ts" context="module">
   export interface Data {
+    file: FileResource;
     mime: [mime: string, description: string];
     viruses: string[];
     snapshots: FileSnapshotResource[];
@@ -9,7 +10,7 @@
 <script lang="ts">
   import { getConnection } from '$lib/client/client';
   import Icon from '$lib/ui/icon.svelte';
-  import type { FileSnapshotResource } from '@rizzzi/enderdrive-lib/server';
+  import type { FileResource, FileSnapshotResource } from '@rizzzi/enderdrive-lib/server';
   import { AnimationFrame, Button, ButtonClass, ViewMode, viewMode } from '@rizzzi/svelte-commons';
   import { type Snippet } from 'svelte';
   import { fly, scale } from 'svelte/transition';
@@ -17,44 +18,43 @@
   const { fileId }: { fileId: number } = $props();
 
   const {
-    serverFunctions: { getFileMime, listFileViruses, listFileSnapshots }
+    serverFunctions: { getFile, getFileMime, listFileViruses, listFileSnapshots }
   } = getConnection();
 
   let snapshotId: number | null = $state(null as never);
   let tab: number = $state(0);
 
-  let lastHover: number = $state(Date.now());
+  let lastMouseActivity: number = $state(Date.now());
   let showActions: boolean = $state(true);
 
   let fileViewElement: HTMLDivElement = $state(null as never);
 
   async function load(): Promise<Data> {
+    const file = await getFile(fileId);
     const mime = await getFileMime(fileId);
     const viruses = await listFileViruses(fileId);
     const snapshots = await listFileSnapshots(fileId);
 
-    return { mime, viruses, snapshots };
+    return { file, mime, viruses, snapshots };
   }
 
-  function updateHover(currentTarget: EventTarget, target: EventTarget | null) {
-    if (currentTarget !== target) {
-      return;
-    }
+  function updateLastMouseActivity() {
+    lastMouseActivity = Date.now();
 
-    lastHover = Date.now();
     checkHover();
   }
 
   function checkHover() {
-    showActions = Date.now() - lastHover < 2500;
+    showActions = Date.now() - lastMouseActivity < 2500;
   }
 </script>
 
 <AnimationFrame callback={checkHover} />
 
-{#snippet bar(position: 'bottom' | 'top', view: Snippet)}
+{#snippet bar(data: Data, position: 'bottom' | 'top', view: Snippet<[data: Data]>)}
   <div
     class="bar-container"
+    class:bottom={position === 'bottom'}
     transition:fly={{ y: position === 'bottom' ? 32 : -32 }}
     class:fullscreen={$viewMode & ViewMode.Mobile || $viewMode & ViewMode.Fullscreen}
   >
@@ -62,20 +62,28 @@
       class="{position} bar"
       class:fullscreen={$viewMode & ViewMode.Mobile || $viewMode & ViewMode.Fullscreen}
     >
-      {@render view()}
+      {@render view(data)}
     </div>
   </div>
 {/snippet}
 
-{#snippet topActions()}
+{#snippet topActions(data: Data)}
   {#if $viewMode & ViewMode.Mobile}
-    <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => {}}>
+    <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => history.back()}>
       <Icon icon="chevron-left" thickness="solid" />
+    </Button>
+
+    <div class="file-name">
+      {data.file.name}
+    </div>
+
+    <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => {}}>
+      asd
     </Button>
   {/if}
 {/snippet}
 
-{#snippet bottomActions()}
+{#snippet bottomActions(data: Data)}
   <Button buttonClass={ButtonClass.Transparent} onClick={() => {}}>asd</Button>
 {/snippet}
 
@@ -114,12 +122,16 @@
   class:fullscreen={$viewMode & ViewMode.Mobile || $viewMode & ViewMode.Fullscreen}
   role="document"
   in:scale|global={{ duration: 200, start: 0.95 }}
-  onmousemove={({ currentTarget, target }) => updateHover(currentTarget, target)}
-  ontouchend={({ currentTarget, target }) => updateHover(currentTarget, target)}
+  onmousemove={updateLastMouseActivity}
+  ontouchend={updateLastMouseActivity}
   class:dark={$viewMode & ViewMode.Desktop}
   class:main={tab === 0}
 >
-  {#await load() then { mime: [mime, description], viruses }}
+  {#await load() then data}
+    {@const {
+      mime: [mime, description],
+      viruses
+    } = data}
     {#if viruses.length > 0}
       {@render card(
         'This file cannot be viewed.',
@@ -127,9 +139,9 @@
           viruses.map((virus, index) => `${index + 1}. ${virus}`).join('\n')
       )}
     {:else if showActions}
-      {@render bar('top', topActions)}
+      {@render bar(data, 'top', topActions)}
       {@render content()}
-      {@render bar('bottom', bottomActions)}
+      {@render bar(data, 'bottom', bottomActions)}
     {/if}
   {/await}
 </div>
@@ -139,6 +151,8 @@
     overflow: hidden;
 
     flex-grow: 1;
+
+    min-width: 0;
 
     display: flex;
     flex-direction: column;
@@ -216,18 +230,31 @@
   }
 
   div.bar-container {
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+
     min-height: 0;
     max-height: 0;
+  }
+
+  div.bar-container.bottom {
+    top: calc(-32px + -24px);
+  }
+
+  div.bar-container.bottom.fullscreen {
+    top: -48px;
   }
 
   div.bar {
     min-height: 24px;
     max-height: 24px;
 
+    min-width: 0;
+
     display: flex;
     flex-direction: row;
-
-    // align-items: center;
 
     gap: 8px;
 
@@ -235,8 +262,8 @@
     margin: 8px;
     border-radius: 4px;
 
-    background-color: var(--primaryContainer);
-    color: var(--onPrimaryContainer);
+    background-color: rgba($color: #000000, $alpha:0.50);
+    color: white;
 
     overflow: hidden;
   }
@@ -252,8 +279,6 @@
     min-height: 32px;
     max-height: 32px;
 
-    font-size: 1.2rem;
-
     margin: 0;
 
     border-radius: 0;
@@ -266,5 +291,21 @@
     flex-grow: 1;
 
     display: flex;
+  }
+
+  div.file-name {
+    flex-grow: 1;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    min-width: 0px;
+
+    font-weight: bolder;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap: nowrap;
   }
 </style>

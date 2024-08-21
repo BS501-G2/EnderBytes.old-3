@@ -401,13 +401,9 @@ export class ServerConnection {
           unlockedUserAuthentication = null;
         }
 
-        console.table({ user, unlockedUserAuthentication });
-
         if (unlockedUserAuthentication == null || user == null) {
           ApiError.throw(ApiErrorType.Unauthorized, "Invalid credentials");
         }
-
-        console.table({ suspended: user.isSuspended });
 
         if (user.isSuspended) {
           ApiError.throw(ApiErrorType.Forbidden, "User is currently suspended");
@@ -697,6 +693,22 @@ export class ServerConnection {
         }
 
         return file;
+      },
+
+      adminScanFolder: async (fileId: number) => {
+        const authentication = requireAuthenticated(true);
+        await requireRole(authentication, UserRole.SiteAdmin);
+
+        const file = await fileManager.getById(fileId);
+        if (file == null) {
+          ApiError.throw(ApiErrorType.NotFound, "File not found");
+        }
+
+        if (file.type !== FileType.Folder) {
+          ApiError.throw(ApiErrorType.InvalidRequest, "Not a folder");
+        }
+
+        return await fileManager.scanFolder(file);
       },
 
       getFilePathChain: async (fileId: number) => {
