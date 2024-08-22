@@ -1,5 +1,9 @@
 <script lang="ts" context="module">
   export interface FileViewContext {
+    setTopBarContent: (view: Snippet<[data: FileViewData]>) => () => void;
+    setBottomBarContent: (view: Snippet<[data: FileViewData]>) => () => void;
+
+    setSnapshotId: (id: number) => void;
   }
 
   export const FileViewContextName = 'file-view-context';
@@ -27,7 +31,31 @@
     serverFunctions: { getFile, getFileMime, listFileViruses, listFileSnapshots }
   } = getConnection();
 
-  const {} = setContext<FileViewContext>(FileViewContextName, {});
+  let topBarContent: Snippet<[data: FileViewData]> = $state(emptyBar);
+  let bottomBarContent: Snippet<[data: FileViewData]> = $state(emptyBar);
+
+  const {} = setContext<FileViewContext>(FileViewContextName, {
+    setTopBarContent: (view) => {
+      topBarContent = view;
+      return () => {
+        if (topBarContent === view) {
+          topBarContent = emptyBar;
+        }
+      };
+    },
+    setBottomBarContent: (view) => {
+      bottomBarContent = view;
+      return () => {
+        if (bottomBarContent === view) {
+          bottomBarContent = emptyBar;
+        }
+      };
+    },
+
+    setSnapshotId: (id: number) => {
+      snapshotId = id;
+    }
+  });
 
   let snapshotId: number | null = $state(null as never);
   let tab: number = $state(0);
@@ -57,6 +85,10 @@
   }
 </script>
 
+{#snippet emptyBar(data: FileViewData)}
+  <!-- Empty -->
+{/snippet}
+
 <AnimationFrame callback={checkHover} />
 
 {#snippet bar(data: FileViewData, position: 'bottom' | 'top', view: Snippet<[data: FileViewData]>)}
@@ -73,24 +105,6 @@
       {@render view(data)}
     </div>
   </div>
-{/snippet}
-
-{#snippet topActions(data: FileViewData)}
-  {#if $viewMode & ViewMode.Mobile}
-    <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => history.back()}>
-      <Icon icon="chevron-left" thickness="solid" />
-    </Button>
-
-    <div class="file-name">
-      {data.file.name}
-    </div>
-
-    <Button buttonClass={ButtonClass.Transparent} outline={false} onClick={() => {}}>asd</Button>
-  {/if}
-{/snippet}
-
-{#snippet bottomActions(data: FileViewData)}
-  <Button buttonClass={ButtonClass.Transparent} onClick={() => {}}>asd</Button>
 {/snippet}
 
 {#snippet card(header: string, message: string)}
@@ -129,25 +143,26 @@
   class:dark={$viewMode & ViewMode.Desktop}
   class:main={tab === 0}
 >
-  {#await load() then data}
-    {@const { viruses } = data}
-    {#if viruses.length > 0}
-      {@render card(
-        'This file cannot be viewed.',
-        'Viewing of this file has been disabled because it contains one or more virus(es):\n' +
-          viruses.map((virus, index) => `${index + 1}. ${virus}`).join('\n')
-      )}
-    {:else if showActions}
-      {@render bar(data, 'top', topActions)}
-      <FileManagerFileViewContent {...data} />
-      {@render bar(data, 'bottom', bottomActions)}
-    {/if}
+  {#key snapshotId}
+    {#await load() then data}
+      {@const { viruses } = data}
+      {#if viruses.length > 0}
+        {@render card(
+          'This file cannot be viewed.',
+          'Viewing of this file has been disabled because it contains one or more virus(es):\n' +
+            viruses.map((virus, index) => `${index + 1}. ${virus}`).join('\n')
+        )}
+      {:else if showActions}
+        {@render bar(data, 'top', topBarContent)}
+
+        <FileManagerFileViewContent {...data} />
+
+        {@render bar(data, 'bottom', bottomBarContent)}
+      {/if}
     {:catch error}
-      {@render card(
-        'An error has occured trying to view this file.',
-        ''
-      )}
-  {/await}
+      {@render card('An error has occured trying to view this file.', '')}
+    {/await}
+  {/key}
 </div>
 
 <style lang="scss">
@@ -295,21 +310,5 @@
     flex-grow: 1;
 
     display: flex;
-  }
-
-  div.file-name {
-    flex-grow: 1;
-
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-
-    min-width: 0px;
-
-    font-weight: bolder;
-
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-wrap: nowrap;
   }
 </style>

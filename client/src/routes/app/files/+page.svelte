@@ -93,10 +93,9 @@
 
           for (let offset = 0; offset < file.size; offset += bufferSize) {
             const buffer = file.slice(offset, offset + bufferSize);
+            await feedUploadBuffer(new Uint8Array(await buffer.arrayBuffer()));
 
             updateStatus(index, file.name, offset + buffer.size, file.size, uploaded, total);
-
-            await feedUploadBuffer(new Uint8Array(await buffer.arrayBuffer()));
             uploaded += buffer.size;
           }
 
