@@ -1,7 +1,7 @@
 <script lang="ts" context="module">
   export type IconThickness = 'solid' | 'regular' | 'thin' | 'light';
   export type IconSize =
-    | `${number}${'px' | '%' | 'em'}`
+    | `${number}${'px' | '%' | 'em' | 'rem'}`
     | '2xs'
     | 'xs'
     | 'sm'
@@ -19,6 +19,15 @@
     | `rgba(${string})`
     | `hsl(${string})`
     | 'inherit';
+
+  export interface IconProps {
+    icon: string;
+    thickness?: IconThickness;
+    size?: IconSize;
+    color?: IconColor;
+    rotate?: IconRotation;
+    flip?: IconFlip;
+  }
 </script>
 
 <script lang="ts">
@@ -29,14 +38,7 @@
     color = 'inherit',
     rotate = 0,
     flip
-  }: {
-    icon: string;
-    thickness?: IconThickness;
-    size?: IconSize;
-    color?: IconColor;
-    rotate?: IconRotation;
-    flip?: IconFlip;
-  } = $props();
+  }: IconProps = $props();
 </script>
 
 {#if ['2xs', 'xs', 'sm', 'lg', 'xl', '2xl'].includes(size)}

@@ -42,7 +42,6 @@ export type ExtractInstanceFromConstructor<T> =
 
 export class Database extends Service<
   DatabaseInstance,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [managers: ResourceManagerConstructor<any, any>[]]
 > {
   public constructor(server: Server) {
@@ -82,7 +81,6 @@ export class Database extends Service<
     return this.#instanceData.db;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   get #managers(): DatabaseResourceManagerInstance<any, any>[] {
     return this.#instanceData.managers;
   }
@@ -127,7 +125,6 @@ export class Database extends Service<
       for (const entry of managers) {
         let init: ((number?: number) => Promise<void>) | null = null;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const instance: ResourceManager<any, any> = new entry(
           this,
           (onInit) => {
@@ -164,7 +161,6 @@ export class Database extends Service<
     return instance.instance as M;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public getManagers<R extends ResourceManagerConstructor<any, any>[]>(
     ...constructors: R
   ) {

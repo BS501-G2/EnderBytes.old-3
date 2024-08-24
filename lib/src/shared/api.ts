@@ -12,6 +12,13 @@ export enum ScanFolderSortType {
   ContentSize,
 }
 
+export enum FileThumbnailerStatusType {
+  Pending,
+  InProgress,
+  Available,
+  Failed,
+}
+
 export interface Authentication {
   userId: number;
 

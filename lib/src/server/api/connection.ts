@@ -969,7 +969,7 @@ export class ServerConnection {
           offset,
           limit,
           orderBy: [["id", true]],
-        })) {
+        })) {``
           logs.push(log);
         }
 

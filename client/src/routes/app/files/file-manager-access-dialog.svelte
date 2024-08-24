@@ -18,7 +18,9 @@
     InputType,
     LoadingSpinner,
     Overlay,
-    OverlayPositionType
+    OverlayPositionType,
+    ViewMode,
+    viewMode
   } from '@rizzzi/svelte-commons';
   import { writable, type Writable } from 'svelte/store';
   import { onDestroy, type Snippet } from 'svelte';
@@ -49,7 +51,7 @@
   {/snippet}
 
   {#snippet body()}
-    <div class="access-dialog">
+    <div class="access-dialog" class:desktop={$viewMode & ViewMode.Desktop}>
       <div class="search" bind:this={searchBox}>
         <Input
           type={InputType.Text}
@@ -60,38 +62,36 @@
         />
       </div>
 
-      <h3>Existing access</h3>
+      <div class="divider"></div>
 
-      {#await getUser([UserResolveType.UserId, file.ownerUserId])}
-        <LoadingSpinner size="1em" />
-      {:then user}
-        {@render userRow(user)}
-      {/await}
+      <div class="section">
+        <h3>Existing access</h3>
 
-      {#key refreshKey}
-        {#await (async () => {
-          const accesses = await listFileAccess(file.id);
+        {#key refreshKey}
+          {#await (async () => {
+            const accesses = await listFileAccess(file.id);
 
-          const out: [access: FileAccessResource, user: UserResource][] = [];
+            const out: [access: FileAccessResource, user: UserResource][] = [];
 
-          for (const access of accesses) {
-            const user = await getUser([UserResolveType.UserId, access.userId]);
-            out.push([access, user]);
-          }
+            for (const access of accesses) {
+              const user = await getUser([UserResolveType.UserId, access.userId]);
+              out.push([access, user]);
+            }
 
-          return out;
-        })()}
-          <LoadingSpinner size="1em" />
-        {:then accesses}
-          {#if accesses.length === 0}
-            <p>No access other users found.</p>
-          {/if}
+            return out;
+          })()}
+            <LoadingSpinner size="1em" />
+          {:then accesses}
+            {#if accesses.length === 0}
+              <p>No other users have access to this file.</p>
+            {/if}
 
-          {#each accesses as [access, user]}
-            {@render userRow(user, access)}
-          {/each}
-        {/await}
-      {/key}
+            {#each accesses as [access, user]}
+              {@render userRow(user, access)}
+            {/each}
+          {/await}
+        {/key}
+      </div>
     </div>
   {/snippet}
 </Dialog>
@@ -132,6 +132,7 @@
                   onClick={async () => {
                     await setUserAccess(file.id, user.id, FileAccessLevel.Read);
                     $search = '';
+                    refreshKey++;
                   }}
                   outline={false}
                   buttonClass={ButtonClass.Transparent}
@@ -176,12 +177,23 @@
                 refreshKey++;
               }}
             >
-              {@render option(FileAccessLevel.None)}
               {@render option(FileAccessLevel.Read)}
               {@render option(FileAccessLevel.ReadWrite)}
               {@render option(FileAccessLevel.Manage)}
               {@render option(FileAccessLevel.Full)}
             </select>
+
+            <Button
+              buttonClass={ButtonClass.Transparent}
+              outline={false}
+              onClick={async () => {
+                await setUserAccess(file.id, user.id, FileAccessLevel.None);
+                refreshKey++;
+              }}
+              container={actionIconContainer}
+            >
+              <Icon icon="x" thickness="solid"></Icon>
+            </Button>
           {:else}
             <p><i>{FileAccessLevel[access.level]}</i></p>
           {/if}
@@ -199,14 +211,18 @@
   </div>
 {/snippet}
 
+{#snippet actionIconContainer(view: Snippet)}
+  <div class="action-icon">
+    {@render view()}
+  </div>
+{/snippet}
+
 <style lang="scss">
   div.button-container {
     padding: 8px;
   }
 
   div.search {
-    flex-grow: 1;
-
     display: flex;
     flex-direction: column;
   }
@@ -215,7 +231,12 @@
     display: flex;
     flex-direction: column;
 
-    gap: 8px;
+    gap: 16px;
+  }
+
+  div.access-dialog.desktop {
+    min-height: min(512px, 100dvh - 128px);
+    min-height: min(512px, 100dvh - 128px);
   }
 
   div.search-result {
@@ -266,5 +287,24 @@
         padding: 8px;
       }
     }
+  }
+
+  div.action-icon {
+    padding: 8px;
+  }
+
+  div.divider {
+    min-height: 1px;
+    max-height: 1px;
+
+    background-color: var(--primaryContainer);
+  }
+
+  div.section {
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden auto;
+    min-height: 0px;
   }
 </style>

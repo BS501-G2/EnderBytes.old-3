@@ -45,11 +45,11 @@
             class="file"
             class:active={file.id === entry.id}
             onclick={(event) => {
-              onDismiss();
-
               if (file.id !== entry.id) {
                 onFileId(event, entry.id);
               }
+              onDismiss();
+
             }}
           >
             <div class="file-icon">

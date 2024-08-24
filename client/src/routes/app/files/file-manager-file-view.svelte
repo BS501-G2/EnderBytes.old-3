@@ -4,6 +4,8 @@
     setBottomBarContent: (view: Snippet<[data: FileViewData]>) => () => void;
 
     setSnapshotId: (id: number) => void;
+
+    showMobileActions: Writable<[element: HTMLElement] | null>;
   }
 
   export const FileViewContextName = 'file-view-context';
@@ -24,6 +26,7 @@
   import { setContext, type Snippet } from 'svelte';
   import { fly, scale } from 'svelte/transition';
   import FileManagerFileViewContent from './file-manager-file-view-content.svelte';
+    import { writable, type Writable } from 'svelte/store';
 
   const { fileId }: { fileId: number } = $props();
 
@@ -54,7 +57,9 @@
 
     setSnapshotId: (id: number) => {
       snapshotId = id;
-    }
+    },
+
+    showMobileActions: writable(null as never)
   });
 
   let snapshotId: number | null = $state(null as never);
@@ -81,7 +86,7 @@
   }
 
   function checkHover() {
-    showActions = Date.now() - lastMouseActivity < 2500;
+    showActions = Date.now() - lastMouseActivity < 25000;
   }
 </script>
 
@@ -97,10 +102,14 @@
     class:bottom={position === 'bottom'}
     transition:fly={{ y: position === 'bottom' ? 32 : -32 }}
     class:fullscreen={$viewMode & ViewMode.Mobile || $viewMode & ViewMode.Fullscreen}
+      class:mobile={$viewMode & ViewMode.Mobile}
+      class:desktop={$viewMode & ViewMode.Desktop}
   >
     <div
       class="{position} bar"
       class:fullscreen={$viewMode & ViewMode.Mobile || $viewMode & ViewMode.Fullscreen}
+      class:mobile={$viewMode & ViewMode.Mobile}
+      class:desktop={$viewMode & ViewMode.Desktop}
     >
       {@render view(data)}
     </div>
@@ -143,29 +152,34 @@
   class:dark={$viewMode & ViewMode.Desktop}
   class:main={tab === 0}
 >
+  {#if $viewMode & ViewMode.Mobile}
+   <div class="mobile-appbar"></div>
+  {/if}
+
   {#key snapshotId}
     {#await load() then data}
-      {@const { viruses } = data}
-      {#if viruses.length > 0}
-        {@render card(
-          'This file cannot be viewed.',
-          'Viewing of this file has been disabled because it contains one or more virus(es):\n' +
-            viruses.map((virus, index) => `${index + 1}. ${virus}`).join('\n')
-        )}
-      {:else if showActions}
+      {#if showActions}
         {@render bar(data, 'top', topBarContent)}
+      {/if}
 
-        <FileManagerFileViewContent {...data} />
+      <FileManagerFileViewContent {...data} />
 
+      {#if showActions}
         {@render bar(data, 'bottom', bottomBarContent)}
       {/if}
     {:catch error}
-      {@render card('An error has occured trying to view this file.', '')}
+      {@render card('An error has occured trying to view this file.', error.message)}
     {/await}
   {/key}
 </div>
 
 <style lang="scss">
+  div.mobile.appbar {
+    min-height: env(titlebar-area-height, 0);
+    max-height: env(titlebar-area-height, 0);
+
+  }
+
   div.file-view {
     overflow: hidden;
 
@@ -304,6 +318,13 @@
 
     background-color: transparent;
     color: inherit;
+  }
+
+  div.bar.bottom.mobile {
+    padding: 0;
+
+    min-height: 48px;
+    max-height: 48px;
   }
 
   div.content {

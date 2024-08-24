@@ -68,12 +68,12 @@
   let isWindowWIdthLimited: boolean = $state(isWindowWidthLimitedChecker());
 
   function isWindowWidthLimitedChecker(): boolean {
-    return window.innerWidth < 416
+    return window.innerWidth < 416;
   }
 
   $effect(() => {
     console.log('isWindowWidthLimited', isWindowWIdthLimited);
-  })
+  });
 
   function updateSelectionSnapshot(
     ...args:
@@ -312,10 +312,14 @@
     oncontextmenu={(event) => {
       event.preventDefault();
     }}
-    ontouchend={(event) => {
-      props.onFileId(event, file.id);
-    }}
     onclick={(event) => {
+      const eventA = event as unknown as PointerEvent;
+
+      if (eventA.pointerType === 'touch') {
+        props.onFileId(event, file.id);
+        return;
+      }
+
       if (hasKeys('control') || hasKeys('shift')) {
         const foundIndex = $selected.indexOf(file);
 
@@ -421,7 +425,7 @@
       Array.from(event.dataTransfer?.files || [])
     );
   }}
-  onresize={() => isWindowWIdthLimited = isWindowWidthLimitedChecker()}
+  onresize={() => (isWindowWIdthLimited = isWindowWidthLimitedChecker())}
 />
 
 {#if $drag != null}

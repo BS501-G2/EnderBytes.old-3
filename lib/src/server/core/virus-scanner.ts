@@ -17,18 +17,18 @@ import {
 import { Readable } from "stream";
 import { FileDataManager } from "../db/file-data.js";
 
-export interface VirusScannerInstance {
+export interface VirusScannerData {
   clam: NodeClam;
 }
 
 export type VirusScannerOptions = [socket: string];
 
 export class VirusScanner extends Service<
-  VirusScannerInstance,
+  VirusScannerData,
   VirusScannerOptions
 > {
   public constructor(server: Server) {
-    let getData: ServiceGetDataCallback<VirusScannerInstance> = null as never;
+    let getData: ServiceGetDataCallback<VirusScannerData> = null as never;
 
     super((func) => (getData = func), server);
 
@@ -37,9 +37,9 @@ export class VirusScanner extends Service<
   }
 
   readonly #server: Server;
-  readonly #getData: ServiceGetDataCallback<VirusScannerInstance>;
+  readonly #getData: ServiceGetDataCallback<VirusScannerData>;
 
-  get #data(): VirusScannerInstance {
+  get #data(): VirusScannerData {
     return this.#getData();
   }
 
@@ -52,7 +52,7 @@ export class VirusScanner extends Service<
   }
 
   async run(
-    setData: ServiceSetDataCallback<VirusScannerInstance>,
+    setData: ServiceSetDataCallback<VirusScannerData>,
     onReady: ServiceReadyCallback,
     socket: string
   ): Promise<void> {
