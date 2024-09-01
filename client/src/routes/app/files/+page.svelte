@@ -12,7 +12,7 @@
   import { goto } from '$app/navigation';
   import { executeBackgroundTask } from '$lib/background-task.svelte';
   import { byteUnit, ScanFolderSortType } from '@rizzzi/enderdrive-lib/shared';
-  import { getContext, onMount } from 'svelte';
+  import { getContext, onMount, type Snippet } from 'svelte';
   import { DashboardContextName, type DashboardContext } from '../dashboard.svelte';
   import { Title } from '@rizzzi/svelte-commons';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
@@ -132,7 +132,7 @@
     void task.run();
   };
 
-  onMount(() => setMainContent(layout));
+  onMount(() => setMainContent(layout as Snippet));
 </script>
 
 <Title title="My Files" />

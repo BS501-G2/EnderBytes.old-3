@@ -88,41 +88,18 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     await new Promise<void>(onReady);
   }
 
-  async #openFile(
-    connection: ServerConnection,
-    authentication: UnlockedUserAuthentication,
-    file: UnlockedFileResource,
-    fileContent: FileContentResource,
-    fileSnapshot: FileSnapshotResource,
-    isThumbnail: boolean
-  ) {
-    const { database } = this;
-    const { fileHandles } = this.#getData();
-
-    const entry: FileHandle = {
-      id: this.nextId,
-
-      connection,
-      authentication,
-
-      fileId: file.id,
-      fileContentId: fileContent.id,
-      fileSnapshotId: fileSnapshot.id,
-
-      position: 0,
-      isThumbnail,
-      hasBytesWritten: false,
-    };
-
-    fileHandles.push(entry);
-    return entry.id;
-  }
-
-  #getHandle(
+  async #getHandle(
     connection: ServerConnection,
     authentication: UnlockedUserAuthentication,
     handleId: number
-  ): FileHandle {
+  ): Promise<
+    [
+      handle: FileHandle,
+      file: UnlockedFileResource,
+      fileContent: FileContentResource,
+      fileSnapshot: FileSnapshotResource
+    ]
+  > {
     const { fileHandles } = this.#getData();
 
     const handle = fileHandles.find(
@@ -136,21 +113,50 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
       throw new Error("Invalid authentication. Maybe it was closed?");
     }
 
-    return handle;
+    const [fileManager, fileContentManager, fileSnapshotManager] =
+      this.getManagers(FileManager, FileContentManager, FileSnapshotManager);
+
+    const file = await fileManager.getById(handle.fileId);
+    const fileContent = await fileContentManager.getById(handle.fileContentId);
+    const fileSnapshot = await fileSnapshotManager.getById(
+      handle.fileSnapshotId
+    );
+
+    if (file == null || fileContent == null || fileSnapshot == null) {
+      throw new Error("File may have been deleted");
+    }
+
+    const unlockedFile = await fileManager.unlock(file, authentication);
+
+    return [handle, unlockedFile, fileContent, fileSnapshot];
   }
 
-  public removeHandles(connection?: ServerConnection) {
+  async #openFile(
+    connection: ServerConnection,
+    authentication: UnlockedUserAuthentication,
+    file: UnlockedFileResource,
+    fileContent: FileContentResource,
+    fileSnapshot?: FileSnapshotResource
+  ) {
     const { fileHandles } = this.#getData();
+    const [fileSnapshotManager] = this.getManagers(FileSnapshotManager);
 
-    for (let index = 0; index < fileHandles.length; index++) {
-      const fileHandle = fileHandles[index];
+    const fileHandle: FileHandle = {
+      id: this.nextId,
+      connection: connection,
+      authentication: authentication,
+      fileId: file.id,
+      fileContentId: fileContent.id,
+      fileSnapshotId:
+        fileSnapshot?.id ??
+        (await fileSnapshotManager.getLatest(file, fileContent)).id,
+      position: 0,
+      isThumbnail: false,
+      hasBytesWritten: false,
+    };
 
-      if (connection != null && connection.id != fileHandle.connection.id) {
-        return;
-      }
-
-      fileHandles.splice(index, 1);
-    }
+    fileHandles.push(fileHandle);
+    return fileHandle.id;
   }
 
   public async openNewFile(
@@ -158,9 +164,11 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     authentication: UnlockedUserAuthentication,
     folder: UnlockedFileResource,
     name: string
-  ) {
-    const [fileManager, fileContentManager, fileSnapshotManager] =
-      this.getManagers(FileManager, FileContentManager, FileSnapshotManager);
+  ): Promise<number> {
+    const [fileManager, fileContentManager] = this.getManagers(
+      FileManager,
+      FileContentManager
+    );
 
     const file = await fileManager.create(
       authentication,
@@ -170,16 +178,8 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     );
 
     const fileContent = await fileContentManager.getMain(file);
-    const fileSnapshot = await fileSnapshotManager.getLatest(file, fileContent);
 
-    return this.#openFile(
-      connection,
-      authentication,
-      file,
-      fileContent,
-      fileSnapshot,
-      false
-    );
+    return await this.#openFile(connection, authentication, file, fileContent);
   }
 
   public async openFile(
@@ -196,13 +196,12 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     const fileContent = await fileContentManager.getMain(file);
     fileSnapshot ??= await fileSnapshotManager.getLatest(file, fileContent);
 
-    return this.#openFile(
+    return await this.#openFile(
       connection,
       authentication,
       file,
       fileContent,
-      fileSnapshot,
-      false
+      fileSnapshot
     );
   }
 
@@ -212,61 +211,52 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     file: UnlockedFileResource,
     fileSnapshot?: FileSnapshotResource
   ): Promise<number | null> {
-    const {
-      server: { thumbnailer },
-    } = this;
     const [fileContentManager, fileSnapshotManager] = this.getManagers(
       FileContentManager,
       FileSnapshotManager
     );
 
-    fileSnapshot ??= await fileSnapshotManager.getLatest(
+    const fileContent = await fileContentManager.getMain(file);
+    fileSnapshot ??= await fileSnapshotManager.getLatest(file, fileContent);
+
+    const thumbnail = await this.#server.thumbnailer.getThumbnail(
       file,
-      await fileContentManager.getMain(file)
+      fileSnapshot
     );
 
-    const fileThumbnail = await thumbnailer.getThumbnail(file, fileSnapshot);
-
-    if (fileThumbnail == null || fileThumbnail.fileThumbnailContentId == null) {
+    if (thumbnail == null || thumbnail.fileThumbnailContentId == null) {
       return null;
     }
 
-    const fileThumbnailContent = await fileContentManager.getById(
-      fileThumbnail.fileThumbnailContentId
+    const thumbnailContent = await fileContentManager.getById(
+      thumbnail.fileThumbnailContentId
     );
 
-    if (fileThumbnailContent == null) {
+    if (thumbnailContent == null) {
       return null;
     }
 
-    const fileThumbnailSnapshot = await fileSnapshotManager.getLatest(
+    const thumbnailSnapshot = await fileSnapshotManager.getLatest(
       file,
-      fileThumbnailContent
+      thumbnailContent
     );
 
-    return this.#openFile(
+    return await this.#openFile(
       connection,
       authentication,
       file,
-      fileThumbnailContent,
-      fileThumbnailSnapshot,
-      true
+      thumbnailContent,
+      thumbnailSnapshot
     );
   }
 
   public close(connection: ServerConnection, id: number) {
     const { fileHandles } = this.#getData();
+    const index = fileHandles.findIndex((fileHandle) => fileHandle.id === id);
 
-    const index = fileHandles.findIndex(
-      (fileHandle) =>
-        connection.id === fileHandle.connection.id && fileHandle.id === id
-    );
-
-    if (index < 0) {
-      return;
+    if (index >= 0) {
+      fileHandles.splice(index, 1);
     }
-
-    fileHandles.splice(index, 1);
   }
 
   public async read(
@@ -275,47 +265,23 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     handleId: number,
     length: number
   ) {
-    const [
-      fileManager,
-      fileContentManager,
-      fileSnapshotManager,
-      fileDataManager,
-    ] = this.getManagers(
-      FileManager,
-      FileContentManager,
-      FileSnapshotManager,
-      FileDataManager
-    );
-
-    const handle = this.#getHandle(connection, authentication, handleId);
-
-    const file = await fileManager.getById(handle.fileId);
-
-    const fileContent = await fileContentManager.getById(handle.fileContentId);
-    const fileSnapshot = await fileSnapshotManager.getById(
-      handle.fileSnapshotId
-    );
-
-    if (file == null || fileContent == null || fileSnapshot == null) {
-      throw new Error("File may have been deleted");
-    }
-
-    const unlockedFile = await fileManager.unlock(
-      file,
+    const [fileHandle, file, fileContent, fileSnapshot] = await this.#getHandle(
+      connection,
       authentication,
-      FileAccessLevel.Read
+      handleId
     );
+    const [fileDataManager] = this.getManagers(FileDataManager);
 
-    const buffer = await fileDataManager.readData(
-      unlockedFile,
+    const data = await fileDataManager.readData(
+      file,
       fileContent,
       fileSnapshot,
-      handle.position,
+      fileHandle.position,
       length
     );
 
-    handle.position += length;
-    return buffer;
+    fileHandle.position += data.length;
+    return data;
   }
 
   public async write(
@@ -324,60 +290,53 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     handleId: number,
     buffer: Uint8Array
   ) {
-    const [
-      fileManager,
-      fileContentManager,
-      fileSnapshotManager,
-      fileDataManager,
-      userManager,
-    ] = this.getManagers(
-      FileManager,
-      FileContentManager,
-      FileSnapshotManager,
-      FileDataManager,
-      UserManager
+    const [fileHandle, file, fileContent, fileSnapshot] = await this.#getHandle(
+      connection,
+      authentication,
+      handleId
     );
 
-    const handle = this.#getHandle(connection, authentication, handleId);
-
-    const file = await fileManager.getById(handle.fileId);
-    const fileContent = await fileContentManager.getById(handle.fileContentId);
-    const fileSnapshot = await fileSnapshotManager.getById(
-      handle.fileSnapshotId
-    );
-    const user = await userManager.getById(authentication.userId);
-
-    if (
-      file == null ||
-      fileContent == null ||
-      fileSnapshot == null ||
-      user == null
-    ) {
-      throw new Error("File may have been deleted");
+    if (fileHandle.isThumbnail) {
+      throw new Error("Cannot write to thumbnail");
     }
 
-    const newSnapshot = handle.hasBytesWritten
-      ? fileSnapshot
-      : await fileSnapshotManager.create(file, fileContent, fileSnapshot, user);
+    const [fileDataManager, fileSnapshotManager, userManager] =
+      this.getManagers(FileDataManager, FileSnapshotManager, UserManager);
 
-    handle.fileSnapshotId = newSnapshot.id;
-    handle.hasBytesWritten = true;
+    const user = await userManager.getById(fileHandle.authentication.userId);
+    if (user == null) {
+      throw new Error("User not found");
+    }
 
-    const unlockedFile = await fileManager.unlock(
-      file,
-      authentication,
-      FileAccessLevel.ReadWrite
-    );
+    if (!fileHandle.hasBytesWritten) {
+      const newSnapshot = await fileSnapshotManager.create(
+        file,
+        fileContent,
+        fileSnapshot,
+        user
+      );
 
-    await fileDataManager.writeData(
-      unlockedFile,
-      fileContent,
-      newSnapshot,
-      handle.position,
-      buffer
-    );
+      await fileDataManager.writeData(
+        file,
+        fileContent,
+        newSnapshot,
+        fileHandle.position,
+        buffer
+      );
 
-    handle.position += buffer.length;
+      fileHandle.fileSnapshotId = newSnapshot.id;
+      fileHandle.hasBytesWritten = true;
+    } else {
+      await fileDataManager.writeData(
+        file,
+        fileContent,
+        fileSnapshot,
+        fileHandle.position,
+        buffer
+      );
+    }
+
+    fileHandle.position += buffer.length;
   }
 
   public async seek(
@@ -386,31 +345,45 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     handleId: number,
     position: number
   ) {
-    const handle = this.#getHandle(connection, authentication, handleId);
-    const [fileManager, fileSnapshotManager, fileContentManager] =
-      this.getManagers(FileManager, FileSnapshotManager, FileContentManager);
-
-    const file = await fileManager.getById(handle.fileId);
-    const fileContent = await fileContentManager.getById(handle.fileContentId);
-    const fileSnapshot = await fileSnapshotManager.getById(
-      handle.fileSnapshotId
+    const [fileHandle, , , fileSnapshot] = await this.#getHandle(
+      connection,
+      authentication,
+      handleId
     );
-
-    if (file == null || fileContent == null || fileSnapshot == null) {
-      throw new Error("File may have been deleted");
-    }
 
     if (position < 0 || position > fileSnapshot.size) {
       throw new Error("Invalid position");
     }
 
-    const unlockedFile = await fileManager.unlock(
-      file,
+    fileHandle.position = position;
+  }
+
+  public async position(
+    connection: ServerConnection,
+    authentication: UnlockedUserAuthentication,
+    handleId: number
+  ): Promise<number> {
+    const [handle] = await this.#getHandle(
+      connection,
       authentication,
-      FileAccessLevel.ReadWrite
+      handleId
     );
 
-    handle.position = position;
+    return handle.position;
+  }
+
+  public async length(
+    connection: ServerConnection,
+    authentication: UnlockedUserAuthentication,
+    handleId: number
+  ): Promise<number> {
+    const [, , , fileSnapshot] = await this.#getHandle(
+      connection,
+      authentication,
+      handleId
+    );
+
+    return fileSnapshot.size;
   }
 
   public async truncate(
@@ -419,31 +392,35 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     handleId: number,
     length: number
   ) {
-    const handle = this.#getHandle(connection, authentication, handleId);
-
-    const [fileManager, fileSnapshotManager, fileContentManager, fileDataManager] =
-      this.getManagers(FileManager, FileSnapshotManager, FileContentManager, FileDataManager);
-
-    const file = await fileManager.getById(handle.fileId);
-    const fileContent = await fileContentManager.getById(handle.fileContentId);
-    const fileSnapshot = await fileSnapshotManager.getById(
-      handle.fileSnapshotId
-    );
-
-    if (file == null || fileContent == null || fileSnapshot == null) {
-      throw new Error("File may have been deleted");
-    }
-
-    if (length < 0 || length > fileSnapshot.size) {
-      throw new Error("Invalid length");
-    }
-
-    const unlockedFile = await fileManager.unlock(
-      file,
+    const [handle, file, fileContent, fileSnapshot] = await this.#getHandle(
+      connection,
       authentication,
-      FileAccessLevel.ReadWrite
+      handleId
     );
 
-    handle.position = Math.min(length, handle.position);
+    if (handle.isThumbnail) {
+      throw new Error("Cannot truncate thumbnails");
+    }
+
+    const [fileDataManager] = this.getManagers(
+      FileDataManager,
+      FileSnapshotManager
+    );
+
+    await fileDataManager.truncateData(file, fileContent, fileSnapshot, length);
+  }
+
+  public removeAllHandles(connection?: ServerConnection) {
+    const { fileHandles } = this.#getData();
+
+    for (let index = 0; index < fileHandles.length; index++) {
+      const fileHandle = fileHandles[index];
+
+      if (connection != null && connection.id != fileHandle.connection.id) {
+        return;
+      }
+
+      fileHandles.splice(index, 1);
+    }
   }
 }

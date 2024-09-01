@@ -314,6 +314,48 @@ export class FileDataManager extends ResourceManager<
     return Buffer.concat(output) as any;
   }
 
+  public async truncateData(
+    file: UnlockedFileResource,
+    fileContent: FileContentResource,
+    fileSnapshot: FileSnapshotResource,
+    size: number
+  ) {
+    const [fileBuffers] = this.getManagers(FileBufferManager);
+
+    for (let index = 0; ; index++) {
+      const bufferStart = index * fileBufferSize;
+      const bufferEnd = bufferStart + fileBufferSize;
+
+      const fileData = await this.#getByIndex(
+        file,
+        fileContent,
+        fileSnapshot,
+        index
+      );
+
+      if (bufferStart >= size) {
+        if (fileData != null) {
+          await this.#delete(fileData);
+        }
+      } else if (bufferEnd < size) {
+        const difference = bufferEnd - size;
+
+        if (fileData != null) {
+          const fileBuffer = fileBuffers.unlock(
+            file,
+            (await fileBuffers.getById(fileData.fileBufferId))!
+          );
+
+          await this.#update(
+            file,
+            fileData,
+            fileBuffer.unlockedBuffer.subarray(0, difference)
+          );
+        }
+      }
+    }
+  }
+
   public readDataStream(
     file: UnlockedFileResource,
     fileContent: FileContentResource,

@@ -93,7 +93,7 @@ export class ServerConnectionManager extends Service<
               onDisconnect: () => {
                 delete connections[connection.id];
 
-                this.server.fileManager.removeHandles(connection);
+                this.server.fileManager.removeAllHandles(connection);
               },
               getContext: () => this.#getConnectionContext(connection),
             }
