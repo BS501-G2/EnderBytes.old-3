@@ -13,10 +13,12 @@ export enum ScanFolderSortType {
 }
 
 export enum FileThumbnailerStatusType {
-  Pending,
+  InQueue,
   InProgress,
   Available,
   Failed,
+  NotAvailable,
+  NotRunning,
 }
 
 export interface Authentication {

@@ -15,11 +15,44 @@
 
 {#snippet layout()}
   <div class="feed-container">
-    <div class="recent-text-container">
-      <p class="recent-text-paragraph">Recent Files</p>
+      <div class="shared-text-container">
+        <p class="shared-text-paragraph">Shared Files</p>
+
+        <div class="show-more-button-container">
+          <a href="destination.html">
+            <button class="show-more-button">Show more</button>
+          </a>
+        </div>
+
+      </div>
+
+    <div class="shared-files-container">
+
+      <div class="shared-files-cards-container">
+
+        <div class="shared-files-cards">
+          <div class="thumbnail-cards">
+            <img src="/favicon.svg" alt="Thumbnail">
+          </div>
+          <div class="name-cards">
+            <i class="fa-regular fa-file"></i>
+            <p class="card-name-text">resume.docx</p>
+          </div>
+        </div>
+
+      </div>
+
+
+
     </div>
 
+
+
+      <div class="recent-text-container">
+        <p class="recent-text-paragraph">Recent Files</p>
+      </div>
     <div class="recent-files-container">
+
       <div class="recent-files-columns">
         <div class="name-column">
           <p class="column-texts">Name</p>
@@ -61,10 +94,25 @@
 {/snippet}
 
 <style>
-  .recent-text-container {
+  .recent-text-container,.shared-text-container {
     padding: 20px;
   }
+  .shared-text-container{
+    display: grid;
+    grid-template-columns: 50% 50%;
+  }
+  .show-more-button-container{
+    display: flex;
 
+    align-content: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .show-more-button{
+    background-color: var(--primary);
+    box-sizing: border-box;
+    color: white;
+  }
   .feed-container {
     display: flex;
     flex-direction: column;
@@ -72,9 +120,45 @@
     padding: 20px;
     overflow: auto;
   }
-  .recent-files-container {
+  .recent-files-container,.shared-files-cards-container ,.shared-files-container{
     border-radius: 20px;
     background-color: var(--primaryContainerVariant);
+  }
+  .shared-files-cards-container{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(192px, 1fr));
+    padding: 16px;
+  }
+  .shared-files-cards{
+    display: flex;
+    flex-direction: column;
+    margin: 8px;
+    padding: 4px;
+    border-radius: 8px;
+    background-color: var(--background);
+    color: var(--onBackground);
+    border: solid 1px var(--shadow);
+  }
+  .thumbnail-cards{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+  }
+  .name-cards{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px;
+    gap: 8px;
+    min-height: 1.2em;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .recent-files-columns {
@@ -121,7 +205,7 @@
     margin-right: 5px;
     visibility: hidden;
   }
-  .recent-text-paragraph {
+  .recent-text-paragraph,.shared-text-paragraph {
     font-size: clamp(15px, 3vw + 0.5rem, 30px);
   }
   .column-texts {

@@ -73,8 +73,6 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   setSuspend: (id: number, isSuspended: boolean) => Promise<void>;
 
-  createFile: (parentFolderId: number, name: string) => Promise<FileResource>;
-
   createFolder: (parentFolderId: number, name: string) => Promise<FileResource>;
 
   scanFolder: (
@@ -145,32 +143,25 @@ export interface ServerFunctions extends ConnectionFunctions {
     limit?: number
   ) => Promise<FileLogResource[]>;
 
-  feedUploadBuffer: (buffer: Uint8Array) => Promise<number>;
-
-  getUploadBufferSize: () => Promise<number>;
-
-  getUploadBufferSizeLimit: () => Promise<number>;
-
-  clearUploadBuffer: () => Promise<void>;
-
-  writeUploadBufferToFile: (
-    fileId: number,
-    sourceFileSnapshotId: number,
-    position: number
-  ) => Promise<void>;
-
-  downloadFile: (
-    fileId: number,
-    position?: number,
-    length?: number,
-    snapshotId?: number
-  ) => Promise<Uint8Array>;
-
   getMyAccess: (fileId: number) => Promise<{
     level: FileAccessLevel;
 
     access: FileAccessResource | null;
   }>;
+
+  openNewFile: (parentFolder: number, name: string) => Promise<number>;
+
+  openFile: (fileId: number, snapshotId?: number) => Promise<number>;
+
+  openFileThumbnail: (fileId: number, snapshotId: number) => Promise<number>;
+
+  truncateFile: (fileHandleId: number, length: number) => Promise<void>;
+
+  readFile: (fileHandleId: number, length: number) => Promise<Uint8Array>
+
+  writeFile: (fileHandleId: number, data: Uint8Array) => Promise<void>;
+
+  closeFile: (fileHandleId: number) => Promise<void>;
 
   moveFile: (fileIds: number[], toParentId: number) => Promise<void>;
 

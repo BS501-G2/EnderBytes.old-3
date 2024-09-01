@@ -4,7 +4,7 @@ import { Database } from "../database.js";
 import { FileManager, FileResource } from "./file.js";
 import { FileSnapshotManager, FileSnapshotResource } from "./file-snapshot.js";
 import { ScanFolderSortType, FileThumbnailerStatusType } from "../../shared.js";
-import { FileContentManager } from "./file-content.js";
+import { FileContentManager, FileContentResource } from "./file-content.js";
 
 export interface FileThumbnailResource extends Resource {
   fileId: number;
@@ -53,17 +53,32 @@ export class FileThumbnailManager extends ResourceManager<
     }
   }
 
+  public async getByFile(
+    file: FileResource,
+    fileSnapshot: FileSnapshotResource
+  ) {
+    return await this.first({
+      where: [
+        ["fileId", "=", file.id],
+        ["fileSnapshotId", "=", fileSnapshot.id],
+      ],
+    });
+  }
+
   public async create(
     file: FileResource,
     fileSnapshot: FileSnapshotResource,
 
-    status: FileThumbnailerStatusType
+    status: FileThumbnailerStatusType,
+    fileThumbnail?: FileContentResource
   ): Promise<FileThumbnailResource> {
     const thumbnail = await this.insert({
       fileId: file.id,
       fileSnapshotId: fileSnapshot.id,
 
       status,
+
+      fileThumbnailContentId: fileThumbnail?.id,
     });
 
     return thumbnail;

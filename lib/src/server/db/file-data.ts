@@ -314,12 +314,12 @@ export class FileDataManager extends ResourceManager<
     return Buffer.concat(output) as any;
   }
 
-  public async readDataStream(
+  public readDataStream(
     file: UnlockedFileResource,
     fileContent: FileContentResource,
     fileSnapshot: FileSnapshotResource,
     offset: number = 0
-  ): Promise<Readable> {
+  ): Readable {
     const getCurrentTransaction: () => Knex | null = () =>
       this.transacting ? this.db : null;
     const transaction = getCurrentTransaction();

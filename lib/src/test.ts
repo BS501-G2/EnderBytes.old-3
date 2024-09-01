@@ -21,4 +21,6 @@ export async function test(
   }
 }
 
-void test(process.argv[2] as never, process.argv[3] as never);
+void test(process.argv[2] as never, process.argv[3] as never).catch(
+  console.error
+);

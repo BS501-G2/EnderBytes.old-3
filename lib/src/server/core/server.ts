@@ -15,7 +15,9 @@ import { UserSessionManager } from "../db/user-session.js";
 import { UserManager } from "../db/user.js";
 import { VirusReportEntryManager } from "../db/virus-report-entry.js";
 import { VirusReportManager } from "../db/virus-report.js";
+import { FileManagerService } from "./file-manager.js";
 import { MimeDetector } from "./mime-detector.js";
+import { Thumbnailer } from "./thumbnailer.js";
 import { VirusScanner } from "./virus-scanner.js";
 
 export interface ServerInstanceData {
@@ -23,6 +25,8 @@ export interface ServerInstanceData {
   virusScanner: VirusScanner;
   mimeDetector: MimeDetector;
   connectionManager: ServerConnectionManager;
+  thumbnailer: Thumbnailer;
+  fileManager: FileManagerService;
 }
 
 export type ServerOptions = [port: number];
@@ -52,6 +56,14 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
     return this.#data.mimeDetector;
   }
 
+  get thumbnailer() {
+    return this.#data.thumbnailer;
+  }
+
+  get fileManager() {
+    return this.#data.fileManager;
+  }
+
   async run(
     setData: (instance: ServerInstanceData) => void,
     onReady: (onStop: () => void) => void,
@@ -62,8 +74,17 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
     const database = new Database(this);
     const virusScanner = new VirusScanner(this);
     const mimeDetector = new MimeDetector(this);
+    const thumbnailer = new Thumbnailer(this);
+    const fileManager = new FileManagerService(this);
 
-    setData({ connectionManager, database, virusScanner, mimeDetector });
+    setData({
+      connectionManager,
+      database,
+      virusScanner,
+      mimeDetector,
+      thumbnailer,
+      fileManager,
+    });
 
     await database.start([
       UserManager,
@@ -84,11 +105,15 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
     await virusScanner.start("/run/clamav/clamd.ctl");
     await mimeDetector.start();
     await connectionManager.start(port);
+    await thumbnailer.start();
+    await fileManager.start();
     // await apiServer.start(port);
 
     await new Promise<void>((resolve) => onReady(resolve));
 
     // await apiServer.stop();
+    await fileManager.stop();
+    await thumbnailer.stop();
     await connectionManager.stop();
     await mimeDetector.stop();
     await virusScanner.stop();

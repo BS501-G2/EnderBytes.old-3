@@ -123,7 +123,7 @@ export class ServerConnection {
     const buffers: Uint8Array[] = [];
 
     const feedUploadBuffer = (buffer: Uint8Array) => {
-      if (getUploadBufferSize() + buffer.length > bufferLimit) {
+      if (getUploadSize() + buffer.length > bufferLimit) {
         ApiError.throw(
           ApiErrorType.InvalidRequest,
           "Upload buffer size limit reached"
@@ -131,10 +131,10 @@ export class ServerConnection {
       }
 
       buffers.push(buffer);
-      return getUploadBufferSize();
+      return getUploadSize();
     };
 
-    const getUploadBufferSize = (): number =>
+    const getUploadSize = (): number =>
       buffers.reduce((size, buffer) => size + buffer.length, 0);
 
     const consumeUploadBuffer = (): Uint8Array => {
@@ -596,78 +596,6 @@ export class ServerConnection {
         }
       },
 
-      updateFile: async (
-        fileId: number,
-        bounds: [offset: number, length: number][]
-      ) => {
-        const authentication = requireAuthenticated(true);
-        const file = await getFile(
-          fileId,
-          authentication,
-          FileAccessLevel.ReadWrite
-        );
-
-        if (
-          getUploadBufferSize() !==
-          bounds.reduce((size, [, length]) => size + length, 0)
-        ) {
-          ApiError.throw(ApiErrorType.InvalidRequest, "Invalid bounds");
-        }
-      },
-
-      createFile: async (folderId, name) => {
-        const authentication = requireAuthenticated(true);
-
-        if (getUploadBufferSize() === 0) {
-          ApiError.throw(ApiErrorType.InvalidRequest, "File cannot be empty");
-        }
-
-        const buffer = consumeUploadBuffer();
-        // const viruses = await this.#manager.server.virusScanner.scanBuffer(
-        //   buffer
-        // );
-
-        // if (viruses.length > 0) {
-        //   ApiError.throw(ApiErrorType.InvalidRequest, "File contains viruses");
-        // }
-
-        const folder = await getFile(
-          folderId,
-          authentication,
-          FileAccessLevel.ReadWrite
-        );
-
-        const file = await fileManager.create(
-          authentication,
-          folder,
-          name,
-          FileType.File
-        );
-
-        const fileContent = await fileContentManager.getMain(file);
-        const fileSnapshot = await fileSnapshotManager.getRoot(
-          file,
-          fileContent
-        );
-
-        await fileDataManager.writeData(
-          file,
-          fileContent,
-          fileSnapshot,
-          0,
-          buffer
-        );
-
-        const user = await resolveUser([
-          UserResolveType.UserId,
-          authentication.userId,
-        ]);
-        await fileLogManager.push(folder, user, FileLogType.Modify);
-        await fileLogManager.push(file, user, FileLogType.Create);
-
-        return (await fileManager.getById(file.id))!;
-      },
-
       createFolder: async (parentFolderId, name) => {
         const authentication = requireAuthenticated(true);
         const parentFolder = await getFile(
@@ -781,7 +709,7 @@ export class ServerConnection {
         const files = await fileManager.scanFolder(file);
 
         if (sort == null) {
-          return files
+          return files;
         }
 
         return await sortFiles(files, sort);
@@ -969,7 +897,8 @@ export class ServerConnection {
           offset,
           limit,
           orderBy: [["id", true]],
-        })) {``
+        })) {
+          ``;
           logs.push(log);
         }
 
@@ -996,104 +925,6 @@ export class ServerConnection {
         }
 
         return logs;
-      },
-
-      feedUploadBuffer: async (buffer) => {
-        requireAuthenticated(true);
-
-        return feedUploadBuffer(buffer);
-      },
-
-      getUploadBufferSize: async () => {
-        requireAuthenticated(true);
-
-        return getUploadBufferSize();
-      },
-
-      getUploadBufferSizeLimit: async () => {
-        requireAuthenticated(true);
-
-        return bufferLimit;
-      },
-
-      clearUploadBuffer: async () => {
-        requireAuthenticated(true);
-
-        consumeUploadBuffer();
-      },
-
-      writeUploadBufferToFile: async (
-        fileId,
-        sourceFileSnapshotId,
-        position
-      ) => {
-        const authentication = requireAuthenticated(true);
-        const file = await getFile(
-          fileId,
-          authentication,
-          FileAccessLevel.ReadWrite,
-          FileType.File
-        );
-        const user = await resolveUser([
-          UserResolveType.UserId,
-          authentication.userId,
-        ]);
-
-        const fileContent = await fileContentManager.getMain(file);
-        const sourceFileSnapshot = await getSnapshot(
-          file,
-          fileContent,
-          sourceFileSnapshotId
-        );
-
-        const destinationFileSnapshot = await fileSnapshotManager.fork(
-          file,
-          fileContent,
-          sourceFileSnapshot,
-          user
-        );
-
-        await fileDataManager.writeData(
-          file,
-          fileContent,
-          destinationFileSnapshot,
-          position,
-          consumeUploadBuffer()
-        );
-      },
-
-      downloadFile: async (ileId, position, length, snapshotId) => {
-        const authentication = requireAuthenticated(true);
-        const file = await getFile(
-          ileId,
-          authentication,
-          FileAccessLevel.Read,
-          FileType.File
-        );
-        const fileContent = await fileContentManager.getMain(file);
-        const latest =
-          snapshotId != null
-            ? await fileSnapshotManager.getByFileAndId(
-                file,
-                fileContent,
-                snapshotId
-              )
-            : await fileSnapshotManager.getLatest(file, fileContent);
-
-        if (latest == null) {
-          ApiError.throw(
-            ApiErrorType.InvalidRequest,
-            "File snapshot not found"
-          );
-        }
-
-        return await fileDataManager.readData(
-          file,
-          fileContent,
-          latest,
-          position,
-          length
-        );
       },
 
       getMyAccess: async (fileId) => {
@@ -1133,6 +964,98 @@ export class ServerConnection {
         );
 
         return { access, level: access?.level ?? FileAccessLevel.None };
+      },
+
+      openNewFile: async (parentFolderId, name) => {
+        const authentication = requireAuthenticated(true);
+        const parentFolder = await getFile(
+          parentFolderId,
+          authentication,
+          FileAccessLevel.ReadWrite
+        );
+
+        const file = await this.#manager.server.fileManager.openNewFile(
+          this,
+          authentication,
+          parentFolder,
+          name
+        );
+
+        return file;
+      },
+
+      openFile: async (fileId) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.None
+        );
+
+        return await this.#manager.server.fileManager.openFile(
+          this,
+          authentication,
+          file
+        );
+      },
+
+      openFileThumbnail: async (fileId, snapshotId) => {
+        const authentication = requireAuthenticated(true);
+        const file = await getFile(
+          fileId,
+          authentication,
+          FileAccessLevel.None
+        );
+
+        const fileHandleId =
+          await this.#manager.server.fileManager.openFileThumbnail(
+            this,
+            authentication,
+            file
+          );
+
+        if (fileHandleId == null) {
+          ApiError.throw(ApiErrorType.NotFound, "No thumbnail available");
+        }
+
+        return fileHandleId;
+      },
+
+      truncateFile: async (handleId, length) => {
+        const authentication = requireAuthenticated(true);
+
+        await this.#manager.server.fileManager.truncate(
+          this,
+          authentication,
+          handleId,
+          length
+        );
+      },
+
+      readFile: async (handleId, length) => {
+        const authentication = requireAuthenticated(true);
+
+        return await this.#manager.server.fileManager.read(
+          this,
+          authentication,
+          handleId,
+          length
+        );
+      },
+
+      writeFile: async (handleId, data) => {
+        const authentication = requireAuthenticated(true);
+
+        await this.#manager.server.fileManager.write(
+          this,
+          authentication,
+          handleId,
+          data
+        );
+      },
+
+      closeFile: async (handleId) => {
+        this.#manager.server.fileManager.close(this, handleId);
       },
 
       moveFile: async (fileIds, toParentId) => {

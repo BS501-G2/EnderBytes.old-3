@@ -6,7 +6,11 @@
     FileSnapshotResource,
     UserResource
   } from '@rizzzi/enderdrive-lib/server';
-  import { FileType, ScanFolderSortType, type FileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
+  import {
+    FileType,
+    ScanFolderSortType,
+    type FileAccessLevel
+  } from '@rizzzi/enderdrive-lib/shared';
   import { setContext } from 'svelte';
   import { writable, type Readable, type Writable } from 'svelte/store';
 
@@ -118,6 +122,7 @@
     Banner,
     BannerClass,
     LoadingSpinner,
+    Title,
     ViewMode,
     viewMode
   } from '@rizzzi/svelte-commons';
@@ -326,6 +331,10 @@
         </div>
       </Banner>
     {:else if $resolved.status === 'success'}
+      {#if $resolved.page === 'files'}
+        <Title title={$resolved.file.name} />
+      {/if}
+
       {#if $viewMode & ViewMode.Desktop}
         <FileManagerActionBar />
         <FileManagerSeparator orientation="horizontal" with-margin />
