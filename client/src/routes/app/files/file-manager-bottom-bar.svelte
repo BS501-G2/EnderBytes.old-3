@@ -1,9 +1,7 @@
 <script lang="ts">
   import { getContext } from 'svelte';
   import { FileManagerContextName, type FileManagerContext } from './file-manager.svelte';
-  import { writable, type Writable } from 'svelte/store';
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
-  import { FileType } from '@rizzzi/enderdrive-lib/shared';
 
   const { resolved } = getContext<FileManagerContext>(FileManagerContextName);
 
@@ -16,14 +14,14 @@
 <div class="bottom-bar">
   <p>
     {files.reduce((a, b) => {
-      if (b.type === FileType.File) {
+      if (b.type === 'file') {
         return a + 1;
       }
 
       return a;
     }, 0)} file(s),
     {files.reduce((a, b) => {
-      if (b.type === FileType.Folder) {
+      if (b.type === 'folder') {
         return a + 1;
       }
 

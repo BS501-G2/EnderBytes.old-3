@@ -1,8 +1,7 @@
 <script lang="ts">
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  import Locale, { LocaleKey } from '$lib/locale.svelte';
+  import Locale from '$lib/locale.svelte';
   import {
-    ColorKey,
     ResetCSS,
     Title,
     titleString,
@@ -12,12 +11,13 @@
     ResponsiveLayout
   } from '@rizzzi/svelte-commons';
   import type { Snippet } from 'svelte';
+	import { LocaleKey } from '$lib/locale';
 
   const { children }: { children: Snippet } = $props();
 </script>
 
 <svelte:head>
-  <meta name="theme-color" content={getColorHex(ColorKey.PrimaryContainer, $currentColorScheme)} />
+  <meta name="theme-color" content={getColorHex('primaryContainer', $currentColorScheme)} />
   <title>{$titleString}</title>
 </svelte:head>
 

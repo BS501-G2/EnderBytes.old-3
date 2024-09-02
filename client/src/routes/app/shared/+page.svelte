@@ -1,33 +1,33 @@
 <script lang="ts">
-  import { getContext, onMount } from 'svelte';
-  import { writable, type Writable } from 'svelte/store';
-  import { DashboardContextName, type DashboardContext } from '../dashboard.svelte';
-  import FileManager, {
-    type FileManagerOnPageCallback,
-    type FileManagerOnFileIdCallback
-  } from '../files/file-manager.svelte';
-  import { Title } from '@rizzzi/svelte-commons';
-  import { goto } from '$app/navigation';
-  import { ScanFolderSortType } from '@rizzzi/enderdrive-lib/shared';
+	import { getContext, onMount } from 'svelte';
+	import { writable, type Writable } from 'svelte/store';
+	import { DashboardContextName, type DashboardContext } from '../dashboard';
+	import FileManager, {
+		type FileManagerOnPageCallback,
+		type FileManagerOnFileIdCallback
+	} from '../files/file-manager.svelte';
+	import { Title } from '@rizzzi/svelte-commons';
+	import { goto } from '$app/navigation';
+	import type { ScanFolderSortType } from '@rizzzi/enderdrive-lib/shared';
 
-  const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
+	const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
 
-  const refresh: Writable<() => void> = writable(null as never);
-  const sort: Writable<ScanFolderSortType> = writable(ScanFolderSortType.FileName);
+	const refresh: Writable<() => void> = writable(null as never);
+	const sort: Writable<ScanFolderSortType> = writable('fileName' as ScanFolderSortType);
 
-  const onPage: FileManagerOnPageCallback = (...[, page]) => {
-    goto(`/app/${page}`);
-  };
+	const onPage: FileManagerOnPageCallback = (...[, page]) => {
+		goto(`/app/${page}`);
+	};
 
-  const onFileId: FileManagerOnFileIdCallback = (...[, newFileId]) => {
-    goto(`/app/files${newFileId != null ? `?fileId=${newFileId}` : ''}`);
-  };
+	const onFileId: FileManagerOnFileIdCallback = (...[, newFileId]) => {
+		goto(`/app/files${newFileId != null ? `?fileId=${newFileId}` : ''}`);
+	};
 
-  onMount(() => setMainContent(layout));
+	onMount(() => setMainContent(layout));
 </script>
 
 <Title title="Shared Files" />
 
 {#snippet layout()}
-  <FileManager page="shared" {onPage} {onFileId} {refresh} {sort} />
+	<FileManager page="shared" {onPage} {onFileId} {refresh} {sort} />
 {/snippet}

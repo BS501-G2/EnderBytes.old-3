@@ -1,32 +1,3 @@
-<script lang="ts" context="module">
-  export interface DashboardContextMenuEntry {
-    name: string;
-    icon: string;
-    onClick: (event: MouseEvent) => void;
-  }
-
-  export interface DashboardContext {
-    addContextMenuEntry: (
-      name: string,
-      icon: string,
-      onClick: (event: MouseEvent) => void
-    ) => () => void;
-
-    setMainContent: (children: Snippet | null) => () => void;
-
-    pushOverlayContent: (children: Snippet) => () => void;
-
-    openSettings: Writable<boolean>;
-    openLogoutConfirm: Writable<boolean>;
-    openExtraContextMenuOverlay: Writable<
-      [element: HTMLElement, entries: DashboardContextMenuEntry[], onDismiss: () => void] | null
-    >;
-
-    isWidthLimited: Writable<boolean>;
-  }
-
-  export const DashboardContextName = 'dashboard-context';
-</script>
 
 <script lang="ts">
   import { getLocale } from '$lib/locale.svelte';
@@ -41,6 +12,7 @@
   import DashboardOverlay from './dashboard-overlay.svelte';
   import DashboardSideCard from './dashboard-side-card.svelte';
   import ExtraContextMenu from './extra-context-menu.svelte';
+	import { DashboardContextName, type DashboardContext, type DashboardContextMenuEntry } from './dashboard';
 
   const { children }: { children: Snippet } = $props();
 

@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
   import { writable, type Writable } from 'svelte/store';
 
@@ -34,7 +34,7 @@
 </script>
 
 <script lang="ts">
-  import { Button, ButtonClass, Dialog, DialogClass } from '@rizzzi/svelte-commons';
+  import { Button, Dialog } from '@rizzzi/svelte-commons';
   import { type Snippet } from 'svelte';
 </script>
 
@@ -47,7 +47,7 @@
 {#snippet layout(index: number)}
   {@const { files, resolve } = $dialogs[index]}
 
-  <Dialog dialogClass={DialogClass.Normal} onDismiss={() => resolve(false)}>
+  <Dialog dialogClass='normal' onDismiss={() => resolve(false)}>
     {#snippet head()}
       <h2>Delete {files.length} file{files.length > 1 ? 's' : ''}</h2>
     {/snippet}
@@ -58,7 +58,7 @@
 
     {#snippet actions()}
       <Button container={buttonContainer} onClick={() => resolve(true)}>Yes</Button>
-      <Button container={buttonContainer} buttonClass={ButtonClass.Transparent} onClick={() => resolve(false)}>No</Button>
+      <Button container={buttonContainer} buttonClass='transparent' onClick={() => resolve(false)}>No</Button>
     {/snippet}
   </Dialog>
 {/snippet}

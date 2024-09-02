@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends any">
   import { AnimationFrame } from '@rizzzi/svelte-commons';
-  import { BackgroundTaskStatus, type BackgroundTask } from '$lib/background-task.svelte';
+  import { BackgroundTaskStatus, type BackgroundTask } from '$lib/background-task';
   import DashboardOperationEntryInner from './dashboard-operation-entry-inner.svelte';
 
   const { task }: { task: BackgroundTask<T> } = $props();

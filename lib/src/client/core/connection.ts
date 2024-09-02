@@ -20,7 +20,7 @@ export class ClientConnection {
   ) {
     this.#wrapper = wrapSocket(
       (this.#io = io("/", {})),
-      this.#client,
+      this.#clientFunctions,
       undefined
       // (...message) => {
       //   console.log(...message);
@@ -34,7 +34,7 @@ export class ClientConnection {
   }
 
   async #restore(authentication: Authentication | null): Promise<void> {
-    const { restore } = this.#server;
+    const { restore } = this.#serverFunctions;
 
     try {
       if (authentication == null) {
@@ -57,7 +57,7 @@ export class ClientConnection {
   readonly #wrapper: SocketWrapper<ServerFunctions, ClientFunctions, Socket>;
   readonly #setAuthentication: (authentication: Authentication | null) => void;
 
-  get #server(): ServerFunctions {
+  get #serverFunctions(): ServerFunctions {
     const funcs = this.#wrapper.funcs;
 
     const wrapFunctions = (
@@ -121,13 +121,13 @@ export class ClientConnection {
     });
   }
 
-  get #client(): ClientFunctions {
+  get #clientFunctions(): ClientFunctions {
     return {
       ...baseConnectionFunctions,
     };
   }
 
   get serverFunctions() {
-    return this.#server;
+    return this.#serverFunctions;
   }
 }

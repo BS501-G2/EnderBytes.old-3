@@ -104,7 +104,7 @@ export class Thumbnailer extends Service<ThumbnailerData, ThumbnailerOptions> {
       return await fileThumbnailManager.create(
         file,
         fileSnapshot,
-        FileThumbnailerStatusType.Available,
+        'available',
         thumbnailContent
       );
 

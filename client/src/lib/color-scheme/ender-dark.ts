@@ -1,37 +1,37 @@
-import { ColorKey, type ColorValues } from '@rizzzi/svelte-commons'
+import { type ColorValues } from '@rizzzi/svelte-commons'
 import { colors as base } from './ender'
 
 export const colors = (): ColorValues => {
   const baseColors = base()
 
   return ({
-    [ColorKey.Primary]: baseColors[ColorKey.PrimaryContainer],
-    [ColorKey.OnPrimary]: baseColors[ColorKey.OnPrimaryContainer],
-    [ColorKey.PrimaryContainer]: baseColors[ColorKey.Primary],
-    [ColorKey.OnPrimaryContainer]: baseColors[ColorKey.OnPrimary],
+    'primary': baseColors['primaryContainer'],
+    'onPrimary': baseColors['onPrimaryContainer'],
+    'primaryContainer': baseColors['primary'],
+    'onPrimaryContainer': baseColors['onPrimary'],
 
-    [ColorKey.PrimaryVariant]: baseColors[ColorKey.PrimaryContainerVariant],
-    [ColorKey.OnPrimaryVariant]: baseColors[ColorKey.OnPrimaryContainierVariant],
-    [ColorKey.PrimaryContainerVariant]: baseColors[ColorKey.PrimaryVariant],
-    [ColorKey.OnPrimaryContainierVariant]: baseColors[ColorKey.OnPrimaryVariant],
+    'primaryVariant': baseColors['primaryContainerVariant'],
+    'onPrimaryVariant': baseColors['onPrimaryContainerVariant'],
+    'primaryContainerVariant': baseColors['primaryVariant'],
+    'onPrimaryContainerVariant': baseColors['onPrimaryVariant'],
 
-    [ColorKey.Background]: baseColors[ColorKey.OnBackground],
-    [ColorKey.BackgroundVariant]: baseColors[ColorKey.OnBackgroundVariant],
-    [ColorKey.OnBackground]: baseColors[ColorKey.Background],
-    [ColorKey.OnBackgroundVariant]: baseColors[ColorKey.BackgroundVariant],
+    'background': baseColors['onBackground'],
+    'backgroundVariant': baseColors['onBackgroundVariant'],
+    'onBackground': baseColors['background'],
+    'onBackgroundVariant': baseColors['backgroundVariant'],
 
-    [ColorKey.Error]: baseColors[ColorKey.Error],
-    [ColorKey.ErrorBackground]: baseColors[ColorKey.ErrorBackground],
-    [ColorKey.OnError]: baseColors[ColorKey.OnError],
+    'error': baseColors['error'],
+    'errorBackground': baseColors['errorBackground'],
+    'onError': baseColors['onError'],
 
-    [ColorKey.Warning]: baseColors[ColorKey.Warning],
-    [ColorKey.WarningBackground]: baseColors[ColorKey.WarningBackground],
-    [ColorKey.OnWarning]: baseColors[ColorKey.OnWarning],
+    'warning': baseColors['warning'],
+    'warningBackground': baseColors['warningBackground'],
+    'onWarning': baseColors['onWarning'],
 
-    [ColorKey.Info]: baseColors[ColorKey.Info],
-    [ColorKey.InfoBackground]: baseColors[ColorKey.InfoBackground],
-    [ColorKey.OnInfo]: baseColors[ColorKey.OnInfo],
+    'info': baseColors['info'],
+    'infoBackground': baseColors['infoBackground'],
+    'onInfo': baseColors['onInfo'],
 
-    [ColorKey.Shadow]: 0x0000007f
+    'shadow': 0x0000007f
   })
 }

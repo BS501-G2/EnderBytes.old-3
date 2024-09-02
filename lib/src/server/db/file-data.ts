@@ -212,6 +212,8 @@ export class FileDataManager extends ResourceManager<
       fileSnapshot,
       Math.max(positionEnd, fileSnapshot.size)
     );
+
+    console.log(Math.max(positionEnd, fileSnapshot.size));
   }
 
   public async copySnapshotData(

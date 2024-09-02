@@ -40,7 +40,7 @@ export class FileLogManager extends ResourceManager<
         .inTable(this.getManager(FileManager).recordTableName)
         .onDelete("cascade");
 
-      table.integer("type").notNullable();
+      table.string("type").notNullable();
       table
         .integer("targetUserId")
         .nullable()

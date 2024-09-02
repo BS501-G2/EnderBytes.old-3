@@ -1,485 +1,445 @@
-<script lang="ts" context="module">
-  import { writable, get, type Writable, type Readable, derived } from 'svelte/store';
+<script lang="ts" module>
+	import {
+		BackgroundTaskStatus,
+		type BackgroundTask,
+		type BackgroundTaskCallback,
+		type BackgroundTaskClient,
+		type BackgroundTaskSetStatusFunction
+	} from './background-task';
 
-  export type BackgroundTaskSetStatusFunction = (
-    message?: string | null,
-    progressPercentage?: number | null
-  ) => void;
+	import { writable, get, type Writable, type Readable, derived } from 'svelte/store';
 
-  export type BackgroundTaskCallback<T> = (
-    client: BackgroundTaskClient<T>,
-    setStatus: BackgroundTaskSetStatusFunction
-  ) => Promise<T> | T;
+	export const backgroundTasks: Writable<BackgroundTask<any>[]> = writable([]);
+	export const runningBackgroundTasks: Readable<BackgroundTask<any>[]> = derived(
+		backgroundTasks,
+		(value) =>
+			value.filter(
+				(value) =>
+					value.status == BackgroundTaskStatus.Running || value.status == BackgroundTaskStatus.Ready
+			)
+	);
 
-  export interface BackgroundTask<T> {
-    name: string;
-    message: string | null;
-    progress: number | null;
-    retryable: boolean;
-    status: BackgroundTaskStatus;
-    cancelled: boolean;
-    autoDismiss: boolean;
-    hidden: boolean;
-    lastUpdated: number;
+	export const failedBackgroundTasks: Readable<BackgroundTask<any>[]> = derived(
+		backgroundTasks,
+		(value) => value.filter((value) => value.status == BackgroundTaskStatus.Failed)
+	);
 
-    isDismissed: boolean;
+	export const completedBackgroundTasks: Readable<BackgroundTask<any>[]> = derived(
+		backgroundTasks,
+		(value) => value.filter((value) => value.status == BackgroundTaskStatus.Done)
+	);
 
-    client: BackgroundTaskClient<any>;
-    run: () => Promise<T>;
-    dismiss: () => void;
-    cancel: () => void;
-  }
+	export function dismissAll() {
+		backgroundTasks.update((value) => {
+			return value.filter((value) => value.status === BackgroundTaskStatus.Running);
+		});
+	}
 
-  export interface BackgroundTaskClient<T> {
-    name: string;
-    status: BackgroundTaskStatus;
-    retryable: boolean;
-    cancelled: boolean;
-    run: () => Promise<T>;
-    dismiss: () => void;
-    task: Promise<T> | null;
-    cancel: () => void;
-  }
+	export function executeBackgroundTaskSeries<T>(
+		name: string,
+		retryable: boolean,
+		callbacks: Array<BackgroundTaskCallback<T>>,
+		autoDismiss: boolean = false
+	): BackgroundTaskClient<T[]> {
+		const client = internalExecuteBackgroundTask<T[]>(
+			name,
+			retryable,
+			async (): Promise<T[]> => {
+				const toExec: Array<() => Promise<void>> = [];
+				const promises: Promise<T>[] = callbacks.map((callback) =>
+					(async () => {
+						const client = executeBackgroundTask<T>(
+							name,
+							retryable,
+							async (client, setStatus) => {
+								setStatus('Waiting...', null);
 
-  export enum BackgroundTaskStatus {
-    Ready,
-    Running,
-    Failed,
-    Cancelled,
-    Done
-  }
+								const { promise } = await new Promise<{ promise: Promise<T> }>((resolve) => {
+									toExec.push(async () => {
+										const promise = (async () => {
+											return await callback(client, setStatus);
+										})();
 
-  export const backgroundTasks: Writable<BackgroundTask<any>[]> = writable([]);
-  export const runningBackgroundTasks: Readable<BackgroundTask<any>[]> = derived(
-    backgroundTasks,
-    (value) =>
-      value.filter(
-        (value) =>
-          value.status == BackgroundTaskStatus.Running || value.status == BackgroundTaskStatus.Ready
-      )
-  );
+										resolve({ promise });
+										await promise;
+									});
+								});
 
-  export const failedBackgroundTasks: Readable<BackgroundTask<any>[]> = derived(
-    backgroundTasks,
-    (value) => value.filter((value) => value.status == BackgroundTaskStatus.Failed)
-  );
+								return await promise;
+							},
+							autoDismiss
+						);
 
-  export const completedBackgroundTasks: Readable<BackgroundTask<any>[]> = derived(
-    backgroundTasks,
-    (value) => value.filter((value) => value.status == BackgroundTaskStatus.Done)
-  );
+						return await client.run();
+					})()
+				);
 
-  export function dismissAll() {
-    backgroundTasks.update((value) => {
-      return value.filter((value) => value.status === BackgroundTaskStatus.Running);
-    });
-  }
+				for (const exec of toExec) {
+					await exec();
+				}
 
-  export function executeBackgroundTaskSeries<T>(
-    name: string,
-    retryable: boolean,
-    callbacks: Array<BackgroundTaskCallback<T>>,
-    autoDismiss: boolean = false
-  ): BackgroundTaskClient<T[]> {
-    const client = internalExecuteBackgroundTask<T[]>(
-      name,
-      retryable,
-      async (): Promise<T[]> => {
-        const toExec: Array<() => Promise<void>> = [];
-        const promises: Promise<T>[] = callbacks.map((callback) =>
-          (async () => {
-            const client = executeBackgroundTask<T>(
-              name,
-              retryable,
-              async (client, setStatus) => {
-                setStatus('Waiting...', null);
+				return await Promise.all(promises);
+			},
+			true,
+			true
+		);
 
-                const { promise } = await new Promise<{ promise: Promise<T> }>((resolve) => {
-                  toExec.push(async () => {
-                    const promise = (async () => {
-                      return await callback(client, setStatus);
-                    })();
+		return client;
+	}
 
-                    resolve({ promise });
-                    await promise;
-                  });
-                });
+	export function executeBackgroundTask<T>(
+		name: string,
+		retryable: boolean,
+		callback: BackgroundTaskCallback<T>,
+		autoDismiss: boolean = false
+	) {
+		return internalExecuteBackgroundTask(name, retryable, callback, autoDismiss, false);
+	}
 
-                return await promise;
-              },
-              autoDismiss
-            );
+	function internalExecuteBackgroundTask<T>(
+		name: string,
+		retryable: boolean,
+		callback: BackgroundTaskCallback<T>,
+		autoDismiss: boolean = false,
+		hidden: boolean = false
+	): BackgroundTaskClient<T> {
+		let firstRun: boolean = false;
+		let task: Promise<T> | null = null;
+		let client: BackgroundTaskClient<T>;
 
-            return await client.run();
-          })()
-        );
+		const backgroundTask: BackgroundTask<T> = {
+			name,
+			message: null,
+			progress: null,
+			retryable,
+			status: BackgroundTaskStatus.Ready,
+			hidden,
+			autoDismiss,
+			lastUpdated: Date.now(),
 
-        for (const exec of toExec) {
-          await exec();
-        }
+			get isDismissed() {
+				return get(backgroundTasks).indexOf(backgroundTask) === -1;
+			},
 
-        return await Promise.all(promises);
-      },
-      true,
-      true
-    );
+			get client() {
+				return client;
+			},
+			get run() {
+				const refresh = () => {
+					backgroundTask.lastUpdated = Date.now();
+					backgroundTasks.update((e) => e);
+				};
+				const setStatus: BackgroundTaskSetStatusFunction = (
+					message = backgroundTask.message,
+					progress = backgroundTask.progress
+				) => {
+					backgroundTask.message = message;
+					backgroundTask.progress = progress;
+					refresh();
+				};
 
-    return client;
-  }
+				const run = async (client: BackgroundTaskClient<T>): Promise<T> => {
+					if (backgroundTask.status === BackgroundTaskStatus.Running) {
+						throw new Error('Operation is already running.');
+					}
 
-  export function executeBackgroundTask<T>(
-    name: string,
-    retryable: boolean,
-    callback: BackgroundTaskCallback<T>,
-    autoDismiss: boolean = false
-  ) {
-    return internalExecuteBackgroundTask(name, retryable, callback, autoDismiss, false);
-  }
+					if (firstRun && !backgroundTask.retryable) {
+						throw new Error('Operation cannot be retried.');
+					}
 
-  function internalExecuteBackgroundTask<T>(
-    name: string,
-    retryable: boolean,
-    callback: BackgroundTaskCallback<T>,
-    autoDismiss: boolean = false,
-    hidden: boolean = false
-  ): BackgroundTaskClient<T> {
-    let firstRun: boolean = false;
-    let task: Promise<T> | null = null;
-    let client: BackgroundTaskClient<T>;
+					try {
+						backgroundTask.cancelled = false;
 
-    const backgroundTask: BackgroundTask<T> = {
-      name,
-      message: null,
-      progress: null,
-      retryable,
-      status: BackgroundTaskStatus.Ready,
-      hidden,
-      autoDismiss,
-      lastUpdated: Date.now(),
+						backgroundTask.status = BackgroundTaskStatus.Running;
+						refresh();
+						const result = await callback(client, setStatus);
+						backgroundTask.status = BackgroundTaskStatus.Done;
+						refresh();
 
-      get isDismissed() {
-        return get(backgroundTasks).indexOf(backgroundTask) === -1;
-      },
+						if (backgroundTask.autoDismiss) {
+							backgroundTask.dismiss();
+						}
 
-      get client() {
-        return client;
-      },
-      get run() {
-        const refresh = () => {
-          backgroundTask.lastUpdated = Date.now();
-          backgroundTasks.update((e) => e);
-        };
-        const setStatus: BackgroundTaskSetStatusFunction = (
-          message = backgroundTask.message,
-          progress = backgroundTask.progress
-        ) => {
-          backgroundTask.message = message;
-          backgroundTask.progress = progress;
-          refresh();
-        };
+						return result;
+					} catch (error: any) {
+						backgroundTask.status = BackgroundTaskStatus.Failed;
+						setStatus(error?.message ?? 'An error occured.', null);
+						throw error;
+					}
+				};
 
-        const run = async (client: BackgroundTaskClient<T>): Promise<T> => {
-          if (backgroundTask.status === BackgroundTaskStatus.Running) {
-            throw new Error('Operation is already running.');
-          }
+				if (client.status === BackgroundTaskStatus.Failed && !client.retryable) {
+					return () => {
+						throw new Error('Operation cannot be retried.');
+					};
+				}
 
-          if (firstRun && !backgroundTask.retryable) {
-            throw new Error('Operation cannot be retried.');
-          }
+				return async () => {
+					try {
+						return await (task = run(client));
+					} finally {
+						task = null;
+					}
+				};
+			},
 
-          try {
-            backgroundTask.cancelled = false;
+			cancel: () => (backgroundTask.cancelled = true),
+			dismiss: () => {
+				if (backgroundTask.status == BackgroundTaskStatus.Running) {
+					return;
+				}
 
-            backgroundTask.status = BackgroundTaskStatus.Running;
-            refresh();
-            const result = await callback(client, setStatus);
-            backgroundTask.status = BackgroundTaskStatus.Done;
-            refresh();
+				backgroundTasks.update((value) => {
+					const index = value.indexOf(backgroundTask);
 
-            if (backgroundTask.autoDismiss) {
-              backgroundTask.dismiss();
-            }
+					if (index >= 0) {
+						value.splice(index, 1);
+					}
 
-            return result;
-          } catch (error: any) {
-            backgroundTask.status = BackgroundTaskStatus.Failed;
-            setStatus(error?.message ?? 'An error occured.', null);
-            throw error;
-          }
-        };
+					return value;
+				});
+			},
 
-        if (client.status === BackgroundTaskStatus.Failed && !client.retryable) {
-          return () => {
-            throw new Error('Operation cannot be retried.');
-          };
-        }
+			cancelled: false
+		};
 
-        return async () => {
-          try {
-            return await (task = run(client));
-          } finally {
-            task = null;
-          }
-        };
-      },
+		backgroundTasks.update((value) => {
+			value.unshift(backgroundTask);
 
-      cancel: () => (backgroundTask.cancelled = true),
-      dismiss: () => {
-        if (backgroundTask.status == BackgroundTaskStatus.Running) {
-          return;
-        }
+			return value;
+		});
 
-        backgroundTasks.update((value) => {
-          const index = value.indexOf(backgroundTask);
+		client = {
+			get cancelled() {
+				return backgroundTask.cancelled;
+			},
+			get run() {
+				return backgroundTask.run;
+			},
+			get cancel() {
+				return backgroundTask.cancel;
+			},
+			get name() {
+				return backgroundTask.name;
+			},
+			get retryable() {
+				return backgroundTask.retryable;
+			},
+			get status() {
+				return backgroundTask.status;
+			},
+			get task() {
+				return task;
+			},
+			get dismiss() {
+				return backgroundTask.dismiss;
+			}
+		};
 
-          if (index >= 0) {
-            value.splice(index, 1);
-          }
+		return client;
+	}
 
-          return value;
-        });
-      },
+	authentication.subscribe(() => {
+		for (const task of get(backgroundTasks)) {
+			task.cancel();
+		}
 
-      cancelled: false
-    };
-
-    backgroundTasks.update((value) => {
-      value.unshift(backgroundTask);
-
-      return value;
-    });
-
-    client = {
-      get cancelled() {
-        return backgroundTask.cancelled;
-      },
-      get run() {
-        return backgroundTask.run;
-      },
-      get cancel() {
-        return backgroundTask.cancel;
-      },
-      get name() {
-        return backgroundTask.name;
-      },
-      get retryable() {
-        return backgroundTask.retryable;
-      },
-      get status() {
-        return backgroundTask.status;
-      },
-      get task() {
-        return task;
-      },
-      get dismiss() {
-        return backgroundTask.dismiss;
-      }
-    };
-
-    return client;
-  }
-
-  authentication.subscribe(() => {
-    for (const task of get(backgroundTasks)) {
-      task.cancel();
-    }
-
-    backgroundTasks.set([]);
-  });
+		backgroundTasks.set([]);
+	});
 </script>
 
 <script lang="ts">
-  import { RefreshCwIcon, XIcon, PlayIcon } from 'svelte-feather-icons';
-  import { onDestroy, onMount } from 'svelte';
-  import { LoadingBar } from '@rizzzi/svelte-commons';
-  import { authentication } from './client/client';
+	import { RefreshCwIcon, XIcon, PlayIcon } from 'svelte-feather-icons';
+	import { onDestroy, onMount } from 'svelte';
+	import { LoadingBar } from '@rizzzi/svelte-commons';
+	import { authentication } from './client/client';
 
-  export let maxCount: number = -1;
+	export let maxCount: number = -1;
 
-  export let filter: (list: BackgroundTask<any>[]) => BackgroundTask<any>[] = (value) => value;
+	export let filter: (list: BackgroundTask<any>[]) => BackgroundTask<any>[] = (value) => value;
 
-  let cached: BackgroundTask<any>[] = [];
+	let cached: BackgroundTask<any>[] = [];
 
-  let unsubscriber: () => void;
+	let unsubscriber: () => void;
 
-  onMount(() => {
-    let preCached: BackgroundTask<any>[] | null = [];
-    let running: boolean = false;
+	onMount(() => {
+		let preCached: BackgroundTask<any>[] | null = [];
+		let running: boolean = false;
 
-    let lastTime: number = 0;
+		let lastTime: number = 0;
 
-    unsubscriber = backgroundTasks.subscribe((value) => {
-      preCached = filter(value);
+		unsubscriber = backgroundTasks.subscribe((value) => {
+			preCached = filter(value);
 
-      if (!running) {
-        running = true;
+			if (!running) {
+				running = true;
 
-        const update = () => {
-          if (preCached == null) {
-            running = false;
-            return;
-          }
+				const update = () => {
+					if (preCached == null) {
+						running = false;
+						return;
+					}
 
-          cached = preCached.slice(0, maxCount < 0 ? preCached.length : maxCount);
-          preCached = null;
-          lastTime = Date.now();
+					cached = preCached.slice(0, maxCount < 0 ? preCached.length : maxCount);
+					preCached = null;
+					lastTime = Date.now();
 
-          requestAnimationFrame(update);
-        };
+					requestAnimationFrame(update);
+				};
 
-        requestAnimationFrame(update);
-      }
-    });
-  });
+				requestAnimationFrame(update);
+			}
+		});
+	});
 
-  onDestroy(() => {
-    unsubscriber();
-  });
+	onDestroy(() => {
+		unsubscriber();
+	});
 </script>
 
 <div class="background-tasks">
-  {#if cached.length == 0}
-    <p>No pending operations.</p>
-  {:else}
-    {#each cached.toSorted((a, b) => a.status - b.status) as { name, progress, run, retryable, cancelled, cancel, message, status, dismiss }, index}
-      {#if index != 0}
-        <div class="divider"></div>
-      {/if}
+	{#if cached.length == 0}
+		<p>No pending operations.</p>
+	{:else}
+		{#each cached.toSorted((a, b) => a.status - b.status) as { name, progress, run, retryable, cancelled, cancel, message, status, dismiss }, index}
+			{#if index != 0}
+				<div class="divider"></div>
+			{/if}
 
-      <div class="background-task">
-        <div class="name">
-          <p><b>{name}</b></p>
+			<div class="background-task">
+				<div class="name">
+					<p><b>{name}</b></p>
 
-          {#if status == BackgroundTaskStatus.Running}
-            {#if !cancelled}
-              <button on:click={() => cancel()} title="Cancel">
-                <XIcon size="16" />
-              </button>
-            {/if}
-          {:else if status == BackgroundTaskStatus.Done}
-            <button on:click={() => dismiss()} title="Dismiss">
-              <XIcon size="16" />
-            </button>
-          {:else if status == BackgroundTaskStatus.Failed}
-            {#if retryable}
-              <button on:click={() => run()} title="Run">
-                <RefreshCwIcon size="16" />
-              </button>
-            {/if}
-            <button on:click={() => dismiss()} title="Dismiss">
-              <XIcon size="16" />
-            </button>
-          {:else if status == BackgroundTaskStatus.Ready}
-            <button on:click={() => run()} title="Run">
-              <PlayIcon size="16" />
-            </button>
-            <button on:click={() => dismiss()} title="Dismiss">
-              <XIcon size="16" />
-            </button>
-          {/if}
-        </div>
-        {#if status == BackgroundTaskStatus.Running}
-          <div class="progress">
-            <LoadingBar bind:progress />
-          </div>
-        {/if}
-        <div class="message">
-          {#if status == BackgroundTaskStatus.Failed}
-            <p>Failed: {message}</p>
-          {:else}
-            {#if message != null}
-              <p>{message}</p>
-            {/if}
-            {#if progress != null}
-              <p>{Math.round(progress * 1000) / 10}%</p>
-            {/if}
-          {/if}
-        </div>
-      </div>
-    {/each}
-  {/if}
+					{#if status == BackgroundTaskStatus.Running}
+						{#if !cancelled}
+							<button on:click={() => cancel()} title="Cancel">
+								<XIcon size="16" />
+							</button>
+						{/if}
+					{:else if status == BackgroundTaskStatus.Done}
+						<button on:click={() => dismiss()} title="Dismiss">
+							<XIcon size="16" />
+						</button>
+					{:else if status == BackgroundTaskStatus.Failed}
+						{#if retryable}
+							<button on:click={() => run()} title="Run">
+								<RefreshCwIcon size="16" />
+							</button>
+						{/if}
+						<button on:click={() => dismiss()} title="Dismiss">
+							<XIcon size="16" />
+						</button>
+					{:else if status == BackgroundTaskStatus.Ready}
+						<button on:click={() => run()} title="Run">
+							<PlayIcon size="16" />
+						</button>
+						<button on:click={() => dismiss()} title="Dismiss">
+							<XIcon size="16" />
+						</button>
+					{/if}
+				</div>
+				{#if status == BackgroundTaskStatus.Running}
+					<div class="progress">
+						<LoadingBar bind:progress />
+					</div>
+				{/if}
+				<div class="message">
+					{#if status == BackgroundTaskStatus.Failed}
+						<p>Failed: {message}</p>
+					{:else}
+						{#if message != null}
+							<p>{message}</p>
+						{/if}
+						{#if progress != null}
+							<p>{Math.round(progress * 1000) / 10}%</p>
+						{/if}
+					{/if}
+				</div>
+			</div>
+		{/each}
+	{/if}
 </div>
 
 <style lang="scss">
-  div.background-tasks {
-    display: flex;
-    flex-direction: column;
+	div.background-tasks {
+		display: flex;
+		flex-direction: column;
 
-    // min-height: 64px;
-    overflow-y: auto;
+		// min-height: 64px;
+		overflow-y: auto;
 
-    padding: 8px 0px 8px 0px;
+		padding: 8px 0px 8px 0px;
 
-    gap: 8px;
+		gap: 8px;
 
-    > p {
-      text-align: center;
-    }
+		> p {
+			text-align: center;
+		}
 
-    > div.divider {
-      min-height: 1px;
-      max-height: 1px;
+		> div.divider {
+			min-height: 1px;
+			max-height: 1px;
 
-      background-color: var(--onPrimary);
-    }
+			background-color: var(--onPrimary);
+		}
 
-    > div.background-task {
-      font-size: 10px;
-      display: flex;
-      flex-direction: column;
+		> div.background-task {
+			font-size: 10px;
+			display: flex;
+			flex-direction: column;
 
-      gap: 8px;
+			gap: 8px;
 
-      > div.name {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
+			> div.name {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
 
-        gap: 9px;
+				gap: 9px;
 
-        > p {
-          margin: 0px;
+				> p {
+					margin: 0px;
 
-          font-size: 12px;
-        }
+					font-size: 12px;
+				}
 
-        > p:nth-child(1) {
-          flex-grow: 1;
-          min-width: 0px;
-        }
+				> p:nth-child(1) {
+					flex-grow: 1;
+					min-width: 0px;
+				}
 
-        > button {
-          background-color: unset;
-          border: unset;
-          color: var(--onPrimary);
+				> button {
+					background-color: unset;
+					border: unset;
+					color: var(--onPrimary);
 
-          cursor: pointer;
+					cursor: pointer;
 
-          padding: 0px;
+					padding: 0px;
 
-          width: 16px;
-          height: 16px;
-        }
-      }
+					width: 16px;
+					height: 16px;
+				}
+			}
 
-      > div.message {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
+			> div.message {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
 
-        > p {
-          margin: 0px;
-        }
+				> p {
+					margin: 0px;
+				}
 
-        > p:nth-child(1) {
-          flex-grow: 1;
-          min-width: 0px;
-        }
+				> p:nth-child(1) {
+					flex-grow: 1;
+					min-width: 0px;
+				}
 
-        > p:nth-child(2) {
-          max-width: 100%;
-        }
-      }
-    }
-  }
+				> p:nth-child(2) {
+					max-width: 100%;
+				}
+			}
+		}
+	}
 </style>

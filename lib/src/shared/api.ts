@@ -1,25 +1,16 @@
-export enum AuthenticationType {
-  Password,
-  Token,
-}
+export type AuthenticationType = "password" | "token";
 
-export type AuthenticationPayload =
-  | [type: AuthenticationType.Password, password: string];
+export type AuthenticationPayload = [type: "password", password: string];
 
-export enum ScanFolderSortType {
-  FileName,
-  DateModified,
-  ContentSize,
-}
+export type ScanFolderSortType = "fileName" | "dateModified" | "contentSize";
 
-export enum FileThumbnailerStatusType {
-  InQueue,
-  InProgress,
-  Available,
-  Failed,
-  NotAvailable,
-  NotRunning,
-}
+export type FileThumbnailerStatusType =
+  | "inQueue"
+  | "inProgress"
+  | "available"
+  | "failed"
+  | "notAvailable"
+  | "notRunning";
 
 export interface Authentication {
   userId: number;
@@ -33,25 +24,17 @@ export interface PartialAuthenticationToken {
   sessionId: number;
 }
 
-export enum UserResolveType {
-  UserId,
-  Username,
-}
-
 export type UserResolvePayload =
-  | [type: UserResolveType.UserId, id: number]
-  | [type: UserResolveType.Username, username: string];
+  | [type: "userId", id: number]
+  | [type: "username", username: string];
 
-export enum ApiErrorType {
-  Unknown,
-  InvalidRequest,
-
-  Unauthorized,
-  Forbidden,
-  Conflict,
-
-  NotFound,
-}
+export type ApiErrorType =
+  | "Unknown"
+  | "InvalidRequest"
+  | "Unauthorized"
+  | "Forbidden"
+  | "Conflict"
+  | "NotFound";
 
 export class ApiError extends Error {
   public static throw(
@@ -59,19 +42,15 @@ export class ApiError extends Error {
     message?: string,
     { cause, stack }: ApiErrorOptions = {}
   ): never {
-    throw new ApiError(
-      status,
-      cause?.message ?? message ?? `${ApiErrorType[status]}`,
-      {
-        stack,
-        cause,
-      }
-    );
+    throw new ApiError(status, cause?.message ?? message ?? `${status}`, {
+      stack,
+      cause,
+    });
   }
 
   public static throwFrom(
     error: Error,
-    status: ApiErrorType = ApiErrorType.Unknown,
+    status: ApiErrorType = "Unknown",
     message?: string
   ): never {
     return ApiError.throw(status, message, {
@@ -86,9 +65,7 @@ export class ApiError extends Error {
     { stack, cause }: ApiErrorOptions = {}
   ) {
     super(
-      `${message} (code ${status}${
-        message == ApiErrorType[status] ? "" : ` ${ApiErrorType[status]}`
-      })`,
+      `${message} (code ${status}${message == status ? "" : ` ${status}`})`,
       { cause }
     );
 

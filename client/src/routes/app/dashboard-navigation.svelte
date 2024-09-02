@@ -3,11 +3,11 @@
 
   import { page } from '$app/stores';
   import { getConnection } from '$lib/client/client';
-  import { UserRole } from '@rizzzi/enderdrive-lib/shared';
   import { viewMode, ViewMode } from '@rizzzi/svelte-commons';
   import { getContext, onMount } from 'svelte';
-  import { type DashboardContext, DashboardContextName } from './dashboard.svelte';
+  import { type DashboardContext, DashboardContextName } from './dashboard';
   import type { UserResource } from '@rizzzi/enderdrive-lib/server';
+	import { serializeUserRole } from '@rizzzi/enderdrive-lib/shared';
 
   const { isWidthLimited } = getContext<DashboardContext>(DashboardContextName);
 
@@ -110,7 +110,7 @@
 
     {#if $viewMode & ViewMode.Desktop}
       {#await (userPromise ??= whoAmI()) then user}
-        {#if user != null && user.role >= UserRole.SiteAdmin}
+        {#if user != null && user.role >= serializeUserRole('SiteAdmin')}
           {@render navigationButton(
             'Admin',
             (selected) => `fa-${selected ? 'solid' : 'regular'} fa-user-shield`,

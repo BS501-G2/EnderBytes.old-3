@@ -1,4 +1,4 @@
-import { LocaleKey, type LocaleValues } from '$lib/locale.svelte';
+import { LocaleKey, type LocaleValues } from "$lib/locale";
 
 export const locale: () => LocaleValues = () => ({
   [LocaleKey.LanguageName]: () => 'English',

@@ -3,8 +3,7 @@
     Button,
     LoadingSpinner,
     type ButtonCallback,
-    Dialog,
-    DialogClass
+    Dialog
   } from '@rizzzi/svelte-commons';
   import { writable, type Writable } from 'svelte/store';
   import { testFunctions } from './test-functions';
@@ -74,7 +73,7 @@
     </div>
 
     {#if $error != null}
-      <Dialog onDismiss={dismissError} dialogClass={DialogClass.Error}>
+      <Dialog onDismiss={dismissError} dialogClass={'error'}>
         {#snippet head()}
           <h2 class="error-head">{$error!.name}</h2>
         {/snippet}

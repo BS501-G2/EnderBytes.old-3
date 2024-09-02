@@ -4,7 +4,7 @@
   import { ShareIcon } from 'svelte-feather-icons';
   import { StarIcon } from 'svelte-feather-icons';
   import { getContext, onMount } from 'svelte';
-  import { type DashboardContext, DashboardContextName } from '../dashboard.svelte';
+  import { type DashboardContext, DashboardContextName } from '../dashboard';
 
   const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
 

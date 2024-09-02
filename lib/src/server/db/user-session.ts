@@ -10,10 +10,7 @@ import {
 } from "./user-authentication.js";
 import { UserManager } from "./user.js";
 
-export enum UserSessionType {
-  Browser,
-  SyncApp,
-}
+export type UserSessionType = "browser" | "sync-app";
 
 export interface UserSessionResource
   extends Resource<UserSessionResource, UserSessionManager> {

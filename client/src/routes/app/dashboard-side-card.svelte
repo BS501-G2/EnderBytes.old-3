@@ -4,10 +4,10 @@
     DashboardContextName,
     type DashboardContext,
     type DashboardContextMenuEntry
-  } from './dashboard.svelte';
+  } from './dashboard';
   import { getConnection } from '$lib/client/client';
   import User from '$lib/client/user.svelte';
-  import { Button, ButtonClass, ViewMode, viewMode } from '@rizzzi/svelte-commons';
+  import { Button, ViewMode, viewMode } from '@rizzzi/svelte-commons';
 
   const { isWidthLimited, openSettings, openLogoutConfirm } =
     getContext<DashboardContext>(DashboardContextName);
@@ -23,7 +23,7 @@
 
 {#snippet action(name: string, icon: string, onClick: ActionCallback, actionClass?: 'error')}
   <div class="action-button-outer">
-    <Button {onClick} hint={name} buttonClass={ButtonClass.Transparent} outline={false}>
+    <Button {onClick} hint={name} buttonClass='transparent' outline={false}>
       <div class="action-button {actionClass}">
         <i class={icon}></i>
       </div>

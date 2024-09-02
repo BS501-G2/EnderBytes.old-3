@@ -17,12 +17,6 @@ export const baseConnectionFunctions: ConnectionFunctions = {
   echo: async <T>(data: T) => data,
 };
 
-export enum MessageType {
-  Request,
-  ResponseOk,
-  ResponseError,
-}
-
 export type Message<
   FL extends ConnectionFunctions,
   FR extends ConnectionFunctions
@@ -31,20 +25,15 @@ export type Message<
 export type RequestMessage<
   F extends ConnectionFunctions,
   K extends keyof F = keyof F
-> = [
-  type: MessageType.Request,
-  id: number,
-  name: K,
-  parameters: Parameters<F[K]>
-];
+> = [type: "request", id: number, name: K, parameters: Parameters<F[K]>];
 
 export type ResponseOkMessage<
   F extends ConnectionFunctions,
   K extends keyof F = keyof F
-> = [type: MessageType.ResponseOk, id: number, data: ReturnType<F[K]>];
+> = [type: "response-ok", id: number, data: ReturnType<F[K]>];
 
 export type ResponseErrorMessage = [
-  type: MessageType.ResponseError,
+  type: "response-error",
   id: number,
   name: string,
   message: string,
@@ -88,7 +77,7 @@ export function wrapSocket<
   const receive = (...message: Message<FR, FL>) => {
     onData?.("receive", message);
 
-    if (message[0] === MessageType.ResponseOk) {
+    if (message[0] === "response-ok") {
       const [, id, data] = message;
 
       if (!(id in pending)) {
@@ -101,7 +90,7 @@ export function wrapSocket<
 
       resolve(data);
       delete pending[id];
-    } else if (message[0] === MessageType.ResponseError) {
+    } else if (message[0] === "response-error") {
       const [, id, name, errorMessage, stack] = message;
 
       if (!(id in pending)) {
@@ -113,13 +102,13 @@ export function wrapSocket<
       } = pending;
       reject(Object.assign(new Error(errorMessage), { name, stack }));
       delete pending[id];
-    } else if (message[0] === MessageType.Request) {
+    } else if (message[0] === "request") {
       const [, id, name, args] = message;
       const { [name]: func } = map;
 
       if (!(name in map)) {
         send(
-          MessageType.ResponseError,
+          "response-error",
           id,
           "InvalidFunctionName",
           `Function does not exist: ${name as string}`
@@ -135,11 +124,11 @@ export function wrapSocket<
         }
       })()
         .then((data: Awaited<ReturnType<typeof func>>) =>
-          send(MessageType.ResponseOk, id, data)
+          send("response-ok", id, data)
         )
         .catch((error: unknown) => {
           const sendError = (name: string, message: string, stack?: string) =>
-            send(MessageType.ResponseError, id, name, message, stack);
+            send("response-error", id, name, message, stack);
 
           if (error instanceof Error) {
             sendError(error.name, error.message, error.stack);
@@ -216,7 +205,7 @@ export function wrapSocket<
       } while (id in pending);
 
       pending[id] = { resolve, reject };
-      send(MessageType.Request, id, name, args);
+      send("request", id, name, args);
     });
 
   const obj: {

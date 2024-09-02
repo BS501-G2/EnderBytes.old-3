@@ -42,7 +42,7 @@ export class FileContentManager extends ResourceManager<
   }
 
   public async getMain(file: FileResource) {
-    if (file.type === FileType.Folder) {
+    if (file.type === 'folder') {
       throw new Error("File is a folder.");
     }
 

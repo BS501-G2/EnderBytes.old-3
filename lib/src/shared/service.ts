@@ -47,9 +47,9 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
 
   public async stop(): Promise<void> {
     if (this.#instance) {
-      this.log(LogLevel.Info, "Stopping...");
+      this.log("info", "Stopping...");
       await this.#instance.onStop?.();
-      this.log(LogLevel.Info, "Service has stopped.");
+      this.log("info", "Service has stopped.");
     }
   }
 
@@ -66,7 +66,7 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
 
         data: null,
       });
-      this.log(LogLevel.Debug, "Runtime data has been set.");
+      this.log("debug", "Runtime data has been set.");
 
       const setInstance: ServiceSetDataCallback<T> = (data: T) => {
         runtime.data = [data];
@@ -78,14 +78,14 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
         runtime.onStop = onStop;
         isReady = true;
         resolve();
-        this.log(LogLevel.Debug, "Service has started.");
+        this.log("debug", "Service has started.");
       };
 
       (async () => await this.run(setInstance, onReady, ...args))()
         .then(() => {
           if (!isReady) {
             this.log(
-              LogLevel.Debug,
+              "debug",
               "Service has stopped without sending ready signal."
             );
             resolve();
@@ -94,15 +94,16 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
         .catch((error: unknown) => {
           if (!isReady) {
             this.log(
-              LogLevel.Debug,
-              "Service has stopped initializing with an error: " + (error instanceof Error ? error.stack : `${error as string}`)
+              "debug",
+              "Service has stopped initializing with an error: " +
+                (error instanceof Error ? error.stack : `${error as string}`)
             );
             reject(error);
           }
         })
         .finally(() => {
           this.#instance = null;
-          this.log(LogLevel.Debug, "Service runtime data has been cleaned up.");
+          this.log("debug", "Service runtime data has been cleaned up.");
         });
     });
   }
@@ -119,7 +120,7 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
       const stack: string[] = [name, ...downstream];
 
       console.log(
-        `[${timestamp}] [${stack.join(" > ")}] [${LogLevel[level]}] ${message}`
+        `[${timestamp}] [${stack.join(" > ")}] [${level}] ${message}`
       );
     }
   }
@@ -129,10 +130,4 @@ export abstract class Service<T = unknown, A extends unknown[] = never[]> {
   }
 }
 
-export enum LogLevel {
-  Critical = "Critical",
-  Error = "Error",
-  Warning = "Warning",
-  Info = "Info",
-  Debug = "Debug",
-}
+export type LogLevel = "critical" | "error" | "warning" | "info" | "debug";

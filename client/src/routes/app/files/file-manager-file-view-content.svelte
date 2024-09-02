@@ -7,9 +7,7 @@
   } from './file-manager-file-view.svelte';
   import {
     Button,
-    ButtonClass,
     Overlay,
-    OverlayPositionType,
     viewMode,
     ViewMode
   } from '@rizzzi/svelte-commons';
@@ -34,7 +32,7 @@
       {@render view()}
     </div>
   {/snippet}
-  <Button buttonClass={ButtonClass.Transparent} outline={false} {onClick} {hint} {container}>
+  <Button buttonClass='transparent' outline={false} {onClick} {hint} {container}>
     <div class="button">
       <Icon {...icon} />
 
@@ -80,7 +78,7 @@
           $showMobileActions = null;
         }}
         position={[
-          OverlayPositionType.Offset,
+          'offset',
           -(window.innerWidth - (element.offsetLeft + element.offsetWidth)),
           element.offsetTop + element.offsetHeight
         ]}

@@ -1,462 +1,458 @@
-<script lang="ts" context="module">
-  import type {
-    FileAccessResource,
-    FileLogResource,
-    FileResource,
-    FileSnapshotResource,
-    UserResource
-  } from '@rizzzi/enderdrive-lib/server';
-  import {
-    FileType,
-    ScanFolderSortType,
-    type FileAccessLevel
-  } from '@rizzzi/enderdrive-lib/shared';
-  import { setContext } from 'svelte';
-  import { writable, type Readable, type Writable } from 'svelte/store';
+<script lang="ts" module>
+	import { FileManagerViewMode } from './file-manager-folder-list';
 
-  export type SourceEvent = MouseEvent | TouchEvent;
+	import type {
+		FileAccessResource,
+		FileResource,
+		FileSnapshotResource,
+		UserResource
+	} from '@rizzzi/enderdrive-lib/server';
+	import { type FileAccessLevel, type ScanFolderSortType } from '@rizzzi/enderdrive-lib/shared';
+	import { setContext } from 'svelte';
+	import { writable, type Readable, type Writable } from 'svelte/store';
 
-  export type FileManagerOnFileIdCallback = (event: SourceEvent, fileId: number | null) => void;
-  export type FileManagerOnPageCallback = (
-    event: SourceEvent,
-    page: 'files' | 'shared' | 'trashed' | 'starred'
-  ) => void;
-  export type FileManagerOnNewCallback = (event: SourceEvent, presetFiles?: File[]) => void;
-  export type FileManagerOnViewCallback = (event: SourceEvent) => void;
-  export type FileManagerOnClipboardCallback = (
-    event: SourceEvent,
-    files: FileResource[] | null,
-    cut: boolean
-  ) => void;
+	export type SourceEvent = MouseEvent | TouchEvent;
 
-  export type FileManagerProps = {
-    refresh: Writable<() => void>;
+	export type FileManagerOnFileIdCallback = (event: SourceEvent, fileId: number | null) => void;
+	export type FileManagerOnPageCallback = (
+		event: SourceEvent,
+		page: 'files' | 'shared' | 'trashed' | 'starred'
+	) => void;
+	export type FileManagerOnNewCallback = (event: SourceEvent, presetFiles?: File[]) => void;
+	export type FileManagerOnViewCallback = (event: SourceEvent) => void;
+	export type FileManagerOnClipboardCallback = (
+		event: SourceEvent,
+		files: FileResource[] | null,
+		cut: boolean
+	) => void;
 
-    onFileId: FileManagerOnFileIdCallback;
-    onPage: FileManagerOnPageCallback;
+	export type FileManagerProps = {
+		refresh: Writable<() => void>;
 
-    sort: Readable<ScanFolderSortType>;
-  } & (
-    | {
-        page: 'files';
+		onFileId: FileManagerOnFileIdCallback;
+		onPage: FileManagerOnPageCallback;
 
-        onNew: FileManagerOnNewCallback;
-        onClipboard: FileManagerOnClipboardCallback;
+		sort: Readable<ScanFolderSortType>;
+	} & (
+		| {
+				page: 'files';
 
-        fileId: Readable<number | null>;
-        clipboard: Readable<[files: FileResource[], cut: boolean] | null>;
-      }
-    | {
-        page: 'shared' | 'starred' | 'trash';
-      }
-  );
+				onNew: FileManagerOnNewCallback;
+				onClipboard: FileManagerOnClipboardCallback;
 
-  export type FileManagerResolved =
-    | {
-        status: 'loading';
-      }
-    | {
-        status: 'error';
-        error: Error;
-      }
-    | ({
-        status: 'success';
-        me: UserResource;
-      } & (
-        | ({
-            page: 'files';
+				fileId: Readable<number | null>;
+				clipboard: Readable<[files: FileResource[], cut: boolean] | null>;
+		  }
+		| {
+				page: 'shared' | 'starred' | 'trash';
+		  }
+	);
 
-            file: FileResource;
-            filePathChain: FileResource[];
-            myAccess: {
-              level: FileAccessLevel;
-              access: FileAccessResource | null;
-            };
-            accesses: FileAccessResource[];
-            isStarred: boolean;
-            // logs: FileLogResource[];
-            selection: Writable<FileResource[]>;
-          } & (
-            | {
-                type: 'file';
+	export type FileManagerResolved =
+		| {
+				status: 'loading';
+		  }
+		| {
+				status: 'error';
+				error: Error;
+		  }
+		| ({
+				status: 'success';
+				me: UserResource;
+		  } & (
+				| ({
+						page: 'files';
 
-                viruses: string[];
-                snapshots: FileSnapshotResource[];
-              }
-            | {
-                type: 'folder';
+						file: FileResource;
+						filePathChain: FileResource[];
+						myAccess: {
+							level: FileAccessLevel;
+							access: FileAccessResource | null;
+						};
+						accesses: FileAccessResource[];
+						isStarred: boolean;
+						// logs: FileLogResource[];
+						selection: Writable<FileResource[]>;
+				  } & (
+						| {
+								type: 'file';
 
-                files: FileResource[];
-              }
-          ))
-        | {
-            page: 'shared' | 'starred' | 'trash';
+								viruses: string[];
+								snapshots: FileSnapshotResource[];
+						  }
+						| {
+								type: 'folder';
 
-            files: FileResource[];
-            selection: Writable<FileResource[]>;
-          }
-      ));
+								files: FileResource[];
+						  }
+				  ))
+				| {
+						page: 'shared' | 'starred' | 'trash';
 
-  export interface FileManagerContext {
-    refreshKey: Writable<number>;
+						files: FileResource[];
+						selection: Writable<FileResource[]>;
+				  }
+		  ));
 
-    resolved: Writable<FileManagerResolved>;
+	export interface FileManagerContext {
+		refreshKey: Writable<number>;
 
-    viewDialog: Writable<[element: HTMLElement] | null>;
-    accessDialogs: Writable<[file: FileResource] | null>;
+		resolved: Writable<FileManagerResolved>;
 
-    listViewMode: Writable<FileManagerViewMode>;
-    showSideBar: Writable<boolean>;
-    addressBarMenu: Writable<[element: HTMLElement, file: FileResource] | null>;
-  }
+		viewDialog: Writable<[element: HTMLElement] | null>;
+		accessDialogs: Writable<[file: FileResource] | null>;
 
-  export type FileManagerActionGenerator = () => FileManagerAction | null;
+		listViewMode: Writable<FileManagerViewMode>;
+		showSideBar: Writable<boolean>;
+		addressBarMenu: Writable<[element: HTMLElement, file: FileResource] | null>;
+	}
 
-  export const FileManagerPropsName = 'fm-props';
-  export const FileManagerContextName = 'fm-context';
+	export type FileManagerActionGenerator = () => FileManagerAction | null;
+
+	export const FileManagerPropsName = 'fm-props';
+	export const FileManagerContextName = 'fm-context';
 </script>
 
 <script lang="ts">
-  import {
-    Awaiter,
-    Banner,
-    BannerClass,
-    LoadingSpinner,
-    Title,
-    ViewMode,
-    viewMode
-  } from '@rizzzi/svelte-commons';
+	import {
+		Awaiter,
+		Banner,
+		LoadingSpinner,
+		Title,
+		ViewMode,
+		viewMode
+	} from '@rizzzi/svelte-commons';
 
-  import { getConnection } from '$lib/client/client';
-  import { persisted } from 'svelte-persisted-store';
-  import FileManagerActionBar, { type FileManagerAction } from './file-manager-action-bar.svelte';
-  import FileManagerFolderList, { FileManagerViewMode } from './file-manager-folder-list.svelte';
-  import FileManagerSideBar from './file-manager-side-bar.svelte';
-  import FileManagerBottomBar from './file-manager-bottom-bar.svelte';
-  import FileManagerFileView from './file-manager-file-view.svelte';
-  import FileManagerSeparator from './file-manager-separator.svelte';
-  import FileManagerAddressBar from './file-manager-address-bar.svelte';
-  import FileManagerView from './file-manager-view.svelte';
-  import FileManagerDeleteConfirm from './file-manager-delete-confirm.svelte';
-  import FileManagerAccessDialog from './file-manager-access-dialog.svelte';
-  import FileManagerDetailsDialog from './file-manager-details-dialog.svelte';
-  import FileManagerAddressBarMenu from './file-manager-address-bar-menu.svelte';
+	import { getConnection } from '$lib/client/client';
+	import { persisted } from 'svelte-persisted-store';
+	import FileManagerActionBar, { type FileManagerAction } from './file-manager-action-bar.svelte';
+	import FileManagerFolderList from './file-manager-folder-list.svelte';
+	import FileManagerSideBar from './file-manager-side-bar.svelte';
+	import FileManagerBottomBar from './file-manager-bottom-bar.svelte';
+	import FileManagerFileView from './file-manager-file-view.svelte';
+	import FileManagerSeparator from './file-manager-separator.svelte';
+	import FileManagerAddressBar from './file-manager-address-bar.svelte';
+	import FileManagerView from './file-manager-view.svelte';
+	import FileManagerDeleteConfirm from './file-manager-delete-confirm.svelte';
+	import FileManagerAccessDialog from './file-manager-access-dialog.svelte';
+	import FileManagerDetailsDialog from './file-manager-details-dialog.svelte';
+	import FileManagerAddressBarMenu from './file-manager-address-bar-menu.svelte';
 
-  const { ...props }: FileManagerProps = $props();
-  const { refresh } = props;
+	const { ...props }: FileManagerProps = $props();
+	const { refresh } = props;
 
-  const {
-    serverFunctions: {
-      whoAmI,
-      getFile,
-      getFilePathChain,
-      getMyAccess,
-      listFileAccess,
-      isFileStarred,
-      listFileLogs,
-      listFileSnapshots,
-      listFileViruses,
-      listSharedFiles,
-      listStarredFiles,
-      listTrashedFiles,
-      scanFolder
-    }
-  } = getConnection();
+	const {
+		serverFunctions: {
+			whoAmI,
+			getFile,
+			getFilePathChain,
+			getMyAccess,
+			listFileAccess,
+			isFileStarred,
+			listFileLogs,
+			listFileSnapshots,
+			listFileViruses,
+			listSharedFiles,
+			listStarredFiles,
+			listTrashedFiles,
+			scanFolder
+		}
+	} = getConnection();
 
-  setContext<FileManagerProps>(FileManagerPropsName, props);
-  const { refreshKey, resolved, showSideBar, viewDialog, accessDialogs, addressBarMenu } =
-    setContext<FileManagerContext>(FileManagerContextName, {
-      refreshKey: writable(0),
-      resolved: writable({ status: 'loading' }),
+	setContext<FileManagerProps>(FileManagerPropsName, props);
+	const { refreshKey, resolved, showSideBar, viewDialog, accessDialogs, addressBarMenu } =
+		setContext<FileManagerContext>(FileManagerContextName, {
+			refreshKey: writable(0),
+			resolved: writable({ status: 'loading' }),
 
-      viewDialog: writable(null),
-      accessDialogs: writable(null),
+			viewDialog: writable(null),
+			accessDialogs: writable(null),
 
-      listViewMode: persisted('fm-list-mode', FileManagerViewMode.Grid),
-      showSideBar: persisted('side-bar', false),
-      addressBarMenu: writable(null)
-    });
+			listViewMode: persisted('fm-list-mode', FileManagerViewMode.Grid),
+			showSideBar: persisted('side-bar', false),
+			addressBarMenu: writable(null)
+		});
 
-  refresh.set(() => refreshKey.update((value) => value + 1));
+	refresh.set(() => refreshKey.update((value) => value + 1));
 
-  const fileId = props.page === 'files' ? props.fileId : writable(null);
+	const fileId = props.page === 'files' ? props.fileId : writable(null);
 
-  fileId.subscribe(() => $refresh());
+	fileId.subscribe(() => $refresh());
 
-  async function load(): Promise<void> {
-    $resolved = { status: 'loading' };
+	async function load(): Promise<void> {
+		$resolved = { status: 'loading' };
 
-    try {
-      // await new Promise<void>((resolve) => setTimeout(resolve, 1000));
-      // throw new Error('Simulated Exception');
+		try {
+			// await new Promise<void>((resolve) => setTimeout(resolve, 1000));
+			// throw new Error('Simulated Exception');
 
-      const me = (await whoAmI())!;
+			const me = (await whoAmI())!;
 
-      if (props.page === 'files') {
-        const file = await getFile($fileId);
-        const [filePathChain, myAccess, accesses, isStarred /* logs */] = await Promise.all([
-          getFilePathChain(file.id),
-          getMyAccess(file.id),
-          listFileAccess(file.id),
-          isFileStarred(file.id)
-          // listFileLogs(file.id)
-        ]);
-        const selection = writable<FileResource[]>([]);
+			if (props.page === 'files') {
+				const file = await getFile($fileId);
+				const [filePathChain, myAccess, accesses, isStarred /* logs */] = await Promise.all([
+					getFilePathChain(file.id),
+					getMyAccess(file.id),
+					listFileAccess(file.id),
+					isFileStarred(file.id)
+					// listFileLogs(file.id)
+				]);
+				const selection = writable<FileResource[]>([]);
 
-        if (file.type === FileType.File) {
-          const [viruses, snapshots] = await Promise.all([
-            listFileViruses(file.id),
-            listFileSnapshots(file.id)
-          ]);
+				if (file.type === 'file') {
+					const [viruses, snapshots] = await Promise.all([
+						listFileViruses(file.id),
+						listFileSnapshots(file.id)
+					]);
 
-          selection.update((selected) => {
-            selected.push(file);
+					selection.update((selected) => {
+						selected.push(file);
 
-            return selected;
-          });
+						return selected;
+					});
 
-          $resolved = {
-            me,
-            page: 'files',
-            status: 'success',
-            file,
-            filePathChain,
-            myAccess,
-            accesses,
-            type: 'file',
-            viruses,
-            snapshots,
-            selection,
-            isStarred
-          };
-        } else if (file.type === FileType.Folder) {
-          const files = await scanFolder(file.id);
+					$resolved = {
+						me,
+						page: 'files',
+						status: 'success',
+						file,
+						filePathChain,
+						myAccess,
+						accesses,
+						type: 'file',
+						viruses,
+						snapshots,
+						selection,
+						isStarred
+					};
+				} else if (file.type === 'folder') {
+					const files = await scanFolder(file.id);
 
-          $resolved = {
-            me,
-            page: 'files',
-            status: 'success',
-            file,
-            filePathChain,
-            myAccess,
-            accesses,
-            type: 'folder',
-            files,
-            selection,
-            isStarred
-          };
-        }
-      } else if (props.page === 'shared') {
-        const shareList = await listSharedFiles();
-        const files: FileResource[] = [];
-        for (const sharedFile of shareList) {
-          try {
-            const file = await getFile(sharedFile.fileId);
-            files.push(file);
-          } catch {}
-        }
+					$resolved = {
+						me,
+						page: 'files',
+						status: 'success',
+						file,
+						filePathChain,
+						myAccess,
+						accesses,
+						type: 'folder',
+						files,
+						selection,
+						isStarred
+					};
+				}
+			} else if (props.page === 'shared') {
+				const shareList = await listSharedFiles();
+				const files: FileResource[] = [];
+				for (const sharedFile of shareList) {
+					try {
+						const file = await getFile(sharedFile.fileId);
+						files.push(file);
+					} catch {}
+				}
 
-        $resolved = {
-          me,
-          status: 'success',
-          page: 'shared',
-          files,
-          selection: writable([])
-        };
-      } else if (props.page === 'starred') {
-        const starredList = await listStarredFiles();
-        const files: FileResource[] = [];
-        for (const starredFile of starredList) {
-          try {
-            const file = await getFile(starredFile.fileId);
-            files.push(file);
-          } catch {}
-        }
+				$resolved = {
+					me,
+					status: 'success',
+					page: 'shared',
+					files,
+					selection: writable([])
+				};
+			} else if (props.page === 'starred') {
+				const starredList = await listStarredFiles();
+				const files: FileResource[] = [];
+				for (const starredFile of starredList) {
+					try {
+						const file = await getFile(starredFile.fileId);
+						files.push(file);
+					} catch {}
+				}
 
-        $resolved = {
-          me,
-          status: 'success',
-          page: 'starred',
-          files,
-          selection: writable([])
-        };
-      } else if (props.page === 'trash') {
-        const files = await listTrashedFiles();
+				$resolved = {
+					me,
+					status: 'success',
+					page: 'starred',
+					files,
+					selection: writable([])
+				};
+			} else if (props.page === 'trash') {
+				const files = await listTrashedFiles();
 
-        $resolved = {
-          me,
-          status: 'success',
-          page: 'trash',
-          files,
-          selection: writable([])
-        };
-      }
-    } catch (error: unknown) {
-      $resolved = { status: 'error', error: error as Error };
-    }
-  }
+				$resolved = {
+					me,
+					status: 'success',
+					page: 'trash',
+					files,
+					selection: writable([])
+				};
+			}
+		} catch (error: unknown) {
+			$resolved = { status: 'error', error: error as Error };
+		}
+	}
 </script>
 
 {#key $refreshKey}
-  <Awaiter callback={load} />
+	<Awaiter callback={load} />
 {/key}
 
 <div
-  class="file-manager"
-  class:mobile={$viewMode & ViewMode.Mobile}
-  class:desktop={$viewMode & ViewMode.Desktop}
+	class="file-manager"
+	class:mobile={$viewMode & ViewMode.Mobile}
+	class:desktop={$viewMode & ViewMode.Desktop}
 >
-  {#if props.page === 'files'}
-    <FileManagerAddressBar />
-  {/if}
+	{#if props.page === 'files'}
+		<FileManagerAddressBar />
+	{/if}
 
-  <div
-    class="main-view"
-    class:mobile={$viewMode & ViewMode.Mobile}
-    class:desktop={$viewMode & ViewMode.Desktop}
-    class:loading={$resolved.status === 'loading'}
-    class:preview-mode={$resolved.status === 'success' &&
-      $resolved.page === 'files' &&
-      $resolved.type === 'file'}
-  >
-    {#if $resolved.status === 'loading'}
-      <LoadingSpinner size="64px" />
-    {:else if $resolved.status === 'error'}
-      <FileManagerActionBar />
-      <FileManagerSeparator orientation="horizontal" with-margin />
-      <Banner bannerClass={BannerClass.Error}>
-        <div class="main-view-error">
-          <h3>{$resolved.error.name}: {$resolved.error.message}</h3>
-          <pre>{$resolved.error.stack}</pre>
-        </div>
-      </Banner>
-    {:else if $resolved.status === 'success'}
-      {#if $resolved.page === 'files'}
-        <Title title={$resolved.file.name} />
-      {/if}
+	<div
+		class="main-view"
+		class:mobile={$viewMode & ViewMode.Mobile}
+		class:desktop={$viewMode & ViewMode.Desktop}
+		class:loading={$resolved.status === 'loading'}
+		class:preview-mode={$resolved.status === 'success' &&
+			$resolved.page === 'files' &&
+			$resolved.type === 'file'}
+	>
+		{#if $resolved.status === 'loading'}
+			<LoadingSpinner size="64px" />
+		{:else if $resolved.status === 'error'}
+			<FileManagerActionBar />
+			<FileManagerSeparator orientation="horizontal" with-margin />
+			<Banner bannerClass="error">
+				<div class="main-view-error">
+					<h3>{$resolved.error.name}: {$resolved.error.message}</h3>
+					<pre>{$resolved.error.stack}</pre>
+				</div>
+			</Banner>
+		{:else if $resolved.status === 'success'}
+			{#if $resolved.page === 'files'}
+				<Title title={$resolved.file.name} />
+			{/if}
 
-      {#if $viewMode & ViewMode.Desktop}
-        <FileManagerActionBar />
-        <FileManagerSeparator orientation="horizontal" with-margin />
-      {/if}
+			{#if $viewMode & ViewMode.Desktop}
+				<FileManagerActionBar />
+				<FileManagerSeparator orientation="horizontal" with-margin />
+			{/if}
 
-      <div class="view-row">
-        {#if $resolved.page === 'files' && $resolved.type === 'file'}
-          <FileManagerFileView fileId={$fileId!} />
-        {:else}
-          <FileManagerFolderList />
-        {/if}
+			<div class="view-row">
+				{#if $resolved.page === 'files' && $resolved.type === 'file'}
+					<FileManagerFileView fileId={$fileId!} />
+				{:else}
+					<FileManagerFolderList />
+				{/if}
 
-        {#if $viewMode & ViewMode.Desktop && $showSideBar}
-          <FileManagerSeparator orientation="vertical" with-margin />
-          <FileManagerSideBar />
-        {/if}
-      </div>
+				{#if $viewMode & ViewMode.Desktop && $showSideBar}
+					<FileManagerSeparator orientation="vertical" with-margin />
+					<FileManagerSideBar />
+				{/if}
+			</div>
 
-      {#if $viewMode & ViewMode.Desktop}
-        <FileManagerSeparator orientation="horizontal" with-margin />
-        <FileManagerBottomBar />
-      {/if}
+			{#if $viewMode & ViewMode.Desktop}
+				<FileManagerSeparator orientation="horizontal" with-margin />
+				<FileManagerBottomBar />
+			{/if}
 
-      {#if $viewMode & ViewMode.Mobile}
-        <FileManagerSeparator orientation="horizontal" />
-        <FileManagerActionBar />
-      {/if}
-    {/if}
-  </div>
+			{#if $viewMode & ViewMode.Mobile}
+				<FileManagerSeparator orientation="horizontal" />
+				<FileManagerActionBar />
+			{/if}
+		{/if}
+	</div>
 </div>
 
 {#if $viewDialog != null}
-  {@const [element] = $viewDialog}
+	{@const [element] = $viewDialog}
 
-  <FileManagerView
-    {element}
-    onDismiss={() => {
-      $viewDialog = null;
-    }}
-  />
+	<FileManagerView
+		{element}
+		onDismiss={() => {
+			$viewDialog = null;
+		}}
+	/>
 {/if}
 
 <FileManagerDeleteConfirm />
 <FileManagerDetailsDialog />
 
 {#if $accessDialogs != null}
-  <FileManagerAccessDialog
-    file={$accessDialogs[0]}
-    resolve={() => {
-      $accessDialogs = null;
-    }}
-  />
+	<FileManagerAccessDialog
+		file={$accessDialogs[0]}
+		resolve={() => {
+			$accessDialogs = null;
+		}}
+	/>
 {/if}
 
 {#if $addressBarMenu != null}
-  <FileManagerAddressBarMenu
-    element={$addressBarMenu[0]}
-    file={$addressBarMenu[1]}
-    onDismiss={() => {
-      $addressBarMenu = null;
-    }}
-  />
+	<FileManagerAddressBarMenu
+		element={$addressBarMenu[0]}
+		file={$addressBarMenu[1]}
+		onDismiss={() => {
+			$addressBarMenu = null;
+		}}
+	/>
 {/if}
 
 <style lang="scss">
-  div.file-manager {
-    flex-grow: 1;
+	div.file-manager {
+		flex-grow: 1;
 
-    display: flex;
-    flex-direction: column;
+		display: flex;
+		flex-direction: column;
 
-    min-width: 0px;
-    min-height: 0px;
-  }
+		min-width: 0px;
+		min-height: 0px;
+	}
 
-  div.file-manager.desktop {
-    padding: 16px;
+	div.file-manager.desktop {
+		padding: 16px;
 
-    gap: 8px;
-  }
+		gap: 8px;
+	}
 
-  div.file-manager.mobile {
-    background-color: var(--backgroundVariant);
-    color: var(--onBackgroundVariant);
-  }
+	div.file-manager.mobile {
+		background-color: var(--backgroundVariant);
+		color: var(--onBackgroundVariant);
+	}
 
-  div.main-view {
-    display: flex;
-    flex-direction: column;
+	div.main-view {
+		display: flex;
+		flex-direction: column;
 
-    flex-grow: 1;
+		flex-grow: 1;
 
-    min-height: 256px;
+		min-height: 256px;
 
-    overflow: hidden auto;
+		overflow: hidden auto;
 
-    div.main-view-error {
-      > pre {
-        overflow: auto;
-      }
-    }
-  }
+		div.main-view-error {
+			> pre {
+				overflow: auto;
+			}
+		}
+	}
 
-  div.main-view.desktop {
-    background-color: var(--backgroundVariant);
-    color: var(--onBackgroundVariant);
+	div.main-view.desktop {
+		background-color: var(--backgroundVariant);
+		color: var(--onBackgroundVariant);
 
-    padding: 8px;
-    border-radius: 8px;
-  }
+		padding: 8px;
+		border-radius: 8px;
+	}
 
-  div.main-view.loading {
-    justify-content: center;
-    align-items: center;
-  }
+	div.main-view.loading {
+		justify-content: center;
+		align-items: center;
+	}
 
-  div.view-row {
-    flex-grow: 1;
+	div.view-row {
+		flex-grow: 1;
 
-    display: flex;
-    flex-direction: row;
+		display: flex;
+		flex-direction: row;
 
-    min-height: 0px;
-  }
+		min-height: 0px;
+	}
 </style>

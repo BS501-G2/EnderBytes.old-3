@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
   export interface FileViewContext {
     setTopBarContent: (view: Snippet<[data: FileViewData]>) => () => void;
     setBottomBarContent: (view: Snippet<[data: FileViewData]>) => () => void;
@@ -22,7 +22,7 @@
   import { getConnection } from '$lib/client/client';
   import Icon from '$lib/ui/icon.svelte';
   import type { FileResource, FileSnapshotResource } from '@rizzzi/enderdrive-lib/server';
-  import { AnimationFrame, Button, ButtonClass, ViewMode, viewMode } from '@rizzzi/svelte-commons';
+  import { AnimationFrame, ViewMode, viewMode } from '@rizzzi/svelte-commons';
   import { setContext, type Snippet } from 'svelte';
   import { fly, scale } from 'svelte/transition';
   import FileManagerFileViewContent from './file-manager-file-view-content.svelte';

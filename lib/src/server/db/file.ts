@@ -13,7 +13,10 @@ import {
   UserAuthenticationManager,
 } from "./user-authentication.js";
 import { FileAccessManager } from "./file-access.js";
-import { FileAccessLevel } from "../../shared/db/file-access.js";
+import {
+  FileAccessLevel,
+  serializeFileAccessLevel,
+} from "../../shared/db/file-access.js";
 import { decryptSymmetric, encryptSymmetric, randomBytes } from "../crypto.js";
 
 export interface FileResource extends Resource {
@@ -79,7 +82,7 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
         .inTable(this.getManager(UserManager).recordTableName);
 
       table.string("name").collate("nocase").notNullable();
-      table.integer("type").notNullable();
+      table.string("type").notNullable();
 
       table.boolean("deleted").notNullable();
 
@@ -91,9 +94,7 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
 
   public verifyFileName<
     T extends FileResource | undefined,
-    X = T extends FileResource
-      ? Promise<FileNameVerificationFlag>
-      : FileNameVerificationFlag
+    X = T extends FileResource ? Promise<number> : number
   >(name: string, parentFolder?: T): X {
     let flag = FileNameVerificationFlag.OK;
 
@@ -135,14 +136,14 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
         (entry) => entry.name.toLowerCase() === friendlyName().toLowerCase()
       ) != null
     ) {
-      if (type === FileType.Folder) {
+      if (type === "folder") {
         throw Error("Folder already exists.");
       }
 
       fnCount++;
     }
 
-    if (parent.type !== FileType.Folder) {
+    if (parent.type !== "folder") {
       throw new Error("Parent is not a folder.");
     }
 
@@ -208,7 +209,7 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
       creatorUserId: unlockedUserKey.userId,
       ownerUserId: unlockedUserKey.userId,
       name: "root",
-      type: FileType.Folder,
+      type: "folder",
 
       deleted: false,
 
@@ -243,7 +244,7 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
             where: [
               ["fileId", "=", file.id],
               ["userId", "=", unlockedUserAuthentication.userId],
-              ["level", ">=", accessLevel],
+              ["level", ">=", serializeFileAccessLevel(accessLevel)],
             ],
             orderBy: [["level", true]],
           })
@@ -372,7 +373,7 @@ export class FileManager extends ResourceManager<FileResource, FileManager> {
         deleted: false,
       }),
       authentication,
-      FileAccessLevel.Manage
+      "Manage"
     );
 
     if (newFolder != null) {

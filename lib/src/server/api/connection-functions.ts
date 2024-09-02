@@ -157,9 +157,9 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   truncateFile: (fileHandleId: number, length: number) => Promise<void>;
 
-  readFile: (fileHandleId: number, length: number) => Promise<Uint8Array>
+  readFile: (fileHandleId: number, position: number, length: number) => Promise<Uint8Array>
 
-  writeFile: (fileHandleId: number, data: Uint8Array) => Promise<void>;
+  writeFile: (fileHandleId: number, position: number, data: Uint8Array) => Promise<void>;
 
   closeFile: (fileHandleId: number) => Promise<void>;
 

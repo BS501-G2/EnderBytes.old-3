@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
   import { introNavigationEntries, introNavigationButtons } from '$lib/intro-navigation';
 </script>
 

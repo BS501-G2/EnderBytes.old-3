@@ -1,22 +1,9 @@
-<script lang="ts" context="module">
-  import { writable, type Writable } from 'svelte/store';
-
-  export interface AdminContext {
-    setMainContent: (layout: Snippet) => () => void;
-
-    pushTopContent: (view: Snippet) => () => void;
-
-    pushToolboxContext: (view: Snippet) => () => void;
-  }
-
-  export const AdminContextName = 'adm-context';
-</script>
-
 <script lang="ts">
   import { getContext, onMount, setContext, type Snippet } from 'svelte';
-  import { DashboardContextName, type DashboardContext } from '../dashboard.svelte';
+  import { DashboardContextName, type DashboardContext } from '../dashboard';
   import Navigation from './navigation.svelte';
     import { Title } from '@rizzzi/svelte-commons';
+	import { type AdminContext, AdminContextName } from './layout';
 
   const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
   const { children }: { children: Snippet } = $props();

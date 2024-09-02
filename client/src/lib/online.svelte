@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
   import { onMount, type Snippet } from 'svelte';
   import { derived, readonly, writable } from 'svelte/store';
 

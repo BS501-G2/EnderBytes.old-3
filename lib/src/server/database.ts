@@ -219,7 +219,7 @@ export class Database extends Service<
         return await this.#db.transaction(async (transaction) => {
           const transactionId = ++this.#nextTransactionId;
 
-          this.log(LogLevel.Debug, `Starting transaction #${transactionId}...`);
+          this.log("debug", `Starting transaction #${transactionId}...`);
           this.#transactions.set(transaction, ++this.#nextTransactionId);
 
           instance.currentTransaction = transaction;
@@ -227,7 +227,7 @@ export class Database extends Service<
             return await callback(transaction, ...args);
           } finally {
             instance.currentTransaction = null;
-            this.log(LogLevel.Debug, `Transaction #${transactionId} finished.`);
+            this.log("debug", `Transaction #${transactionId} finished.`);
           }
         });
       },

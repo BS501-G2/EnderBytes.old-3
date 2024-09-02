@@ -1,9 +1,10 @@
 <script lang="ts">
   import NavigationBarDesktop from './IntroNavigationBarDesktop.svelte';
   import NavigationBarMobile from './IntroNavigationBarMobile.svelte';
-  import Locale, { LocaleKey } from '$lib/locale.svelte';
+  import Locale  from '$lib/locale.svelte';
   import { Title, viewMode, ViewMode } from '@rizzzi/svelte-commons';
   import { type Snippet } from 'svelte';
+	import { LocaleKey } from '$lib/locale';
 
   const { children }: { children: Snippet } = $props();
 </script>

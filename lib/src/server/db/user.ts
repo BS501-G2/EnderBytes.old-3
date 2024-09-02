@@ -2,6 +2,7 @@ import type { Knex } from "knex";
 import {
   UserRole,
   UsernameVerificationFlag,
+  serializeUserRole,
   usernameLength,
   usernameValidCharacters,
 } from "../../shared/db/user.js";
@@ -18,7 +19,7 @@ export interface UserResource extends Resource<UserResource, UserManager> {
   firstName: string;
   middleName: string | null;
   lastName: string;
-  role: UserRole;
+  role: number;
   isSuspended: boolean;
 }
 
@@ -65,8 +66,8 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
   public async verify(
     username: string,
     checkExisting: boolean = true
-  ): Promise<UsernameVerificationFlag> {
-    let flag: UsernameVerificationFlag = UsernameVerificationFlag.OK;
+  ): Promise<number> {
+    let flag: number = UsernameVerificationFlag.OK;
 
     const [min, max] = usernameLength;
 
@@ -93,7 +94,7 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
     middleName: string | null,
     lastName: string,
     password: string = this.generateRandomPassword(16),
-    role: UserRole = UserRole.Member
+    role: UserRole = 'Member'
   ): Promise<
     [
       user: UserResource,
@@ -110,7 +111,7 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
       firstName,
       middleName,
       lastName,
-      role,
+      role:  serializeUserRole(role),
       isSuspended: false,
     });
 
@@ -118,7 +119,7 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
 
     const userKey = await userKeyManager.create(
       user,
-      UserAuthenticationType.Password,
+      'password',
       new TextEncoder().encode(password)
     );
 

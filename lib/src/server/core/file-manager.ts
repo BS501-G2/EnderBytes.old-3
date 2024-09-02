@@ -37,8 +37,6 @@ export interface FileHandle {
   fileContentId: number;
   fileSnapshotId: number;
 
-  position: number;
-
   isThumbnail: boolean;
   hasBytesWritten: boolean;
 }
@@ -150,7 +148,6 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
       fileSnapshotId:
         fileSnapshot?.id ??
         (await fileSnapshotManager.getLatest(file, fileContent)).id,
-      position: 0,
       isThumbnail: false,
       hasBytesWritten: false,
     };
@@ -170,12 +167,7 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
       FileContentManager
     );
 
-    const file = await fileManager.create(
-      authentication,
-      folder,
-      name,
-      FileType.File
-    );
+    const file = await fileManager.create(authentication, folder, name, "file");
 
     const fileContent = await fileContentManager.getMain(file);
 
@@ -263,9 +255,10 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     connection: ServerConnection,
     authentication: UnlockedUserAuthentication,
     handleId: number,
+    position: number,
     length: number
   ) {
-    const [fileHandle, file, fileContent, fileSnapshot] = await this.#getHandle(
+    const [, file, fileContent, fileSnapshot] = await this.#getHandle(
       connection,
       authentication,
       handleId
@@ -276,11 +269,11 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
       file,
       fileContent,
       fileSnapshot,
-      fileHandle.position,
+      position,
       length
     );
 
-    fileHandle.position += data.length;
+    position += data.length;
     return data;
   }
 
@@ -288,6 +281,7 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     connection: ServerConnection,
     authentication: UnlockedUserAuthentication,
     handleId: number,
+    position: number,
     buffer: Uint8Array
   ) {
     const [fileHandle, file, fileContent, fileSnapshot] = await this.#getHandle(
@@ -320,7 +314,7 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
         file,
         fileContent,
         newSnapshot,
-        fileHandle.position,
+        position,
         buffer
       );
 
@@ -331,12 +325,10 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
         file,
         fileContent,
         fileSnapshot,
-        fileHandle.position,
+        position,
         buffer
       );
     }
-
-    fileHandle.position += buffer.length;
   }
 
   public async seek(
@@ -354,22 +346,6 @@ export class FileManagerService extends Service<FileManagerServiceData, []> {
     if (position < 0 || position > fileSnapshot.size) {
       throw new Error("Invalid position");
     }
-
-    fileHandle.position = position;
-  }
-
-  public async position(
-    connection: ServerConnection,
-    authentication: UnlockedUserAuthentication,
-    handleId: number
-  ): Promise<number> {
-    const [handle] = await this.#getHandle(
-      connection,
-      authentication,
-      handleId
-    );
-
-    return handle.position;
   }
 
   public async length(

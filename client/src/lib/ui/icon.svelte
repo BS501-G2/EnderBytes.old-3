@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
   export type IconThickness = 'solid' | 'regular' | 'thin' | 'light';
   export type IconSize =
     | `${number}${'px' | '%' | 'em' | 'rem'}`

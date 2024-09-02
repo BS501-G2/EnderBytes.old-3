@@ -1,5 +1,5 @@
 import { goto } from '$app/navigation';
-import { getAndValidateAuthentication, getConnection } from '$lib/client/client';
+import { getConnection } from '$lib/client/client';
 
 export async function load(): Promise<void> {
   const {

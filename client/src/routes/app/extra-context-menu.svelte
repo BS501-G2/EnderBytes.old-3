@@ -4,8 +4,8 @@
     DashboardContextName,
     type DashboardContext,
     type DashboardContextMenuEntry
-  } from './dashboard.svelte';
-  import { Overlay, OverlayPositionType, ViewMode, viewMode } from '@rizzzi/svelte-commons';
+  } from './dashboard';
+  import { Overlay, ViewMode, viewMode } from '@rizzzi/svelte-commons';
   import { fly } from 'svelte/transition';
 
   const {} = getContext<DashboardContext>(DashboardContextName);
@@ -27,7 +27,7 @@
 </script>
 
 <Overlay
-  position={[OverlayPositionType.Offset, 0, element.clientTop + element.clientHeight + 16]}
+  position={['offset', 0, element.clientTop + element.clientHeight + 16]}
   {onDismiss}
 >
   <div

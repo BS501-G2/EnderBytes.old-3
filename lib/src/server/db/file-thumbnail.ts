@@ -49,7 +49,7 @@ export class FileThumbnailManager extends ResourceManager<
         .inTable(this.getManager(FileContentManager).recordTableName)
         .onDelete("cascade");
 
-      table.integer("status").notNullable();
+      table.string("status").notNullable();
     }
   }
 

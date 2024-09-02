@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
   import type { FileResource } from '@rizzzi/enderdrive-lib/server';
   import { writable, type Writable } from 'svelte/store';
 

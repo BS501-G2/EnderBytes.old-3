@@ -51,7 +51,7 @@ export class UserAuthenticationManager extends ResourceManager<
   ): Promise<void> {
     if (oldVersion < 1) {
       table.integer("userId").notNullable();
-      table.integer("type").notNullable();
+      table.string("type").notNullable();
 
       table.integer("iterations").notNullable();
       table.string("salt").notNullable();
@@ -158,7 +158,7 @@ export class UserAuthenticationManager extends ResourceManager<
   ): Promise<UnlockedUserAuthentication> {
     for await (const userAuthentication of this.list(
       user,
-      UserAuthenticationType.Password
+      'password'
     )) {
       let unlockedUserKey: UnlockedUserAuthentication;
       try {
