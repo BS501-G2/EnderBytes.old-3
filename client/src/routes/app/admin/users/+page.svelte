@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount, type Snippet } from 'svelte';
-	import { type AdminContext, AdminContextName } from '../layout';
+	import { type AdminContext, AdminContextName } from '../+layout.svelte';
 	import { Input, Button } from '@rizzzi/svelte-commons';
 	import { writable, type Writable } from 'svelte/store';
 	import { getConnection } from '$lib/client/client';

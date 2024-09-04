@@ -16,12 +16,14 @@ export interface ClientConnectionOptions {
 export class ClientConnection {
   public constructor(
     getAuth: null | (() => Authentication | null) = null,
-    setAuthentication: (authentication: Authentication | null) => void
+    setAuthentication: (authentication: Authentication | null) => void,
+
+    url?: string
   ) {
     this.#wrapper = wrapSocket(
-      (this.#io = io("/", {})),
+      (this.#io = io(url ?? "/", {})),
       this.#clientFunctions,
-      undefined
+      undefined,
       // (...message) => {
       //   console.log(...message);
       // }

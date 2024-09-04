@@ -19,7 +19,7 @@ import {
   UserAuthenticationManager,
 } from "../db/user-authentication.js";
 import { UserManager, UserResource } from "../db/user.js";
-import { UserSessionManager, UserSessionType } from "../db/user-session.js";
+import { UserSessionManager } from "../db/user-session.js";
 import { ServerConnectionManager } from "./connection-manager.js";
 import { FileManager, FileResource, UnlockedFileResource } from "../db/file.js";
 import { FileContentManager, FileContentResource } from "../db/file-content.js";
@@ -131,13 +131,6 @@ export class ServerConnection {
 
     const getUploadSize = (): number =>
       buffers.reduce((size, buffer) => size + buffer.length, 0);
-
-    const consumeUploadBuffer = (): Uint8Array => {
-      const buffer = Buffer.concat(buffers);
-      buffers.splice(0, buffers.length);
-
-      return buffer as any;
-    };
 
     const [
       userManager,
@@ -709,15 +702,19 @@ export class ServerConnection {
         return chain;
       },
 
-      getFileSize: async (fileId) => {
+      getFileSize: async (fileId, fileSnapshotId) => {
         const authentication = requireAuthenticated(true);
         const file = await getFile(fileId, authentication, "Read", "file");
 
         const fileContent = await fileContentManager.getMain(file);
-        const fileSnapshot = await fileSnapshotManager.getLatest(
-          file,
-          fileContent
-        );
+        const fileSnapshot =
+          fileSnapshotId != null
+            ? await fileSnapshotManager.getById(fileSnapshotId)
+            : await fileSnapshotManager.getLatest(file, fileContent);
+
+        if (fileSnapshot == null) {
+          ApiError.throw("NotFound", "File snapshot not found");
+        }
 
         return fileSnapshot.size;
       },
@@ -726,10 +723,14 @@ export class ServerConnection {
         const authentication = requireAuthenticated(true);
         const file = await getFile(fileId, authentication, "Read", "file");
         const fileContent = await fileContentManager.getMain(file);
-        const fileSnapshot = await fileSnapshotManager.getRoot(
-          file,
-          fileContent
-        );
+        const fileSnapshot =
+          fileSnapshotId != null
+            ? await fileSnapshotManager.getById(fileSnapshotId)
+            : await fileSnapshotManager.getLatest(file, fileContent);
+
+        if (fileSnapshot == null) {
+          ApiError.throw("NotFound", "File snapshot not found");
+        }
 
         return await server.mimeDetector.getFileMime(
           file,
@@ -773,10 +774,14 @@ export class ServerConnection {
         const authentication = requireAuthenticated(true);
         const file = await getFile(fileId, authentication, "Read", "file");
         const fileContent = await fileContentManager.getMain(file);
-        const fileSnapshot = await fileSnapshotManager.getRoot(
-          file,
-          fileContent
-        );
+        const fileSnapshot =
+          fileSnapshotId != null
+            ? await fileSnapshotManager.getById(fileSnapshotId)
+            : await fileSnapshotManager.getLatest(file, fileContent);
+
+        if (fileSnapshot == null) {
+          ApiError.throw("NotFound", "File snapshot not found");
+        }
 
         return await server.virusScanner.scan(
           file,
@@ -1005,6 +1010,16 @@ export class ServerConnection {
 
           await fileManager.move(file, toParent);
         }
+      },
+
+      getFileHandleSize: async (handleId) => {
+        const authentication = requireAuthenticated(true);
+
+        return await this.#manager.server.fileManager.length(
+          this,
+          authentication,
+          handleId
+        );
       },
 
       copyFile: async (fileIds, toParentId, fileSnapshotId) => {

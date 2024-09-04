@@ -165,6 +165,8 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   moveFile: (fileIds: number[], toParentId: number) => Promise<void>;
 
+  getFileHandleSize: (fileHandleId: number) => Promise<number>;
+
   copyFile: (
     fileIds: number[],
     toParentId: number,

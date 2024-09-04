@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext, type Snippet } from 'svelte';
-	import { type AdminContext, AdminContextName } from '../layout';
+	import { type AdminContext, AdminContextName } from '../+layout.svelte';
 	import { getConnection } from '$lib/client/client';
 	import type { FileLogResource } from '@rizzzi/enderdrive-lib/server';
 	import { Input, Overlay, Button } from '@rizzzi/svelte-commons';

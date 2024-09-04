@@ -10,17 +10,19 @@ export async function test(
     | ["server", name: keyof typeof serverTestFunctions]
     | ["shared", name: keyof typeof sharedTestFunctions]
 ): Promise<void> {
-  if (args[0] === "client") {
-    await clientTestFunctions[args[1]]();
-  } else if (args[0] === "server") {
-    await serverTestFunctions[args[1]]();
-  } else if (args[0] === "shared") {
-    await sharedTestFunctions[args[1]]();
-  } else {
-    throw new Error("Invalid test type");
+  try {
+    if (args[0] === "client") {
+      await clientTestFunctions[args[1]]();
+    } else if (args[0] === "server") {
+      await serverTestFunctions[args[1]]();
+    } else if (args[0] === "shared") {
+      await sharedTestFunctions[args[1]]();
+    } else {
+      throw new Error("Invalid test type");
+    }
+  } catch (error: any) {
+    console.error(error);
   }
 }
 
-void test(process.argv[2] as never, process.argv[3] as never).catch(
-  console.error
-);
+void test(process.argv[2] as never, process.argv[3] as never);
