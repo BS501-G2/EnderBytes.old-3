@@ -21,9 +21,11 @@ export class ClientConnection {
     url?: string
   ) {
     this.#wrapper = wrapSocket(
-      (this.#io = io(url ?? "/", {})),
+      (this.#io = io(url ?? "/", {
+        path: "/api/socket.io",
+      })),
       this.#clientFunctions,
-      undefined,
+      undefined
       // (...message) => {
       //   console.log(...message);
       // }

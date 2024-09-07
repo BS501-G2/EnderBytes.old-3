@@ -25,14 +25,20 @@
 		files: FileResource[] | null,
 		cut: boolean
 	) => void;
+	export type FileManagerOnSortCallback = (
+		event: SourceEvent,
+		sort: ScanFolderSortType,
+		desc: boolean
+	) => void;
 
 	export type FileManagerProps = {
 		refresh: Writable<() => void>;
 
 		onFileId: FileManagerOnFileIdCallback;
 		onPage: FileManagerOnPageCallback;
+		onSort: FileManagerOnSortCallback;
 
-		sort: Readable<ScanFolderSortType>;
+		sort: Readable<[sort: ScanFolderSortType, desc: boolean]>;
 	} & (
 		| {
 				page: 'files';
@@ -139,7 +145,7 @@
 	import FileManagerAddressBarMenu from './file-manager-address-bar-menu.svelte';
 
 	const { ...props }: FileManagerProps = $props();
-	const { refresh } = props;
+	const { refresh, sort } = props;
 
 	const {
 		serverFunctions: {
@@ -226,7 +232,7 @@
 						isStarred
 					};
 				} else if (file.type === 'folder') {
-					const files = await scanFolder(file.id);
+					const files = await scanFolder(file.id, $sort);
 
 					$resolved = {
 						me,

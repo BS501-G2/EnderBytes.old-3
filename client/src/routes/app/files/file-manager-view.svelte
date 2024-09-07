@@ -11,7 +11,7 @@
 	import { FileManagerViewMode } from './file-manager-folder-list';
 
 	const {} = getContext<FileManagerProps>(FileManagerPropsName);
-	const { resolved, showSideBar, listViewMode } =
+	const { resolved, showSideBar, listViewMode, refreshKey } =
 		getContext<FileManagerContext>(FileManagerContextName);
 
 	const { element, onDismiss }: { element: HTMLElement; onDismiss: () => void } = $props();
@@ -57,6 +57,7 @@
 					buttonClass={value === sort ? 'primary' : 'transparent'}
 					onClick={() => {
 						sort = value;
+						$refreshKey++;
 					}}
 				>
 					<i class={icon}></i>

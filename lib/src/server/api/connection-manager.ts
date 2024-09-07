@@ -107,7 +107,7 @@ export class ServerConnectionManager extends Service<
       });
 
     io.on("connection", handle);
-    io.listen(port);
+    this.server.httpListener.attachIo(io);
 
     const checkContexts = () => {
       for (const userId in contexts) {

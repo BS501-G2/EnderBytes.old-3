@@ -24,7 +24,7 @@
 	} = getConnection();
 
 	const refresh: Writable<() => void> = writable(null as never);
-	const sort: Writable<ScanFolderSortType> = writable('fileName');
+	const sort: Writable<[sort: ScanFolderSortType, desc: boolean]> = writable(['fileName', false]);
 	const fileId = derived(page, ({ url: { searchParams } }) => {
 		try {
 			const fileId = Number.parseInt(searchParams.get('fileId') ?? '') || null;
@@ -164,6 +164,9 @@
 		{fileId}
 		{clipboard}
 		{sort}
+		onSort={(event, column, desc) => {
+			$sort = [column, desc];
+		}}
 	/>
 
 	{#if $newDialog != null}

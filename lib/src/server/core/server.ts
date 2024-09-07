@@ -16,6 +16,7 @@ import { UserManager } from "../db/user.js";
 import { VirusReportEntryManager } from "../db/virus-report-entry.js";
 import { VirusReportManager } from "../db/virus-report.js";
 import { FileManagerService } from "./file-manager.js";
+import { HttpListener } from "./http.js";
 import { MimeDetector } from "./mime-detector.js";
 import { Thumbnailer } from "./thumbnailer.js";
 import { VirusScanner } from "./virus-scanner.js";
@@ -27,6 +28,7 @@ export interface ServerInstanceData {
   connectionManager: ServerConnectionManager;
   thumbnailer: Thumbnailer;
   fileManager: FileManagerService;
+  httpListener: HttpListener;
 }
 
 export type ServerOptions = [port: number];
@@ -64,20 +66,26 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
     return this.#data.fileManager;
   }
 
+  get httpListener() {
+    return this.#data.httpListener;
+  }
+
   async run(
     setData: (instance: ServerInstanceData) => void,
     onReady: (onStop: () => void) => void,
     ...[port]: ServerOptions
   ): Promise<void> {
     // const apiServer = new ApiServer(this);
-    const connectionManager = new ServerConnectionManager(this);
     const database = new Database(this);
+    const httpListener = new HttpListener(this);
+    const connectionManager = new ServerConnectionManager(this);
     const virusScanner = new VirusScanner(this);
     const mimeDetector = new MimeDetector(this);
     const thumbnailer = new Thumbnailer(this);
     const fileManager = new FileManagerService(this);
 
     setData({
+      httpListener,
       connectionManager,
       database,
       virusScanner,
@@ -104,6 +112,7 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
     ]);
     await virusScanner.start("/run/clamav/clamd.ctl");
     await mimeDetector.start();
+    await httpListener.start(port);
     await connectionManager.start(port);
     await thumbnailer.start();
     await fileManager.start();
@@ -115,6 +124,7 @@ export class Server extends Service<ServerInstanceData, ServerOptions> {
     await fileManager.stop();
     await thumbnailer.stop();
     await connectionManager.stop();
+    await httpListener.stop();
     await mimeDetector.stop();
     await virusScanner.stop();
     await database.stop();
