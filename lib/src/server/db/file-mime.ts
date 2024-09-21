@@ -4,6 +4,7 @@ import { FileManager, UnlockedFileResource } from "./file.js";
 import { FileContentManager, FileContentResource } from "./file-content.js";
 import { FileSnapshotManager, FileSnapshotResource } from "./file-snapshot.js";
 import { Database } from "../database.js";
+import { Mime } from "../api/connection-functions.js";
 
 export interface FileMimeResource
   extends Resource<FileMimeResource, FileMimeManager> {
@@ -56,7 +57,7 @@ export class FileMimeManager extends ResourceManager<
 
     mime: string,
     description: string
-  ): Promise<[mime: string, description: string]> {
+  ): Promise<Mime> {
     let fileMime = await this.first({
       where: [
         ["fileId", "=", unlockedFile.id],
@@ -84,7 +85,7 @@ export class FileMimeManager extends ResourceManager<
     unlockedFile: UnlockedFileResource,
     fileContent: FileContentResource,
     fileSnapshot: FileSnapshotResource
-  ): Promise<[mime: string, description: string] | null> {
+  ): Promise<Mime | null> {
     const fileMime = await this.first({
       where: [
         ["fileId", "=", unlockedFile.id],

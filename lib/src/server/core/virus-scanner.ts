@@ -57,6 +57,7 @@ export class VirusScanner extends Service<
     socket: string
   ): Promise<void> {
     const clam = new NodeClam();
+
     await clam.init({
       clamdscan: {
         socket,
@@ -65,6 +66,7 @@ export class VirusScanner extends Service<
     });
 
     setData({ clam });
+
     await new Promise<void>(onReady);
   }
 

@@ -13,7 +13,7 @@
 	const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
 
 	const refresh: Writable<() => void> = writable(null as never);
-	const sort: Writable<ScanFolderSortType> = writable('fileName');
+	const sort: Writable<[sort: ScanFolderSortType, desc: boolean]> = writable(['fileName', false]);
 
 	const onPage: FileManagerOnPageCallback = (...[, page]) => {
 		goto(`/app/${page}`);
@@ -29,5 +29,14 @@
 <Title title="Starred" />
 
 {#snippet layout()}
-	<FileManager page="starred" {onPage} {onFileId} {refresh} {sort} />
+	<FileManager
+		page="starred"
+		{onPage}
+		{onFileId}
+		{refresh}
+		{sort}
+		onSort={(event, column, desc) => {
+			$sort = [column, desc];
+		}}
+	/>
 {/snippet}

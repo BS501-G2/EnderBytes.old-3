@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { type FileManagerSelection, FileManagerViewMode } from './file-manager-folder-list';
+	import { type FileManagerSelection, type FileManagerViewMode } from './file-manager-folder-list';
 </script>
 
 <script lang="ts">
@@ -13,8 +13,8 @@
 		FileManagerPropsName
 	} from './file-manager.svelte';
 	import type { FileResource } from '@rizzzi/enderdrive-lib/server';
-	import FileManagerSeparator from './file-manager-separator.svelte';
 	import { writable, type Writable } from 'svelte/store';
+	import FileManagerFileEntry from './file-manager-file-entry.svelte';
 
 	const { resolved, listViewMode } = getContext<FileManagerContext>(FileManagerContextName);
 
@@ -274,9 +274,7 @@
 
 {#snippet fileEntryView(index: number, file: FileResource)}
 	<button
-		class="file-entry"
-		class:grid={$listViewMode === FileManagerViewMode.Grid}
-		class:list={$listViewMode === FileManagerViewMode.List}
+		class="file-entry {$listViewMode}"
 		class:selected={$selected.includes(file)}
 		ondblclick={(event) => {
 			props.onFileId(event, file.id);
@@ -311,19 +309,7 @@
 			}
 		}}
 	>
-		<div class="thumbnail grid">
-			{#if file.type === 'folder'}
-				<i class="fa-regular fa-folder"></i>
-			{:else if file.type === 'file'}
-				<img src="/favicon.svg" alt="Thumbnail" />
-			{/if}
-		</div>
-
-		<FileManagerSeparator orientation="horizontal" with-margin />
-		<div class="file-info grid">
-			<i class="fa-regular fa-{file.type}"></i>
-			<p>{file.name}</p>
-		</div>
+		<FileManagerFileEntry {file} listViewMode={$listViewMode} />
 	</button>
 {/snippet}
 
@@ -439,9 +425,7 @@
 		</div>
 
 		<div
-			class="inner-list"
-			class:grid={$listViewMode === FileManagerViewMode.Grid}
-			class:list={$listViewMode === FileManagerViewMode.List}
+			class="inner-list {$listViewMode}"
 			class:limited={isWindowWIdthLimited}
 			bind:this={innerList}
 		>
@@ -488,7 +472,21 @@
 		border: solid 1px var(--shadow);
 	}
 
-	button.file-entry.grid:hover {
+	button.file-entry.list {
+		display: flex;
+		flex-direction: row;
+
+		margin: 16px;
+		padding: 8px;
+		border-radius: 8px;
+
+		background-color: var(--background);
+		color: var(--onBackground);
+		border: solid 1px var(--shadow);
+	}
+
+	button.file-entry.grid:hover,
+	button.file-entry.list:hover {
 		cursor: pointer;
 
 		background-color: var(--backgroundVariant);
@@ -497,69 +495,10 @@
 		border-color: var(--onBackgroundVariant);
 	}
 
-	button.file-entry.grid.selected {
+	button.file-entry.grid.selected,
+	button.file-entry.list.selected {
 		background-color: var(--primary);
 		color: var(--onPrimary);
-	}
-
-	div.thumbnail.grid {
-		display: flex;
-		flex-direction: column;
-
-		align-items: center;
-		justify-content: center;
-
-		min-width: 100%;
-		box-sizing: border-box;
-
-		padding: 8px;
-
-		aspect-ratio: 4 / 3;
-		overflow: hidden;
-
-		> img {
-			min-width: 100%;
-			min-height: 100%;
-			max-width: 100%;
-			max-height: 100%;
-
-			border-radius: 8px;
-
-			box-sizing: border-box;
-
-			object-fit: cover;
-		}
-
-		> i {
-			font-size: 4em;
-		}
-	}
-
-	div.file-info.grid {
-		display: flex;
-		flex-direction: row;
-
-		align-items: center;
-
-		padding: 8px;
-		gap: 8px;
-
-		min-height: 1.2em;
-		max-width: 100%;
-		box-sizing: border-box;
-
-		> p {
-			flex-grow: 1;
-
-			text-overflow: ellipsis;
-			text-wrap: nowrap;
-			text-align: start;
-
-			max-lines: 1;
-			max-width: calc(100%);
-
-			overflow: hidden;
-		}
 	}
 
 	div.selection-container {

@@ -183,8 +183,10 @@ export class ServerConnection {
         );
 
         return unlockedFile;
-      } catch {
-        ApiError.throw("Forbidden", `Failed to unlock file #${id}`);
+      } catch (e: any) {
+        ApiError.throw("Forbidden", `Failed to unlock file #${id}`, {
+          cause: e,
+        });
       }
     };
 

@@ -8,7 +8,7 @@
 	} from './file-manager.svelte';
 	import { Button, Dialog, Overlay, ViewMode, viewMode } from '@rizzzi/svelte-commons';
 	import { fly } from 'svelte/transition';
-	import { FileManagerViewMode } from './file-manager-folder-list';
+	import { type FileManagerViewMode } from './file-manager-folder-list';
 
 	const {} = getContext<FileManagerProps>(FileManagerPropsName);
 	const { resolved, showSideBar, listViewMode, refreshKey } =
@@ -74,7 +74,7 @@
 
 		<div class="row">
 			<p class="label">List Mode</p>
-			{#each [FileManagerViewMode.List, FileManagerViewMode.Grid] as value}
+			{#each ['list', 'grid'] as FileManagerViewMode[] as value}
 				<Button
 					container={buttonContainer}
 					buttonClass={value === $listViewMode ? 'primary' : 'transparent'}
@@ -82,10 +82,10 @@
 						$listViewMode = value;
 					}}
 				>
-					{#if value === FileManagerViewMode.Grid}
+					{#if value === 'grid'}
 						<i class="fa-solid fa-th-large"></i>
 						<p>Grid</p>
-					{:else if value === FileManagerViewMode.List}
+					{:else if value === 'list'}
 						<i class="fa-solid fa-list"></i>
 						<p>List</p>
 					{/if}

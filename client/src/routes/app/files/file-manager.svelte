@@ -1,6 +1,4 @@
 <script lang="ts" module>
-	import { FileManagerViewMode } from './file-manager-folder-list';
-
 	import type {
 		FileAccessResource,
 		FileResource,
@@ -143,6 +141,7 @@
 	import FileManagerAccessDialog from './file-manager-access-dialog.svelte';
 	import FileManagerDetailsDialog from './file-manager-details-dialog.svelte';
 	import FileManagerAddressBarMenu from './file-manager-address-bar-menu.svelte';
+	import type { FileManagerViewMode } from './file-manager-folder-list';
 
 	const { ...props }: FileManagerProps = $props();
 	const { refresh, sort } = props;
@@ -174,7 +173,7 @@
 			viewDialog: writable(null),
 			accessDialogs: writable(null),
 
-			listViewMode: persisted('fm-list-mode', FileManagerViewMode.Grid),
+			listViewMode: persisted('fm-list-mode', 'grid'),
 			showSideBar: persisted('side-bar', false),
 			addressBarMenu: writable(null)
 		});

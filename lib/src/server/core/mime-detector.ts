@@ -5,6 +5,7 @@ import {
   ServiceReadyCallback,
   ServiceSetDataCallback,
 } from "../../shared.js";
+import { Mime } from "../api/connection-functions.js";
 import { FileContentResource } from "../db/file-content.js";
 import { FileDataManager } from "../db/file-data.js";
 import { FileMimeManager } from "../db/file-mime.js";
@@ -88,13 +89,13 @@ export class MimeDetector extends Service<
     file: UnlockedFileResource,
     fileContent: FileContentResource,
     fileSnapshot: FileSnapshotResource
-  ): Promise<[mime: string, description: string]> {
+  ): Promise<Mime> {
     const [fileMimeManager, fileDataManager] = this.#database.getManagers(
       FileMimeManager,
       FileDataManager
     );
 
-    let mime = await fileMimeManager.getMime(file, fileContent, fileSnapshot);
+    const mime = await fileMimeManager.getMime(file, fileContent, fileSnapshot);
 
     if (mime != null) {
       return mime;
@@ -110,20 +111,18 @@ export class MimeDetector extends Service<
       )
     );
 
-    mime = await Promise.all([
-      this.#getBufferMime(firstBuffer, false).then(
-        (mime) => mime.split(";")[0]
-      ),
-      this.#getBufferMime(firstBuffer, true).then((description) =>
-        description.split(",")[0].trim()
-      ),
-    ] as [mime: Promise<string>, description: Promise<string>]);
-
     return await fileMimeManager.setMime(
       file,
       fileContent,
       fileSnapshot,
-      ...mime
+      ...(await Promise.all([
+        this.#getBufferMime(firstBuffer, false).then(
+          (mime) => mime.split(";")[0]
+        ),
+        this.#getBufferMime(firstBuffer, true).then((description) =>
+          description.split(",")[0].trim()
+        ),
+      ] as [mime: Promise<string>, description: Promise<string>]))
     );
   }
 }

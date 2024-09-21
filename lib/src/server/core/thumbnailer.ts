@@ -104,13 +104,12 @@ export class Thumbnailer extends Service<ThumbnailerData, ThumbnailerOptions> {
       return await fileThumbnailManager.create(
         file,
         fileSnapshot,
-        'available',
+        "available",
         thumbnailContent
       );
-
-      // } else if (type === "video") {
-      // } else if (type === "audio") {
-      //   return null
+    // } else if (type === "video") {
+    // } else if (type === "audio") {
+    //   return null;
     }
     return null;
   }

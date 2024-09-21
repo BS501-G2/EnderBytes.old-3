@@ -15,6 +15,7 @@ import { FileStarResource } from "../db/file-star.js";
 import { FileResource } from "../db/file.js";
 import { UnlockedUserAuthentication } from "../db/user-authentication.js";
 import { UserResource } from "../db/user.js";
+export type Mime = [mime: string, description: string];
 
 export interface ServerFunctions extends ConnectionFunctions {
   restore: (authentication: Authentication) => Promise<Authentication>;
@@ -102,7 +103,7 @@ export interface ServerFunctions extends ConnectionFunctions {
   getFileMime: (
     fileId: number,
     fileSnapshotId?: number
-  ) => Promise<[mime: string, description: string]>;
+  ) => Promise<Mime>;
 
   getFileTime: (
     fileId: number

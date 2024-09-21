@@ -1,9 +1,6 @@
 import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 
-export enum FileManagerViewMode {
-	Grid,
-	List
-}
+export type FileManagerViewMode = 'grid' | 'list'
 
 export interface FileManagerSelection {
 	saved: FileResource[];

@@ -1,3 +1,4 @@
+import { goto } from '$app/navigation';
 import { authenticateWithPassword } from '$lib/client/client';
 import { ClientConnection } from '@rizzzi/enderdrive-lib/client';
 
@@ -77,5 +78,17 @@ export const testFunctions = ({
 			})
 	],
 	['List Users', () => listUsers()],
-	['Who Am I?', () => whoAmI()]
+	['Who Am I?', () => whoAmI()],
+	[
+		'Go to Dashboard',
+		() => {
+			goto('/app');
+		}
+	],
+	[
+		'Go to Landing Page',
+		() => {
+			goto('/');
+		}
+	]
 ];

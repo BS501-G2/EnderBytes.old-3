@@ -24,7 +24,24 @@
 	} = getConnection();
 
 	const refresh: Writable<() => void> = writable(null as never);
-	const sort: Writable<[sort: ScanFolderSortType, desc: boolean]> = writable(['fileName', false]);
+	const sort = derived(
+		page,
+		({ url: { searchParams } }): [sort: ScanFolderSortType, desc: boolean] => {
+			try {
+				const sort = searchParams.get('sort') as ScanFolderSortType;
+
+				if (!(sort === 'contentSize' || sort === 'fileName' || sort === 'dateModified')) {
+					return ['fileName', false];
+				}
+
+				const desc = searchParams.get('desc') === 'true';
+
+				return [sort, desc];
+			} catch (error) {
+				return ['fileName', false];
+			}
+		}
+	);
 	const fileId = derived(page, ({ url: { searchParams } }) => {
 		try {
 			const fileId = Number.parseInt(searchParams.get('fileId') ?? '') || null;
