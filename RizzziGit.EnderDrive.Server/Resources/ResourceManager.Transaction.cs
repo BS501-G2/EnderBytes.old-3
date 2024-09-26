@@ -148,7 +148,7 @@ public sealed partial class ResourceManager
     }
 }
 
-public sealed class ResourceTransactionParams
+public sealed class ResourceTransaction
 {
     public required ulong TransactionId;
     public required Logger Logger;
@@ -157,8 +157,8 @@ public sealed class ResourceTransactionParams
     public required CancellationToken CancellationToken;
 }
 
-public delegate Task ResourceTransactionCallback(ResourceTransactionParams parameters);
-public delegate Task<T> ResourceTransactionCallback<T>(ResourceTransactionParams parameters);
+public delegate Task ResourceTransactionCallback(ResourceTransaction parameters);
+public delegate Task<T> ResourceTransactionCallback<T>(ResourceTransaction parameters);
 public delegate IAsyncEnumerable<T> ResourceTransactionCallbackEnumerable<T>(
-    ResourceTransactionParams parameters
+    ResourceTransaction parameters
 );

@@ -20,18 +20,16 @@ public class KeyAccess : ResourceData
 
     public UnlockedKeyAccess Unlock(UnlockedUserAuthentication userAuthentication)
     {
-        if (UserId != userAuthentication.UserId)
-        {
-            throw new InvalidOperationException("User ID mismatch");
-        }
-
         byte[] aesKey = KeyManager.Decrypt(userAuthentication, EncryptedAesKey);
 
         return new()
         {
+            Id = ObjectId.GenerateNewId(),
             KeyId = KeyId,
             UserId = UserId,
             EncryptedAesKey = EncryptedAesKey,
+
+            Original = this,
 
             AesKey = aesKey,
         };
@@ -40,6 +38,8 @@ public class KeyAccess : ResourceData
 
 public class UnlockedKeyAccess : KeyAccess
 {
+    public required KeyAccess Original;
+
     public required byte[] AesKey;
 }
 
@@ -49,11 +49,11 @@ public sealed partial class ResourceManager
     private IMongoCollection<KeyAccess> KeyAccesses => GetCollection<KeyAccess>();
 
     public async Task<(Key Key, KeyAccess KeyAccess)> CreateKey(
-        ResourceTransactionParams transactionParams,
+        ResourceTransaction transactionParams,
         User user
     )
     {
-        Key key = new();
+        Key key = new() { Id = ObjectId.GenerateNewId() };
 
         await Keys.InsertOneAsync(key, null, transactionParams.CancellationToken);
 
@@ -61,23 +61,12 @@ public sealed partial class ResourceManager
     }
 
     public async Task<UnlockedKeyAccess> AddInitialKeyAccess(
-        ResourceTransactionParams transactionParams,
+        ResourceTransaction transactionParams,
         Key key,
         User user
     )
     {
-        if (
-            await KeyAccesses
-                .AsQueryable()
-                .Where((e) => e.KeyId == key.Id)
-                .ToAsyncEnumerable()
-                .AnyAsync(transactionParams.CancellationToken)
-        )
-        {
-            throw new InvalidOperationException("Key has already been generated");
-        }
-
-        Aes aes = await KeyManager.GenerateSymmetricKey(transactionParams.CancellationToken);
+        using Aes aes = await KeyManager.GenerateSymmetricKey(transactionParams.CancellationToken);
 
         byte[] aesKey = KeyManager.SerializeSymmetricKey(aes);
         byte[] encryptedAesKey = KeyManager.Encrypt(user, aesKey);
@@ -85,6 +74,7 @@ public sealed partial class ResourceManager
         KeyAccess keyAccess =
             new()
             {
+                Id = ObjectId.GenerateNewId(),
                 KeyId = key.Id,
                 UserId = user.Id,
                 EncryptedAesKey = encryptedAesKey,
@@ -94,6 +84,9 @@ public sealed partial class ResourceManager
 
         return new()
         {
+            Original = keyAccess,
+
+            Id = keyAccess.Id,
             KeyId = key.Id,
             UserId = user.Id,
             EncryptedAesKey = encryptedAesKey,
@@ -103,34 +96,19 @@ public sealed partial class ResourceManager
     }
 
     public async Task<UnlockedKeyAccess> AddKeyAccess(
-        ResourceTransactionParams transactionParams,
+        ResourceTransaction transactionParams,
         Key key,
         UnlockedKeyAccess sourceKeyAccess,
         User user
     )
     {
-        if (key.Id != sourceKeyAccess.KeyId)
-        {
-            throw new InvalidOperationException("Key ID mismatch");
-        }
-
-        if (
-            await KeyAccesses
-                .AsQueryable()
-                .Where((keyAccess) => keyAccess.KeyId == key.Id && keyAccess.UserId == user.Id)
-                .ToAsyncEnumerable()
-                .AnyAsync(transactionParams.CancellationToken)
-        )
-        {
-            throw new InvalidOperationException("User already has access to key");
-        }
-
-        Aes aes = KeyManager.DeserializeSymmetricKey(sourceKeyAccess.AesKey);
+        using Aes aes = KeyManager.DeserializeSymmetricKey(sourceKeyAccess.AesKey);
         byte[] encryptedAesKey = KeyManager.Encrypt(user, sourceKeyAccess.AesKey);
 
         KeyAccess keyAccess =
             new()
             {
+                Id = ObjectId.GenerateNewId(),
                 KeyId = key.Id,
                 UserId = user.Id,
                 EncryptedAesKey = encryptedAesKey,
@@ -140,6 +118,9 @@ public sealed partial class ResourceManager
 
         return new()
         {
+            Original = keyAccess,
+
+            Id = keyAccess.Id,
             KeyId = key.Id,
             UserId = user.Id,
             EncryptedAesKey = encryptedAesKey,
@@ -148,22 +129,6 @@ public sealed partial class ResourceManager
         };
     }
 
-    public async Task RemoveKeyAccess(
-        ResourceTransactionParams transactionParams,
-        UnlockedKeyAccess unlockedKeyAccess
-    )
-    {
-        if (
-            await KeyAccesses
-                .AsQueryable()
-                .Where((keyAccess) => keyAccess.KeyId == unlockedKeyAccess.KeyId)
-                .ToAsyncEnumerable()
-                .CountAsync(transactionParams.CancellationToken) <= 1
-        )
-        {
-            throw new InvalidOperationException("Removing the last key access is not allowed");
-        }
-
-        await KeyAccesses.DeleteManyAsync((keyAccess) => keyAccess.Id == unlockedKeyAccess.Id);
-    }
+    public Task RemoveKeyAccess(ResourceTransaction transaction, UnlockedKeyAccess keyAccess) =>
+        Delete(transaction, keyAccess);
 }

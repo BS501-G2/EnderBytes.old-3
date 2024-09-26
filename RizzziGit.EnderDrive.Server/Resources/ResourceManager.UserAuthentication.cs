@@ -7,6 +7,7 @@ using MongoDB.Driver;
 
 namespace RizzziGit.EnderDrive.Server.Resources;
 
+using System.Collections.Generic;
 using System.Linq;
 using Services;
 
@@ -31,8 +32,8 @@ public class UserAuthentication : ResourceData
     public required byte[] RsaPublicKey;
     public required byte[] EncryptedRsaPrivateKey;
 
-    public required byte[] EncryptedChallengeBytes;
-    public required byte[] ChallengeBytes;
+    public UnlockedUserAuthentication Unlock(UnlockedUserAuthentication userAuthentication) =>
+        Unlock(userAuthentication.Payload);
 
     public UnlockedUserAuthentication Unlock(string payload) =>
         Unlock(Encoding.UTF8.GetBytes(payload));
@@ -47,11 +48,13 @@ public class UserAuthentication : ResourceData
             key = rfc2898DeriveBytes.GetBytes(32);
         }
 
-        Aes aesKey = KeyManager.DeserializeSymmetricKey([.. key, .. AesIv]);
+        using Aes aesKey = KeyManager.DeserializeSymmetricKey([.. key, .. AesIv]);
         byte[] rsaPrivateKey = KeyManager.Decrypt(aesKey, EncryptedRsaPrivateKey);
 
         return new()
         {
+            Original = this,
+
             Id = Id,
             UserId = UserId,
             Type = Type,
@@ -60,9 +63,8 @@ public class UserAuthentication : ResourceData
             AesIv = AesIv,
             RsaPublicKey = RsaPublicKey,
             EncryptedRsaPrivateKey = EncryptedRsaPrivateKey,
-            ChallengeBytes = ChallengeBytes,
-            EncryptedChallengeBytes = EncryptedChallengeBytes,
 
+            Payload = payload,
             AesKey = payload,
             RsaPrivateKey = rsaPrivateKey,
         };
@@ -74,6 +76,9 @@ public class UnlockedUserAuthentication : UserAuthentication
     public static implicit operator RSA(UnlockedUserAuthentication user) =>
         KeyManager.DeserializeAsymmetricKey(user.RsaPrivateKey);
 
+    public required UserAuthentication Original;
+
+    public required byte[] Payload;
     public required byte[] AesKey;
     public required byte[] RsaPrivateKey;
 }
@@ -91,26 +96,15 @@ public sealed partial class ResourceManager
         return rfc2898DeriveBytes.GetBytes(32);
     }
 
-    public async Task<UnlockedUserAuthentication> AddInitialUserAuthentication(
-        ResourceTransactionParams transactionParams,
+    private async Task<UnlockedUserAuthentication> AddInitialUserAuthentication(
+        ResourceTransaction transactionParams,
         User user,
-        byte[] rsaPublicKey,
-        byte[] rsaPrivateKey,
         UserAuthenticationType type,
-        byte[] payload
+        byte[] payload,
+        byte[] rsaPublicKey,
+        byte[] rsaPrivateKey
     )
     {
-        if (
-            await UserAuthentications
-                .AsQueryable()
-                .Where((userAuthentication) => userAuthentication.UserId == user.Id)
-                .ToAsyncEnumerable()
-                .AnyAsync(transactionParams.CancellationToken)
-        )
-        {
-            throw new InvalidOperationException("asds");
-        }
-
         int iterations = 10000;
 
         byte[] salt = new byte[16];
@@ -121,16 +115,17 @@ public sealed partial class ResourceManager
 
         byte[] aesKey = HashPayload(salt, iterations, payload);
 
-        Aes aes = KeyManager.DeserializeSymmetricKey([.. aesKey, .. iv]);
+        using Aes aes = KeyManager.DeserializeSymmetricKey([.. aesKey, .. iv]);
 
         byte[] encryptedRsaPrivateKey = KeyManager.Encrypt(aes, rsaPrivateKey);
 
-        byte[] challenge = new byte[4096];
+        byte[] challenge = RandomNumberGenerator.GetBytes(4 * 1024);
         byte[] encryptedChallenge = KeyManager.Encrypt(aes, challenge);
 
         UserAuthentication userAuthentication =
             new()
             {
+                Id = ObjectId.GenerateNewId(),
                 UserId = user.Id,
                 Type = type,
                 Iterations = iterations,
@@ -138,8 +133,6 @@ public sealed partial class ResourceManager
                 AesIv = iv,
                 RsaPublicKey = rsaPublicKey,
                 EncryptedRsaPrivateKey = encryptedRsaPrivateKey,
-                ChallengeBytes = challenge,
-                EncryptedChallengeBytes = encryptedChallenge,
             };
 
         await UserAuthentications.InsertOneAsync(
@@ -151,6 +144,8 @@ public sealed partial class ResourceManager
         return (
             new()
             {
+                Original = userAuthentication,
+                Id = userAuthentication.Id,
                 UserId = user.Id,
                 Type = UserAuthenticationType.Password,
                 Iterations = iterations,
@@ -158,8 +153,7 @@ public sealed partial class ResourceManager
                 AesIv = iv,
                 RsaPublicKey = rsaPublicKey,
                 EncryptedRsaPrivateKey = encryptedRsaPrivateKey,
-                ChallengeBytes = challenge,
-                EncryptedChallengeBytes = encryptedChallenge,
+                Payload = payload,
                 AesKey = aesKey,
                 RsaPrivateKey = rsaPrivateKey,
             }
@@ -167,7 +161,7 @@ public sealed partial class ResourceManager
     }
 
     public async Task<UnlockedUserAuthentication> AddUserAuthentication(
-        ResourceTransactionParams transactionParams,
+        ResourceTransaction transactionParams,
         User user,
         UnlockedUserAuthentication sourceUserAuthentication,
         UserAuthenticationType type,
@@ -184,18 +178,17 @@ public sealed partial class ResourceManager
 
         byte[] aesKey = HashPayload(salt, iterations, payload);
 
-        Aes aes = KeyManager.DeserializeSymmetricKey(aesKey, iv);
+        using Aes aes = KeyManager.DeserializeSymmetricKey(aesKey, iv);
 
         byte[] encryptedRsaPrivateKey = KeyManager.Encrypt(
             aes,
             sourceUserAuthentication.RsaPrivateKey
         );
-        byte[] challenge = new byte[4096];
-        byte[] encryptedChallenge = KeyManager.Encrypt(aes, challenge);
 
         UserAuthentication userAuthentication =
             new()
             {
+                Id = ObjectId.GenerateNewId(),
                 UserId = user.Id,
                 Type = type,
                 Iterations = iterations,
@@ -203,8 +196,6 @@ public sealed partial class ResourceManager
                 AesIv = iv,
                 RsaPublicKey = sourceUserAuthentication.RsaPublicKey,
                 EncryptedRsaPrivateKey = encryptedRsaPrivateKey,
-                ChallengeBytes = challenge,
-                EncryptedChallengeBytes = encryptedChallenge,
             };
 
         await UserAuthentications.InsertOneAsync(
@@ -215,6 +206,8 @@ public sealed partial class ResourceManager
 
         return new()
         {
+            Original = userAuthentication,
+            Id = userAuthentication.Id,
             UserId = user.Id,
             Type = type,
             Iterations = iterations,
@@ -224,14 +217,14 @@ public sealed partial class ResourceManager
             EncryptedRsaPrivateKey = encryptedRsaPrivateKey,
             AesKey = sourceUserAuthentication.AesKey,
             RsaPrivateKey = sourceUserAuthentication.RsaPrivateKey,
-            ChallengeBytes = challenge,
-            EncryptedChallengeBytes = encryptedChallenge,
+            Payload = payload,
         };
     }
 
-    public async Task RemoveUserAuthentication(
-        ResourceTransactionParams transactionParams,
-        UnlockedUserAuthentication unlockedUserAuthentication
+    private async Task RemoveUserAuthentication(
+        ResourceTransaction transactionParams,
+        UnlockedUserAuthentication unlockedUserAuthentication,
+        bool forceDelete = false
     )
     {
         if (
@@ -243,6 +236,7 @@ public sealed partial class ResourceManager
                 )
                 .ToAsyncEnumerable()
                 .CountAsync(transactionParams.CancellationToken) <= 1
+            && !forceDelete
         )
         {
             throw new InvalidOperationException(
@@ -256,4 +250,24 @@ public sealed partial class ResourceManager
             transactionParams.CancellationToken
         );
     }
+
+    public Task RemoveUserAuthentication(
+        ResourceTransaction transactionParams,
+        UnlockedUserAuthentication unlockedUserAuthentication
+    ) => RemoveUserAuthentication(transactionParams, unlockedUserAuthentication, false);
+
+    public IAsyncEnumerable<UserAuthentication> GetUserAuthentications(
+        ResourceTransaction transaction,
+        User? user = null,
+        UserAuthenticationType? type = null
+    ) =>
+        Query<UserAuthentication>(
+            transaction,
+            (query) =>
+                query.Where(
+                    (item) =>
+                        (user == null || user.Id == item.UserId)
+                        && (type == null || type == item.Type)
+                )
+        );
 }

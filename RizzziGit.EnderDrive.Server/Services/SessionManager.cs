@@ -38,10 +38,6 @@ public sealed class SessionManager(Server server, ApiServer apiServer)
         return new() { Sessions = sessions };
     }
 
-    protected override async Task OnRun(SessionManagerParams data, CancellationToken cancellationToken)
-    {
-    }
-
     protected override async Task OnStop(SessionManagerParams data, Exception? exception)
     {
     }
