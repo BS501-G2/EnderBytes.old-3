@@ -5,7 +5,7 @@
 		type FileAccessLevel
 	} from '@rizzzi/enderdrive-lib/shared';
 
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import type {
 		FileAccessResource,
 		FileResource,
@@ -31,7 +31,7 @@
 
 	const {
 		serverFunctions: { listFileAccess, listUsers, setUserAccess, getUser, whoAmI, getMyAccess }
-	} = getConnection();
+	} = getConnection2();
 
 	const { resolve, file }: { resolve: () => void; file: FileResource } = $props();
 

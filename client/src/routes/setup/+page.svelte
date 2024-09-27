@@ -12,7 +12,7 @@
 	import { type Writable, writable } from 'svelte/store';
 
 	import { goto } from '$app/navigation';
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 
 	const tabs: TabItem[] = [
 		{
@@ -107,7 +107,7 @@
 						if (currentTabIndex !== tabs.length - 1) {
 							setTab(currentTabIndex + 1);
 						} else {
-							getConnection().serverFunctions.register(
+							getConnection2().serverFunctions.register(
 								$username,
 								$firstName,
 								$middleName || null,

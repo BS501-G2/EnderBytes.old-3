@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext, type Snippet } from 'svelte';
 	import { type AdminContext, AdminContextName } from '../+layout.svelte';
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import type { FileLogResource } from '@rizzzi/enderdrive-lib/server';
 	import { Input, Overlay, Button } from '@rizzzi/svelte-commons';
 	import User from '$lib/client/user.svelte';
@@ -22,7 +22,7 @@
 
 	const {
 		serverFunctions: { listFileLogs, listUsers, adminListFileLogs }
-	} = getConnection();
+	} = getConnection2();
 
 	let filterUsers: number[] = $state([]);
 	let filterActions: FileLogType[] = $state([]);

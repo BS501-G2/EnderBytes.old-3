@@ -23,7 +23,7 @@
 	} from './file-manager.svelte';
 	import { writable, type Writable } from 'svelte/store';
 	import { DashboardContextName, type DashboardContext } from '../dashboard';
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import { deleteConfirm } from './file-manager-delete-confirm.svelte';
 	import { openDetails } from './file-manager-details-dialog.svelte';
 
@@ -41,7 +41,7 @@
 			restoreFile,
 			purgeFile
 		}
-	} = getConnection();
+	} = getConnection2();
 
 	async function getActions(): Promise<FileManagerAction[]> {
 		const actions: FileManagerAction[] = [];

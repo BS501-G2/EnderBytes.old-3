@@ -7,7 +7,7 @@
 		type FileManagerOnPageCallback
 	} from './file-manager.svelte';
 	import FileManagerNew from './file-manager-new.svelte';
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { executeBackgroundTask } from '$lib/background-task.svelte';
@@ -21,7 +21,7 @@
 
 	const {
 		serverFunctions: { getFile, createFolder, openNewFile, writeFile }
-	} = getConnection();
+	} = getConnection2();
 
 	const refresh: Writable<() => void> = writable(null as never);
 	const sort = derived(

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 	import { Overlay } from '@rizzzi/svelte-commons';
 	import { getContext, onMount } from 'svelte';
@@ -25,7 +25,7 @@
 
 	const {
 		serverFunctions: { scanFolder }
-	} = getConnection();
+	} = getConnection2();
 </script>
 
 <Overlay

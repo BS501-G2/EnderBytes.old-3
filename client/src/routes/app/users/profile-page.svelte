@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Title, Awaiter, Button } from '@rizzzi/svelte-commons';
 	import { type UserResolvePayload } from '@rizzzi/enderdrive-lib/shared';
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import { DashboardContextName, type DashboardContext } from '../dashboard';
 	import { getContext } from 'svelte';
 
 	const {
 		serverFunctions: { getUser }
-	} = getConnection();
+	} = getConnection2();
 
 	const { openSettings } = getContext<DashboardContext>(DashboardContextName);
 

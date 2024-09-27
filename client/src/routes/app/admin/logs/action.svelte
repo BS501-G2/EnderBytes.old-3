@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import User from '$lib/client/user.svelte';
 	import type { FileLogResource } from '@rizzzi/enderdrive-lib/server';
 	import { LoadingSpinner } from '@rizzzi/svelte-commons';
@@ -18,7 +18,7 @@
 
 	const {
 		serverFunctions: { adminGetFile }
-	} = getConnection();
+	} = getConnection2();
 
 	let isHovered: boolean = $state(false);
 	let actionElement: HTMLDivElement = $state(null as never);

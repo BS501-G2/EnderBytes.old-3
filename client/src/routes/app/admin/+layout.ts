@@ -1,11 +1,11 @@
 import { goto } from '$app/navigation';
-import { getConnection } from '$lib/client/client';
+import { getConnection2 } from '$lib/client/client';
 import { serializeUserRole } from '@rizzzi/enderdrive-lib/shared';
 
 export async function load(): Promise<void> {
 	const {
 		serverFunctions: { whoAmI }
-	} = getConnection();
+	} = getConnection2();
 	const user = await whoAmI();
 
 	if (user == null) {

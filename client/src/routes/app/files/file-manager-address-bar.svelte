@@ -9,14 +9,14 @@
 		type SourceEvent
 	} from './file-manager.svelte';
 	import FileManagerSeparator from './file-manager-separator.svelte';
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 
 	const { onFileId } = getContext<FileManagerProps>(FileManagerPropsName);
 	const { resolved, addressBarMenu } = getContext<FileManagerContext>(FileManagerContextName);
 
 	const {
 		serverFunctions: { getFile }
-	} = getConnection();
+	} = getConnection2();
 </script>
 
 {#snippet buttonContainer(view: Snippet)}

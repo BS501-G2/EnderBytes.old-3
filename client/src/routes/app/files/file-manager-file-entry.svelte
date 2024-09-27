@@ -1,14 +1,14 @@
 <script lang="ts">
 	import type { FileResource, Mime } from '@rizzzi/enderdrive-lib/server';
 	import FileManagerSeparator from './file-manager-separator.svelte';
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import type { FileManagerViewMode } from './file-manager-folder-list';
 
 	const { file, listViewMode }: { file: FileResource; listViewMode: FileManagerViewMode } =
 		$props();
 	const {
 		serverFunctions: { getFileMime }
-	} = getConnection();
+	} = getConnection2();
 
 	async function load(): Promise<Mime> {
 		const mime = await getFileMime(file.id);

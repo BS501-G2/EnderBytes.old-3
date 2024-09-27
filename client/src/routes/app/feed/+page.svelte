@@ -5,14 +5,14 @@
 	import { Button, Title, ViewMode, viewMode } from '@rizzzi/svelte-commons';
 	import { getContext, onMount } from 'svelte';
 	import { type DashboardContext, DashboardContextName } from '../dashboard';
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import { goto } from '$app/navigation';
 	import { type FileResource, type FileAccessResource } from '@rizzzi/enderdrive-lib/server';
 
 	const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
 	const {
 		serverFunctions: { listSharedFiles }
-	} = getConnection();
+	} = getConnection2();
 
 	onMount(() => setMainContent(main));
 </script>

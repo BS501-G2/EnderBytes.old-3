@@ -3,7 +3,7 @@
 	import { type AdminContext, AdminContextName } from '../+layout.svelte';
 	import { Input, Button } from '@rizzzi/svelte-commons';
 	import { writable, type Writable } from 'svelte/store';
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import User from '$lib/client/user.svelte';
 	import NewUser from './new-user.svelte';
 	import UserOptions from './user-options.svelte';
@@ -13,11 +13,11 @@
 	const { setMainContent, pushTopContent } = getContext<AdminContext>(AdminContextName);
 	const {
 		serverFunctions: { setSuspend }
-	} = getConnection();
+	} = getConnection2();
 
 	const {
 		serverFunctions: { listUsers }
-	} = getConnection();
+	} = getConnection2();
 
 	onMount(() => setMainContent(main));
 	onMount(() => pushTopContent(top));

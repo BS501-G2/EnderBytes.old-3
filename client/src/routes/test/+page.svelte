@@ -7,7 +7,7 @@
   } from '@rizzzi/svelte-commons';
   import { writable, type Writable } from 'svelte/store';
   import { testFunctions } from './test-functions';
-  import { getConnection } from '$lib/client/client'
+  import { getConnection2 } from '$lib/client/client'
   import { viewMode, ViewMode } from '@rizzzi/svelte-commons'
 
   const returnedData: Writable<any> = writable(null);
@@ -55,7 +55,7 @@
       <h2>Buttons</h2>
 
       <div class="button-list">
-        {#each testFunctions(getConnection()) as [label, callback]}
+        {#each testFunctions(getConnection2()) as [label, callback]}
           {@render button(() => onClick(callback), label)}
         {/each}
       </div>

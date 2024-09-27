@@ -13,7 +13,6 @@
 	},
 	"devDependencies": {
 		"@fortawesome/fontawesome-free": "^6.6.0",
-		"@rizzzi/enderdrive-lib": "file:../lib",
 		"@rizzzi/svelte-commons": "file:../../svelte-commons",
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/adapter-node": "^5.2.2",
@@ -21,6 +20,8 @@
 		"@sveltejs/vite-plugin-svelte": "^4.0.0-next.6",
 		"@types/eslint": "^9.6.0",
 		"@types/mmmagic": "^0.4.33",
+		"axios": "^1.7.7",
+		"bson": "^6.8.0",
 		"buffer": "^6.0.3",
 		"eslint": "^9.0.0",
 		"eslint-config-prettier": "^9.1.0",

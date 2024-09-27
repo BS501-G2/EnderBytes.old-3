@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import User from '$lib/client/user.svelte';
 	import type {
 		FileAccessResource,
@@ -69,7 +69,7 @@
 				getFileMime,
 				listFileLogs
 			}
-		} = getConnection();
+		} = getConnection2();
 
 		const owner = await getUser(['userId', file.ownerUserId]);
 		const creator = await getUser(['userId', file.creatorUserId]);

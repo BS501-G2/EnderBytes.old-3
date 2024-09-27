@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 
 	import { page } from '$app/stores';
-	import { getConnection } from '$lib/client/client';
+	import { getConnection2 } from '$lib/client/client';
 	import { viewMode, ViewMode } from '@rizzzi/svelte-commons';
 	import { getContext, onMount } from 'svelte';
 	import { type DashboardContext, DashboardContextName } from './dashboard';
@@ -21,7 +21,7 @@
 
 	const {
 		serverFunctions: { whoAmI }
-	} = getConnection();
+	} = getConnection2();
 
 	let userPromise: Promise<UserResource | null> | null = $state(null);
 

@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { getConnection } from './client';
+	import { getConnection2 } from './client';
 	import { UserClass, type UserProps } from './user';
 </script>
 
@@ -8,7 +8,7 @@
 
 	const {
 		serverFunctions: { getUser }
-	} = getConnection();
+	} = getConnection2();
 </script>
 
 {#if 'userId' in props}
