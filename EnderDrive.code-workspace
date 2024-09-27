@@ -5,6 +5,9 @@
     },
     {
       "path": "lib"
+    },
+    {
+      "path": "RizzziGit.EnderDrive.Server"
     }
   ],
   "settings": {}

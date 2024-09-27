@@ -27,7 +27,7 @@ public static partial class Program
 
         if (scanResult.Infected)
         {
-            Console.WriteLine("asd");
+            Console.WriteLine(scanResult.VirusName);
         }
     }
 }

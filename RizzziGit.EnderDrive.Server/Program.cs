@@ -33,6 +33,12 @@ public static partial class Program
             {
                 // await UserTest(server);
                 await ScanVirus(server);
+
+                await server.Join();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
             }
             finally
             {

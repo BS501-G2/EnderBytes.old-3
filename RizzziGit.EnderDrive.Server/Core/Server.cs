@@ -7,6 +7,7 @@ using RizzziGit.Commons.Services;
 namespace RizzziGit.EnderDrive.Server.Core;
 
 using Resources;
+using RizzziGit.EnderDrive.Server.API;
 using Services;
 
 public sealed class ServerData
@@ -14,24 +15,27 @@ public sealed class ServerData
     public required ResourceManager ResourceManager;
     public required KeyManager KeyGenerator;
     public required VirusScanner VirusScanner;
-    public required ConnectionManager ConnectionManager;
+    public required ApiServer ApiServer;
 }
 
-public sealed class Server(string workingPath, string clamAvSocketPath = "/run/clamav/clamd.ctl")
-    : Service2<ServerData>("Server")
+public sealed class Server(
+    string workingPath,
+    string clamAvSocketPath = "/run/clamav/clamd.ctl",
+    int httpPort = 8082,
+    int httpsPort = 8442
+) : Service2<ServerData>("Server")
 {
     private string ServerFolder => Path.Join(workingPath, ".EnderDrive");
-    private string DatabaseFolder => Path.Join(ServerFolder, "Database");
 
     protected override async Task<ServerData> OnStart(CancellationToken cancellationToken)
     {
         ResourceManager resourceManager = new(this);
         KeyManager keyGenerator = new(this);
         VirusScanner virusScanner = new(this, clamAvSocketPath);
-        ConnectionManager connectionManager = new(this);
+        ApiServer apiServer = new(this, httpPort, httpsPort);
 
         await StartServices(
-            [keyGenerator, virusScanner, resourceManager, connectionManager],
+            [keyGenerator, virusScanner, resourceManager, apiServer],
             cancellationToken
         );
 
@@ -40,7 +44,7 @@ public sealed class Server(string workingPath, string clamAvSocketPath = "/run/c
             ResourceManager = resourceManager,
             KeyGenerator = keyGenerator,
             VirusScanner = virusScanner,
-            ConnectionManager = connectionManager,
+            ApiServer = apiServer,
         };
     }
 
@@ -57,14 +61,14 @@ public sealed class Server(string workingPath, string clamAvSocketPath = "/run/c
             data.KeyGenerator.Join(cancellationToken),
             data.VirusScanner.Join(cancellationToken),
             data.ResourceManager.Join(cancellationToken),
-            data.ConnectionManager.Join(cancellationToken)
+            data.ApiServer.Join(cancellationToken)
         );
     }
 
     protected override async Task OnStop(ServerData data, Exception? exception)
     {
         await StopServices(
-            data.ConnectionManager,
+            data.ApiServer,
             data.ResourceManager,
             data.VirusScanner,
             data.KeyGenerator

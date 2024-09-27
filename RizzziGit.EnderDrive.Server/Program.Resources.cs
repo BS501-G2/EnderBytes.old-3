@@ -29,9 +29,12 @@ public static partial class Program
                     ""
                 );
 
+                FileContent fileContent = await resources.GetMainFileContent(transaction, file);
+
                 FileSnapshot fileSnapshot = await resources.CreateFileSnapshot(
                     transaction,
                     file,
+                    fileContent,
                     userAuthentication,
                     null
                 );
@@ -51,6 +54,7 @@ public static partial class Program
                     await resources.WriteFile(
                         transaction,
                         file,
+                        fileContent,
                         fileSnapshot,
                         userAuthentication,
                         input.Position - bufferSize,

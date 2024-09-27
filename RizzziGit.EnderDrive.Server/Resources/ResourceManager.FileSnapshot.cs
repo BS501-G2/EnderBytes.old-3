@@ -7,8 +7,6 @@ namespace RizzziGit.EnderDrive.Server.Resources;
 
 using MongoDB.Driver;
 
-public sealed partial class ResourceManager
-{
     public class FileSnapshot : ResourceData
     {
         public required ObjectId FileId;
@@ -18,6 +16,8 @@ public sealed partial class ResourceManager
 
         public required long Size;
     }
+public sealed partial class ResourceManager
+{
 
     public async Task<FileSnapshot> CreateFileSnapshot(
         ResourceTransaction transaction,

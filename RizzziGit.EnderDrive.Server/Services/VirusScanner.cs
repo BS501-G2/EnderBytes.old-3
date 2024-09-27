@@ -18,8 +18,8 @@ using Utilities;
 
 public sealed class VirusScannerParams
 {
+    public required VirusScanner.TcpForwarder TcpForwarder;
     public required IClamAvClient Client;
-    public required TcpListener InternalTcpListener;
     public required WaitQueue<(
         TaskCompletionSource<ScanResult> Source,
         Stream Stream,
@@ -27,12 +27,16 @@ public sealed class VirusScannerParams
     )> WaitQueue;
 }
 
-public sealed class VirusScanner(Server server, string unixSocketPath)
+public sealed partial class VirusScanner(Server server, string unixSocketPath)
     : Service2<VirusScannerParams>("Virus Scanner", server)
 {
     protected override async Task<VirusScannerParams> OnStart(CancellationToken cancellationToken)
     {
         IPEndPoint ipEndPoint = new(IPAddress.Loopback, 9000);
+        TcpForwarder tcpForwarder = new(this, ipEndPoint, unixSocketPath);
+
+        await StartServices([tcpForwarder], cancellationToken);
+
         IClamAvClient client = ClamAvClient.Create(new($"tcp://{ipEndPoint}"));
 
         await client.PingAsync(cancellationToken);
@@ -42,113 +46,12 @@ public sealed class VirusScanner(Server server, string unixSocketPath)
         Info("Version", version.ProgramVersion);
         Info("Version", $"Virus Database {version.VirusDbVersion}");
 
-        TcpListener internalTcpListener = new(ipEndPoint);
-
-        internalTcpListener.Start();
-
         return new()
         {
             Client = client,
-            InternalTcpListener = internalTcpListener,
+            TcpForwarder = tcpForwarder,
             WaitQueue = new(),
         };
-    }
-
-    private async Task HandleTcpClient(TcpClient client, CancellationToken cancellationToken)
-    {
-        using Socket socket = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.IP);
-        await socket.ConnectAsync(new UnixDomainSocketEndPoint(unixSocketPath));
-
-        using NetworkStream clientStream = client.GetStream();
-        using NetworkStream socketStream = new(socket, true);
-
-        async Task pipe(NetworkStream from, NetworkStream to)
-        {
-            byte[] buffer = new byte[1024 * 256];
-            while (true)
-            {
-                int bufferRead = await from.ReadAsync(buffer, cancellationToken);
-                if (bufferRead == 0)
-                {
-                    break;
-                }
-
-                await to.WriteAsync(buffer.AsMemory(0, bufferRead), cancellationToken);
-            }
-        }
-
-        await Task.WhenAny([pipe(socketStream, clientStream), pipe(clientStream, socketStream)]);
-    }
-
-    private async Task ListenTcp(TcpListener listener, CancellationToken cancellationToken)
-    {
-        List<Task> connections = [];
-
-        try
-        {
-            while (true)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                TaskCompletionSource source = new();
-
-                _ = Task.Run(
-                    async () =>
-                    {
-                        TcpClient client;
-
-                        try
-                        {
-                            client = await listener.AcceptTcpClientAsync(cancellationToken);
-
-                            source.SetResult();
-                        }
-                        catch (Exception exception)
-                        {
-                            source.SetException(exception);
-                            return;
-                        }
-
-                        async Task handle()
-                        {
-                            using (client)
-                            {
-                                await HandleTcpClient(client, cancellationToken);
-                            }
-                        }
-
-                        Task task = handle();
-                        try
-                        {
-                            lock (connections)
-                            {
-                                connections.Add(task);
-                            }
-
-                            await task;
-                        }
-                        catch (Exception exception)
-                        {
-                            lock (connections)
-                            {
-                                connections.Remove(task);
-                            }
-
-                            Error("TCP", $"Handler Exception: {exception.ToPrintable()}");
-                        }
-                    },
-                    CancellationToken.None
-                );
-
-                await source.Task;
-            }
-        }
-        catch
-        {
-            await Task.WhenAll(connections);
-
-            throw;
-        }
     }
 
     private async Task RunScanQueue(
@@ -186,19 +89,24 @@ public sealed class VirusScanner(Server server, string unixSocketPath)
         }
     }
 
-    protected override Task OnRun(VirusScannerParams data, CancellationToken cancellationToken) =>
-        Task.WhenAll(
+    protected override async Task OnRun(
+        VirusScannerParams data,
+        CancellationToken cancellationToken
+    )
+    {
+        await Task.WhenAll(
             [
-                ListenTcp(data.InternalTcpListener, cancellationToken),
                 RunScanQueue(data.Client, cancellationToken),
+                data.TcpForwarder.Join(cancellationToken),
             ]
         );
+    }
 
-    protected override Task OnStop(VirusScannerParams data, Exception? exception)
+    protected override async Task OnStop(VirusScannerParams data, Exception? exception)
     {
         data.Client.Dispose();
 
-        return base.OnStop(data, exception);
+        await StopServices(data.TcpForwarder);
     }
 
     public async Task<ScanResult> Scan(Stream stream, CancellationToken cancellationToken = default)
