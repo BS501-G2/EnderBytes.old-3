@@ -2,11 +2,11 @@
 	import { goto } from '$app/navigation';
 
 	import { page } from '$app/stores';
-	import { getConnection2 } from '$lib/client/client';
+	import { getConnection } from '$lib/client/client';
 	import { viewMode, ViewMode } from '@rizzzi/svelte-commons';
 	import { getContext, onMount } from 'svelte';
 	import { type DashboardContext, DashboardContextName } from './dashboard';
-	import type { UserResource } from '@rizzzi/enderdrive-lib/server';
+	import type { UserResource } from '@rizzzi/enderdrive-lib/shared';
 	import { serializeUserRole } from '@rizzzi/enderdrive-lib/shared';
 
 	const { isWidthLimited } = getContext<DashboardContext>(DashboardContextName);
@@ -21,7 +21,7 @@
 
 	const {
 		serverFunctions: { whoAmI }
-	} = getConnection2();
+	} = getConnection();
 
 	let userPromise: Promise<UserResource | null> | null = $state(null);
 

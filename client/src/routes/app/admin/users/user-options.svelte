@@ -3,7 +3,8 @@
 </script>
 
 <script lang="ts">
-	import type { UserResource } from '@rizzzi/enderdrive-lib/server';
+	import type { UserResource } from '@rizzzi/enderdrive-lib/shared';
+
 	import { Overlay } from '@rizzzi/svelte-commons';
 	import { fade } from 'svelte/transition';
 

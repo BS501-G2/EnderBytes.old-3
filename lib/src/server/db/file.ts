@@ -1,42 +1,23 @@
 import { Knex } from "knex";
-import { QueryOptions, Resource, ResourceManager } from "../resource.js";
+import { QueryOptions, ResourceManager } from "../resource.js";
 import { Database } from "../database.js";
 import {
   FileNameVerificationFlag,
+  FileResource,
   FileType,
+  UnlockedFileResource,
   fileNameInvalidCharacters,
   fileNameLength,
 } from "../../shared/db/file.js";
-import { UserManager, UserResource } from "./user.js";
-import {
-  UnlockedUserAuthentication,
-  UserAuthenticationManager,
-} from "./user-authentication.js";
+import { UserManager } from "./user.js";
+import { UserAuthenticationManager } from "./user-authentication.js";
 import { FileAccessManager } from "./file-access.js";
 import {
   FileAccessLevel,
   serializeFileAccessLevel,
 } from "../../shared/db/file-access.js";
 import { decryptSymmetric, encryptSymmetric, randomBytes } from "../crypto.js";
-
-export interface FileResource extends Resource {
-  parentFileId: number | null;
-  creatorUserId: number;
-  ownerUserId: number;
-
-  name: string;
-  type: FileType;
-
-  deleted: boolean;
-
-  encryptedAesKey: Uint8Array;
-  encryptedAesKeyIv: Uint8Array;
-  encryptedAesKeyAuthTag: Uint8Array;
-}
-
-export interface UnlockedFileResource extends FileResource {
-  aesKey: Uint8Array;
-}
+import { UnlockedUserAuthentication, UserResource } from "../../shared.js";
 
 export class FileManager extends ResourceManager<FileResource, FileManager> {
   public constructor(

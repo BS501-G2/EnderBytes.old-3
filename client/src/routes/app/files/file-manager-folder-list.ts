@@ -1,4 +1,4 @@
-import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+import type { FileResource } from '@rizzzi/enderdrive-lib/shared';
 
 export type FileManagerViewMode = 'grid' | 'list'
 

@@ -4,7 +4,7 @@
 		FileResource,
 		FileSnapshotResource,
 		UserResource
-	} from '@rizzzi/enderdrive-lib/server';
+	} from '@rizzzi/enderdrive-lib/shared';
 	import { type FileAccessLevel, type ScanFolderSortType } from '@rizzzi/enderdrive-lib/shared';
 	import { setContext } from 'svelte';
 	import { writable, type Readable, type Writable } from 'svelte/store';
@@ -127,7 +127,7 @@
 		viewMode
 	} from '@rizzzi/svelte-commons';
 
-	import { getConnection2 } from '$lib/client/client';
+	import { getConnection } from '$lib/client/client';
 	import { persisted } from 'svelte-persisted-store';
 	import FileManagerActionBar, { type FileManagerAction } from './file-manager-action-bar.svelte';
 	import FileManagerFolderList from './file-manager-folder-list.svelte';
@@ -162,7 +162,7 @@
 			listTrashedFiles,
 			scanFolder
 		}
-	} = getConnection2();
+	} = getConnection();
 
 	setContext<FileManagerProps>(FileManagerPropsName, props);
 	const { refreshKey, resolved, showSideBar, viewDialog, accessDialogs, addressBarMenu } =

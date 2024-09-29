@@ -3,19 +3,16 @@ import {
   ServiceGetDataCallback,
   ServiceReadyCallback,
   ServiceSetDataCallback,
+  UnlockedFileResource,
 } from "../../shared.js";
 import NodeClam from "clamscan";
 import { Server } from "./server.js";
-import { UnlockedFileResource } from "../db/file.js";
 import { VirusReportManager } from "../db/virus-report.js";
 import { Database } from "../database.js";
-import { FileContentManager, FileContentResource } from "../db/file-content.js";
-import {
-  FileSnapshotManager,
-  FileSnapshotResource,
-} from "../db/file-snapshot.js";
 import { Readable } from "stream";
 import { FileDataManager } from "../db/file-data.js";
+import { FileSnapshotResource } from "../../shared/db/file-snapshot.js";
+import { FileContentResource } from "../../shared/db/file-content.js";
 
 export interface VirusScannerData {
   clam: NodeClam;

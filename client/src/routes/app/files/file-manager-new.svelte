@@ -14,14 +14,7 @@
 <script lang="ts">
 	import { byteUnit } from '@rizzzi/enderdrive-lib/shared';
 
-	import {
-		Button,
-		Dialog,
-		Input,
-		Overlay,
-		ViewMode,
-		viewMode
-	} from '@rizzzi/svelte-commons';
+	import { Button, Dialog, Input, Overlay, ViewMode, viewMode } from '@rizzzi/svelte-commons';
 	import { onMount, type Snippet } from 'svelte';
 	import { writable, type Writable } from 'svelte/store';
 	import { fly } from 'svelte/transition';
@@ -116,7 +109,7 @@
 
 			<Button
 				buttonClass="transparent"
-				container={buttonContainer}
+				container={buttonContainer as Snippet}
 				onClick={() => fileElement?.click()}
 			>
 				<p>Select Files</p>
@@ -134,7 +127,7 @@
 				{#each tab.options as [action, name], index}
 					<Button
 						buttonClass={index === 0 ? 'primary' : 'transparent'}
-						container={buttonContainer}
+						container={buttonContainer as Snippet}
 						onClick={action}
 					>
 						<p>{name}</p>

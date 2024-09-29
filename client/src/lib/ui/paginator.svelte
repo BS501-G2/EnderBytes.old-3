@@ -70,7 +70,7 @@
 {/snippet}
 
 {#if container != null}
-  {@render container[1](updateScroll, view)}
+  {@render container[1](updateScroll, view as Snippet)}
 {:else}
   <div class="paginator" bind:this={listElement} onscroll={updateScroll}>
     {@render view()}

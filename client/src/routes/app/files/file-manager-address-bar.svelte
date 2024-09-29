@@ -9,14 +9,14 @@
 		type SourceEvent
 	} from './file-manager.svelte';
 	import FileManagerSeparator from './file-manager-separator.svelte';
-	import { getConnection2 } from '$lib/client/client';
+	import { getConnection } from '$lib/client/client';
 
 	const { onFileId } = getContext<FileManagerProps>(FileManagerPropsName);
 	const { resolved, addressBarMenu } = getContext<FileManagerContext>(FileManagerContextName);
 
 	const {
 		serverFunctions: { getFile }
-	} = getConnection2();
+	} = getConnection();
 </script>
 
 {#snippet buttonContainer(view: Snippet)}
@@ -49,7 +49,7 @@
 			onClick={(event: SourceEvent) => onFileId(event, null)}
 			buttonClass={isLocal ? 'transparent' : 'primary'}
 			outline={false}
-			container={buttonContainer}
+			container={buttonContainer as Snippet}
 		>
 			{#if isLocal}
 				{@render button('fa-regular fa-folder-open', 'My Files')}

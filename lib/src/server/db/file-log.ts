@@ -1,18 +1,10 @@
 import { Knex } from "knex";
-import { QueryOptions, Resource, ResourceManager } from "../resource.js";
+import { QueryOptions, ResourceManager } from "../resource.js";
 import { Database } from "../database.js";
-import { FileLogType } from "../../shared/db/file-log.js";
-import { UserManager, UserResource } from "./user.js";
-import { FileManager, UnlockedFileResource } from "./file.js";
-import { FileContentResource } from "./file-content.js";
-
-export interface FileLogResource
-  extends Resource<FileLogResource, FileLogManager> {
-  actorUserId: number;
-  targetFileId: number;
-  type: FileLogType;
-  targetUserId?: number;
-}
+import { FileLogResource, FileLogType } from "../../shared/db/file-log.js";
+import { UserManager } from "./user.js";
+import { FileManager } from "./file.js";
+import { UnlockedFileResource, UserResource } from "../../shared.js";
 
 export class FileLogManager extends ResourceManager<
   FileLogResource,

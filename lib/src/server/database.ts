@@ -6,8 +6,9 @@ import {
 import knex, { Knex } from "knex";
 import FS from "fs";
 import { TaskQueue, createTaskQueue } from "../shared/task-queue.js";
-import { Resource, ResourceManager } from "./resource.js";
+import { ResourceManager } from "./resource.js";
 import { Server } from "./core/server.js";
+import { Resource } from "../shared/resource.js";
 
 interface VersionTable {
   name: string;
@@ -22,7 +23,7 @@ interface DatabaseInstance {
 }
 
 export type ResourceManagerConstructor<
-  R extends Resource<R, M>,
+  R extends Resource,
   M extends ResourceManager<R, M>
 > = new (
   db: Database,
@@ -30,7 +31,7 @@ export type ResourceManagerConstructor<
 ) => M;
 
 export type DatabaseResourceManagerInstance<
-  R extends Resource<R, M>,
+  R extends Resource,
   M extends ResourceManager<R, M>
 > = {
   init: ResourceManagerConstructor<R, M>;
@@ -149,7 +150,7 @@ export class Database extends Service<
     await new Promise<void>((resolve) => onReady(() => resolve()));
   }
 
-  public getManager<R extends Resource<R, M>, M extends ResourceManager<R, M>>(
+  public getManager<R extends Resource, M extends ResourceManager<R, M>>(
     init: ResourceManagerConstructor<R, M>
   ) {
     const instance = this.#managers.find((entry) => entry.init === init);

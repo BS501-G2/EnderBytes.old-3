@@ -1,5 +1,4 @@
 <script lang="ts" module>
-	import type { FileResource } from '@rizzzi/enderdrive-lib/server';
 	import { writable, type Writable } from 'svelte/store';
 
 	interface DialogEntry {
@@ -33,6 +32,7 @@
 
 <script lang="ts">
 	import FileManagerDetails from './file-manager-details.svelte';
+	import type { FileResource } from '@rizzzi/enderdrive-lib/shared';
 </script>
 
 {#snippet layout(index: number)}

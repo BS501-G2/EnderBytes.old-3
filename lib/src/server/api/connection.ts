@@ -4,35 +4,37 @@ import {
   baseConnectionFunctions,
   deserializeFileAccessLevel,
   FileAccessLevel,
+  FileAccessResource,
   fileIoSize,
+  FileLogResource,
+  FileResource,
   FileType,
   ScanFolderSortType,
   serializeFileAccessLevel,
   serializeUserRole,
   SocketWrapper,
+  UnlockedFileResource,
+  UnlockedUserAuthentication,
   UserResolvePayload,
+  UserResource,
   UserRole,
   wrapSocket,
 } from "../../shared.js";
-import {
-  UnlockedUserAuthentication,
-  UserAuthenticationManager,
-} from "../db/user-authentication.js";
-import { UserManager, UserResource } from "../db/user.js";
+import { UserAuthenticationManager } from "../db/user-authentication.js";
+import { UserManager } from "../db/user.js";
 import { UserSessionManager } from "../db/user-session.js";
 import { ServerConnectionManager } from "./connection-manager.js";
-import { FileManager, FileResource, UnlockedFileResource } from "../db/file.js";
-import { FileContentManager, FileContentResource } from "../db/file-content.js";
-import {
-  FileSnapshotManager,
-  FileSnapshotResource,
-} from "../db/file-snapshot.js";
+import { FileManager } from "../db/file.js";
+import { FileContentManager } from "../db/file-content.js";
+import { FileSnapshotManager } from "../db/file-snapshot.js";
 import { FileDataManager } from "../db/file-data.js";
-import { FileLogManager, FileLogResource } from "../db/file-log.js";
-import { FileAccessManager, FileAccessResource } from "../db/file-access.js";
+import { FileLogManager } from "../db/file-log.js";
+import { FileAccessManager } from "../db/file-access.js";
 import { FileStarManager } from "../db/file-star.js";
-import { ServerFunctions } from "./connection-functions.js";
 import { ClientFunctions } from "../../client/core/connection-functions.js";
+import { FileContentResource } from "../../shared/db/file-content.js";
+import { FileSnapshotResource } from "../../shared/db/file-snapshot.js";
+import { ServerFunctions } from "../../shared/api/server-functions.js";
 
 export interface ServerConnectionContext {
   updateTime: number;

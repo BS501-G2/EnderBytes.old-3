@@ -1,30 +1,21 @@
 import { Knex } from "knex";
 import { Database } from "../database.js";
-import { ResourceManager, Resource } from "../resource.js";
+import { ResourceManager } from "../resource.js";
 import {
   deserializeFileAccessLevel,
   FileAccessLevel,
+  FileAccessResource,
   serializeFileAccessLevel,
+  UnlockedFileAccess,
 } from "../../shared/db/file-access.js";
-import { FileManager, UnlockedFileResource } from "./file.js";
-import { UserManager, UserResource } from "./user.js";
+import { FileManager } from "./file.js";
+import { UserManager } from "./user.js";
+import { UserAuthenticationManager } from "./user-authentication.js";
 import {
+  UnlockedFileResource,
   UnlockedUserAuthentication,
-  UserAuthenticationManager,
-} from "./user-authentication.js";
-
-export interface FileAccessResource
-  extends Resource<FileAccessResource, FileAccessManager> {
-  userId: number;
-  fileId: number;
-  level: number;
-  encryptedKey: Uint8Array;
-  granterUserId: number;
-}
-
-export interface UnlockedFileAccess extends FileAccessResource {
-  key: Uint8Array;
-}
+  UserResource,
+} from "../../shared.js";
 
 export class FileAccessManager extends ResourceManager<
   FileAccessResource,

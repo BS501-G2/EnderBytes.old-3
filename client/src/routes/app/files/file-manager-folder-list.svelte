@@ -12,7 +12,7 @@
 		type FileManagerProps,
 		FileManagerPropsName
 	} from './file-manager.svelte';
-	import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+	import type { FileResource } from '@rizzzi/enderdrive-lib/shared';
 	import { writable, type Writable } from 'svelte/store';
 	import FileManagerFileEntry from './file-manager-file-entry.svelte';
 

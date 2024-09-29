@@ -1,21 +1,22 @@
 import {
   Authentication,
-  ConnectionFunctions,
-  FileAccessLevel,
-  FileLogType,
   ScanFolderSortType,
-  UserAuthenticationType,
   UserResolvePayload,
-  UserRole,
-} from "../../shared.js";
-import { FileAccessResource } from "../db/file-access.js";
-import { FileLogResource } from "../db/file-log.js";
+} from "../api.js";
+import { ConnectionFunctions } from "../connection.js";
+import { FileAccessLevel, FileAccessResource } from "../db/file-access.js";
+import { FileLogResource, FileLogType } from "../db/file-log.js";
 import { FileSnapshotResource } from "../db/file-snapshot.js";
 import { FileStarResource } from "../db/file-star.js";
 import { FileResource } from "../db/file.js";
-import { UnlockedUserAuthentication } from "../db/user-authentication.js";
-import { UserResource } from "../db/user.js";
-export type Mime = [mime: string, description: string];
+import {
+  UnlockedUserAuthentication,
+  UserAuthenticationType,
+} from "../db/user-authentication.js";
+
+import { UserResource, UserRole } from "../db/user.js";
+
+export type Mime = [mime: string, description: string]
 
 export interface ServerFunctions extends ConnectionFunctions {
   restore: (authentication: Authentication) => Promise<Authentication>;
@@ -100,10 +101,7 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   getFileSize: (fileId: number, fileSnapshotId?: number) => Promise<number>;
 
-  getFileMime: (
-    fileId: number,
-    fileSnapshotId?: number
-  ) => Promise<Mime>;
+  getFileMime: (fileId: number, fileSnapshotId?: number) => Promise<Mime>;
 
   getFileTime: (
     fileId: number
@@ -158,9 +156,17 @@ export interface ServerFunctions extends ConnectionFunctions {
 
   truncateFile: (fileHandleId: number, length: number) => Promise<void>;
 
-  readFile: (fileHandleId: number, position: number, length: number) => Promise<Uint8Array>
+  readFile: (
+    fileHandleId: number,
+    position: number,
+    length: number
+  ) => Promise<Uint8Array>;
 
-  writeFile: (fileHandleId: number, position: number, data: Uint8Array) => Promise<void>;
+  writeFile: (
+    fileHandleId: number,
+    position: number,
+    data: Uint8Array
+  ) => Promise<void>;
 
   closeFile: (fileHandleId: number) => Promise<void>;
 

@@ -12,6 +12,7 @@
   } from '@rizzzi/svelte-commons';
   import type { Snippet } from 'svelte';
 	import { LocaleKey } from '$lib/locale';
+	import type { Writable } from 'svelte/store';
 
   const { children }: { children: Snippet } = $props();
 </script>

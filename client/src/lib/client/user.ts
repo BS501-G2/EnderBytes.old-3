@@ -1,4 +1,4 @@
-import type { UserResource } from "@rizzzi/enderdrive-lib/server";
+import type { UserResource } from "@rizzzi/enderdrive-lib/shared";
 
 export enum UserClass {
 	Link

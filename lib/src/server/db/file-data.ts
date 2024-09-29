@@ -1,21 +1,16 @@
 import { Knex } from "knex";
-import { ResourceManager, Resource } from "../resource.js";
-import { FileManager, UnlockedFileResource } from "./file.js";
-import { FileContentManager, FileContentResource } from "./file-content.js";
-import { FileSnapshotManager, FileSnapshotResource } from "./file-snapshot.js";
-import { FileBufferManager, FileBufferResource } from "./file-buffer.js";
-import { fileBufferSize, FileType } from "../../shared/db/file.js";
+import { ResourceManager } from "../resource.js";
+import { FileManager } from "./file.js";
+import { FileContentManager } from "./file-content.js";
+import { FileSnapshotManager } from "./file-snapshot.js";
+import { FileBufferManager } from "./file-buffer.js";
+import { fileBufferSize, FileType, UnlockedFileResource } from "../../shared/db/file.js";
 import { Database } from "../database.js";
 import { Readable } from "stream";
-
-export interface FileDataResource
-  extends Resource<FileDataResource, FileDataManager> {
-  fileId: number;
-  fileContentId: number;
-  fileSnapshotId: number;
-  fileBufferId: number;
-  index: number;
-}
+import { FileContentResource } from "../../shared/db/file-content.js";
+import { FileSnapshotResource } from "../../shared/db/file-snapshot.js";
+import { FileBufferResource } from "../../shared/db/file-buffer.js";
+import { FileDataResource } from "../../shared.js";
 
 export class FileDataManager extends ResourceManager<
   FileDataResource,

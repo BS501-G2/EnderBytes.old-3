@@ -1,27 +1,16 @@
 import type { Knex } from "knex";
 import {
+  UserResource,
   UserRole,
   UsernameVerificationFlag,
   serializeUserRole,
   usernameLength,
   usernameValidCharacters,
 } from "../../shared/db/user.js";
-import { Resource, ResourceManager } from "../resource.js";
-import {
-  UnlockedUserAuthentication,
-  UserAuthenticationManager,
-} from "./user-authentication.js";
+import { ResourceManager } from "../resource.js";
+import { UserAuthenticationManager } from "./user-authentication.js";
 import { Database } from "../database.js";
-import { UserAuthenticationType } from "../../shared/db/user-authentication.js";
-
-export interface UserResource extends Resource<UserResource, UserManager> {
-  username: string;
-  firstName: string;
-  middleName: string | null;
-  lastName: string;
-  role: number;
-  isSuspended: boolean;
-}
+import { UnlockedUserAuthentication } from "../../shared/db/user-authentication.js";
 
 export class UserManager extends ResourceManager<UserResource, UserManager> {
   public constructor(
@@ -94,7 +83,7 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
     middleName: string | null,
     lastName: string,
     password: string = this.generateRandomPassword(16),
-    role: UserRole = 'Member'
+    role: UserRole = "Member"
   ): Promise<
     [
       user: UserResource,
@@ -111,7 +100,7 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
       firstName,
       middleName,
       lastName,
-      role:  serializeUserRole(role),
+      role: serializeUserRole(role),
       isSuspended: false,
     });
 
@@ -119,7 +108,7 @@ export class UserManager extends ResourceManager<UserResource, UserManager> {
 
     const userKey = await userKeyManager.create(
       user,
-      'password',
+      "password",
       new TextEncoder().encode(password)
     );
 

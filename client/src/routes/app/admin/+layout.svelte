@@ -63,7 +63,7 @@
 		}
 	});
 
-	onMount(() => setMainContent(layout));
+	onMount(() => setMainContent(layout as Snippet));
 </script>
 
 <Title title="Admin Interface" />

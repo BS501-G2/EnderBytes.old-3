@@ -7,20 +7,19 @@ import {
   ServiceGetDataCallback,
   TaskQueue,
   createTaskQueue,
+  UnlockedFileResource,
+  FileResource,
 } from "../../shared.js";
-import { FileContentManager, FileContentResource } from "../db/file-content.js";
-import {
-  FileSnapshotManager,
-  FileSnapshotResource,
-} from "../db/file-snapshot.js";
-import {
-  FileThumbnailManager,
-  FileThumbnailResource,
-} from "../db/file-thumbnail.js";
-import { FileManager, FileResource, UnlockedFileResource } from "../db/file.js";
+import { FileContentManager } from "../db/file-content.js";
+import { FileSnapshotManager } from "../db/file-snapshot.js";
+import { FileThumbnailManager } from "../db/file-thumbnail.js";
+import { FileManager } from "../db/file.js";
 import { Server } from "./server.js";
 import { VirusScannerData } from "./virus-scanner.js";
 import { FileDataManager } from "../db/file-data.js";
+import { FileThumbnailResource } from "../../shared/db/file-thumbnail.js";
+import { FileSnapshotResource } from "../../shared/db/file-snapshot.js";
+import { FileContentResource } from "../../shared/db/file-content.js";
 
 export interface ThumbnailerData {
   pendingList: ThumbnailerQueueEntry[];
@@ -96,7 +95,7 @@ export class Thumbnailer extends Service<ThumbnailerData, ThumbnailerOptions> {
           thumbnailContent,
           thumbnailSnapshot,
           written,
-          chunk
+          chunk as Uint8Array
         );
         written += chunk.length;
       }
@@ -107,9 +106,9 @@ export class Thumbnailer extends Service<ThumbnailerData, ThumbnailerOptions> {
         "available",
         thumbnailContent
       );
-    // } else if (type === "video") {
-    // } else if (type === "audio") {
-    //   return null;
+      // } else if (type === "video") {
+      // } else if (type === "audio") {
+      //   return null;
     }
     return null;
   }
@@ -247,7 +246,7 @@ export async function* getThumbnail(
       }
 
       if (code !== 0) {
-        push(new Error(Buffer.concat(error).toString()));
+        push(new Error(Buffer.concat(error as Uint8Array[]).toString()));
       } else {
         push(null);
       }

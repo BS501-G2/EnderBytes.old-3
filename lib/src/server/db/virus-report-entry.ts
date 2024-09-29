@@ -1,14 +1,8 @@
 import { Knex } from "knex";
-import { Resource, ResourceManager } from "../resource.js";
+import { ResourceManager } from "../resource.js";
 import { VirusReportManager } from "./virus-report.js";
 import { Database } from "../database.js";
-
-export interface VirusReportEntryResource
-  extends Resource<VirusReportEntryResource, VirusReportEntryManager> {
-  virusReportId: number;
-
-  name: string;
-}
+import { VirusReportEntryResource } from "../../shared/db/virus-report-entry.js";
 
 export class VirusReportEntryManager extends ResourceManager<
   VirusReportEntryResource,

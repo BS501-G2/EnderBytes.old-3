@@ -5,19 +5,17 @@ import {
   ServiceGetDataCallback,
   ServiceReadyCallback,
   ServiceSetDataCallback,
-} from "../../shared.js";
-import { ServerConnection } from "../api/connection.js";
-import { FileContentManager, FileContentResource } from "../db/file-content.js";
-import { FileDataManager } from "../db/file-data.js";
-import {
-  FileSnapshotManager,
-  FileSnapshotResource,
-} from "../db/file-snapshot.js";
-import { FileManager, FileResource, UnlockedFileResource } from "../db/file.js";
-import {
+  UnlockedFileResource,
   UnlockedUserAuthentication,
-  UserAuthentication,
-} from "../db/user-authentication.js";
+} from "../../shared.js";
+import { FileContentResource } from "../../shared/db/file-content.js";
+import { FileSnapshotResource } from "../../shared/db/file-snapshot.js";
+import { ServerConnection } from "../api/connection.js";
+import { FileContentManager } from "../db/file-content.js";
+import { FileDataManager } from "../db/file-data.js";
+import { FileSnapshotManager } from "../db/file-snapshot.js";
+import { FileManager } from "../db/file.js";
+import {} from "../db/user-authentication.js";
 import { UserManager } from "../db/user.js";
 import { Server } from "./server.js";
 

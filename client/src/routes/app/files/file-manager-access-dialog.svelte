@@ -5,12 +5,12 @@
 		type FileAccessLevel
 	} from '@rizzzi/enderdrive-lib/shared';
 
-	import { getConnection2 } from '$lib/client/client';
+	import { getConnection } from '$lib/client/client';
 	import type {
 		FileAccessResource,
 		FileResource,
 		UserResource
-	} from '@rizzzi/enderdrive-lib/server';
+	} from '@rizzzi/enderdrive-lib/shared';
 </script>
 
 <script lang="ts">
@@ -31,7 +31,7 @@
 
 	const {
 		serverFunctions: { listFileAccess, listUsers, setUserAccess, getUser, whoAmI, getMyAccess }
-	} = getConnection2();
+	} = getConnection();
 
 	const { resolve, file }: { resolve: () => void; file: FileResource } = $props();
 
@@ -138,7 +138,7 @@
 									}}
 									outline={false}
 									buttonClass="transparent"
-									container={buttonContainer}
+									container={buttonContainer as Snippet}
 								>
 									<div class="user-entry">
 										<!-- <i class="fa-solid fa-user"></i> -->
@@ -192,7 +192,7 @@
 								await setUserAccess(file.id, user.id, 'None');
 								refreshKey++;
 							}}
-							container={actionIconContainer}
+							container={actionIconContainer as Snippet}
 						>
 							<Icon icon="x" thickness="solid"></Icon>
 						</Button>

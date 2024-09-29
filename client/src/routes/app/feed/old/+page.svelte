@@ -3,12 +3,12 @@
   import { MoreVerticalIcon } from 'svelte-feather-icons';
   import { ShareIcon } from 'svelte-feather-icons';
   import { StarIcon } from 'svelte-feather-icons';
-  import { getContext, onMount } from 'svelte';
+  import { getContext, onMount, type Snippet } from 'svelte';
   import { type DashboardContext, DashboardContextName } from '../../dashboard';
 
   const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
 
-  onMount(() => setMainContent(layout));
+  onMount(() => setMainContent(layout as Snippet));
 </script>
 
 <Title title="Feed" />

@@ -2,12 +2,11 @@ import { io, Socket } from "socket.io-client";
 import {
   Authentication,
   baseConnectionFunctions,
-  ConnectionFunctions,
   SocketWrapper,
   wrapSocket,
 } from "../../shared.js";
-import { ServerFunctions } from "../../server/api/connection-functions.js";
 import { ClientFunctions } from "./connection-functions.js";
+import { ServerFunctions } from "../../shared/api/server-functions.js";
 
 export interface ClientConnectionOptions {
   getAuth?: () => Authentication | null;

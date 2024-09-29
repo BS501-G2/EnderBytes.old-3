@@ -1,19 +1,12 @@
 import { Knex } from "knex";
-import { ResourceManager, Resource } from "../resource.js";
+import { ResourceManager } from "../resource.js";
 import { Database } from "../database.js";
-import { UnlockedFileResource } from "./file.js";
 import { decryptSymmetric, encryptSymmetric, randomBytes } from "../crypto.js";
-
-export interface FileBufferResource
-  extends Resource<FileBufferResource, FileBufferManager> {
-  buffer: Uint8Array;
-  bufferIv: Uint8Array;
-  bufferAuthTag: Uint8Array;
-}
-
-export interface UnlockedFileBufferResource extends FileBufferResource {
-  unlockedBuffer: Uint8Array;
-}
+import {
+  FileBufferResource,
+  UnlockedFileBufferResource,
+} from "../../shared/db/file-buffer.js";
+import { UnlockedFileResource } from "../../shared.js";
 
 export class FileBufferManager extends ResourceManager<
   FileBufferResource,

@@ -1,8 +1,6 @@
-export * from "./server/api/connection-functions.js";
 export * from "./server/api/connection-manager.js";
 export * from "./server/api/connection.js";
 
-// export * from "./server/core/file-buffer.js";
 export * from "./server/core/file-indexer.js";
 export * from "./server/core/http.js";
 export * from "./server/core/mime-detector.js";

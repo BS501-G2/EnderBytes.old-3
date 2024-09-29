@@ -5,7 +5,7 @@
     type DashboardContext,
     type DashboardContextMenuEntry
   } from './dashboard';
-  import { getConnection2 } from '$lib/client/client';
+  import { getConnection } from '$lib/client/client';
   import User from '$lib/client/user.svelte';
   import { Button, ViewMode, viewMode } from '@rizzzi/svelte-commons';
 
@@ -16,7 +16,7 @@
 
   const {
     serverFunctions: { whoAmI }
-  } = getConnection2();
+  } = getConnection();
 
   type ActionCallback = (event: MouseEvent) => void;
 </script>

@@ -1,18 +1,13 @@
 import { Knex } from "knex";
-import { Resource, ResourceManager } from "../resource.js";
-import { FileManager, FileResource } from "./file.js";
-import { FileContentManager, FileContentResource } from "./file-content.js";
-import { FileSnapshotManager, FileSnapshotResource } from "./file-snapshot.js";
+import { ResourceManager } from "../resource.js";
+import { FileManager } from "./file.js";
+import { FileContentManager } from "./file-content.js";
+import { FileSnapshotManager } from "./file-snapshot.js";
 import { Database } from "../database.js";
-
-export interface FileIndexResource
-  extends Resource<FileIndexResource, FileIndexManager> {
-  fileId: number;
-  fileContentId: number;
-  fileSnapshotId: number;
-
-  token: string;
-}
+import { FileContentResource } from "../../shared/db/file-content.js";
+import { FileIndexResource } from "../../shared/db/file-index.js";
+import { FileSnapshotResource } from "../../shared/db/file-snapshot.js";
+import { FileResource } from "../../shared.js";
 
 export class FileIndexManager extends ResourceManager<
   FileIndexResource,

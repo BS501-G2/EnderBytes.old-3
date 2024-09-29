@@ -1,11 +1,7 @@
 import { Knex } from "knex";
-import { Resource, ResourceManager } from "../resource.js";
+import { ResourceManager } from "../resource.js";
 import { Database } from "../database.js";
-
-export interface TestResource extends Resource<TestResource, TestManager> {
-  test: string;
-  number: number;
-}
+import { TestResource } from "../../shared/db/test-manager.js";
 
 export class TestManager extends ResourceManager<TestResource, TestManager> {
   public constructor(

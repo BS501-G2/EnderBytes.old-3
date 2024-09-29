@@ -1,20 +1,14 @@
 import { Knex } from "knex";
-import { Resource, ResourceManager } from "../resource.js";
-import { FileManager, UnlockedFileResource } from "./file.js";
-import { FileContentManager, FileContentResource } from "./file-content.js";
-import { FileSnapshotManager, FileSnapshotResource } from "./file-snapshot.js";
+import {  ResourceManager } from "../resource.js";
+import { FileManager } from "./file.js";
+import { FileContentManager } from "./file-content.js";
+import { FileSnapshotManager } from "./file-snapshot.js";
 import { Database } from "../database.js";
-import { Mime } from "../api/connection-functions.js";
-
-export interface FileMimeResource
-  extends Resource<FileMimeResource, FileMimeManager> {
-  fileId: number;
-  fileContentId: number;
-  fileSnapshotId: number;
-
-  mime: string;
-  description: string;
-}
+import { FileMimeResource } from "../../shared/db/file-mime.js";
+import { FileContentResource } from "../../shared/db/file-content.js";
+import { UnlockedFileResource } from "../../shared.js";
+import { FileSnapshotResource } from "../../shared/db/file-snapshot.js";
+import { Mime } from "../../shared/api/server-functions.js";
 
 export class FileMimeManager extends ResourceManager<
   FileMimeResource,

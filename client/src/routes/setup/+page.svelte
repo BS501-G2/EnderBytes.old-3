@@ -6,22 +6,24 @@
 		Dialog,
 		Button,
 		type TabItem,
-		createTabId
+		createTabId,
+		type SetTabFunction
 	} from '@rizzzi/svelte-commons';
 
 	import { type Writable, writable } from 'svelte/store';
 
 	import { goto } from '$app/navigation';
-	import { getConnection2 } from '$lib/client/client';
+	import { getConnection } from '$lib/client/client';
+	import type { Snippet } from 'svelte';
 
 	const tabs: TabItem[] = [
 		{
 			name: 'Login Credentials',
-			view: loginCredentialsTab
+			view: loginCredentialsTab as Snippet<[setTab: SetTabFunction, tab: TabItem<{}>]>
 		},
 		{
 			name: 'Profile',
-			view: profileTab
+			view: profileTab as Snippet<[setTab: SetTabFunction, tab: TabItem<{}>]>
 		}
 	];
 
@@ -35,7 +37,7 @@
 	const lastName: Writable<string> = writable('');
 </script>
 
-{#snippet loginCredentialsTab()}
+{#snippet loginCredentialsTab(setTab: SetTabFunction, tab: TabItem<{}>)}
 	<p>Put in your login credentials</p>
 
 	<div class="input-row">
@@ -51,7 +53,7 @@
 	</div>
 {/snippet}
 
-{#snippet profileTab()}
+{#snippet profileTab(setTab: SetTabFunction, tab: TabItem<{}>)}
 	<p>Put in your profile information</p>
 
 	<div class="input-row">
@@ -82,7 +84,7 @@
 
 	{#snippet body()}
 		<Tab id={tabId}>
-			{#snippet view(view)}
+			{#snippet view(view: Snippet)}
 				<div class="tab-view">
 					{@render view()}
 				</div>
@@ -93,21 +95,21 @@
 	{#snippet actions()}
 		<Tab id={tabId}>
 			{#snippet view()}{/snippet}
-			{#snippet host(tabs, currentTabIndex, setTab)}
+			{#snippet host(tabs: TabItem<{}>[], currentIndex: number, setTab: SetTabFunction)}
 				<Button
-					onClick={() => setTab(currentTabIndex - 1)}
+					onClick={() => setTab(currentIndex - 1)}
 					buttonClass="background"
-					enabled={currentTabIndex > 0}
+					enabled={currentIndex > 0}
 				>
 					<div class="button">Previous</div>
 				</Button>
 
 				<Button
 					onClick={async () => {
-						if (currentTabIndex !== tabs.length - 1) {
-							setTab(currentTabIndex + 1);
+						if (currentIndex !== tabs.length - 1) {
+							setTab(currentIndex + 1);
 						} else {
-							getConnection2().serverFunctions.register(
+							getConnection().serverFunctions.register(
 								$username,
 								$firstName,
 								$middleName || null,
@@ -120,7 +122,7 @@
 					}}
 				>
 					<div class="button">
-						{#if currentTabIndex !== tabs.length - 1}
+						{#if currentIndex !== tabs.length - 1}
 							Next
 						{:else}
 							Submit

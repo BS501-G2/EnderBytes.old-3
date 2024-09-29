@@ -27,9 +27,9 @@
     {/if}
   {/snippet}
   {#if container}
-    {@render container(view)}
+    {@render container(view as Snippet)}
   {:else}
-    {@render defaultContainer(view)}
+    {@render defaultContainer(view as Snippet)}
   {/if}
 </div>
 

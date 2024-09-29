@@ -1,3 +1,14 @@
+import { Resource } from "../resource.js";
+
+export interface UserResource extends Resource {
+  username: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  role: number;
+  isSuspended: boolean;
+}
+
 export type UserRole = "Member" | "SiteAdmin" | "SystemAdmin";
 
 export function serializeUserRole(role: UserRole): number {

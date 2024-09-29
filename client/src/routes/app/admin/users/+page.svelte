@@ -3,24 +3,24 @@
 	import { type AdminContext, AdminContextName } from '../+layout.svelte';
 	import { Input, Button } from '@rizzzi/svelte-commons';
 	import { writable, type Writable } from 'svelte/store';
-	import { getConnection2 } from '$lib/client/client';
+	import { getConnection } from '$lib/client/client';
 	import User from '$lib/client/user.svelte';
 	import NewUser from './new-user.svelte';
 	import UserOptions from './user-options.svelte';
-	import type { UserResource } from '@rizzzi/enderdrive-lib/server';
 	import SuspendConfirmation from './suspend-confirmation.svelte';
+	import type { UserResource } from '@rizzzi/enderdrive-lib/shared';
 
 	const { setMainContent, pushTopContent } = getContext<AdminContext>(AdminContextName);
 	const {
 		serverFunctions: { setSuspend }
-	} = getConnection2();
+	} = getConnection();
 
 	const {
 		serverFunctions: { listUsers }
-	} = getConnection2();
+	} = getConnection();
 
-	onMount(() => setMainContent(main));
-	onMount(() => pushTopContent(top));
+	onMount(() => setMainContent(main as Snippet));
+	onMount(() => pushTopContent(top as Snippet));
 
 	const searchString: Writable<string> = writable('');
 	let newUserDialog: boolean = $state(false);
@@ -49,7 +49,7 @@
 			{/snippet}
 
 			<Button
-				container={actionContainer}
+				container={actionContainer as Snippet}
 				onClick={() => {
 					newUserDialog = true;
 				}}

@@ -3,18 +3,18 @@
 
 <script lang="ts">
 	import { Button, Title, ViewMode, viewMode } from '@rizzzi/svelte-commons';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, type Snippet } from 'svelte';
 	import { type DashboardContext, DashboardContextName } from '../dashboard';
-	import { getConnection2 } from '$lib/client/client';
+	import { getConnection } from '$lib/client/client';
 	import { goto } from '$app/navigation';
-	import { type FileResource, type FileAccessResource } from '@rizzzi/enderdrive-lib/server';
+	import { type FileResource, type FileAccessResource } from '@rizzzi/enderdrive-lib/shared';
 
 	const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
 	const {
 		serverFunctions: { listSharedFiles }
-	} = getConnection2();
+	} = getConnection();
 
-	onMount(() => setMainContent(main));
+	onMount(() => setMainContent(main as Snippet));
 </script>
 
 <Title title="Feed" />

@@ -1,10 +1,10 @@
 import { goto } from '$app/navigation';
-import { getConnection2 } from '$lib/client/client';
+import { getConnection } from '$lib/client/client';
 
 export async function load(): Promise<void> {
   const {
     serverFunctions: { getServerStatus, whoAmI }
-  } = getConnection2();
+  } = getConnection();
 
   const serverStatus = await getServerStatus();
 

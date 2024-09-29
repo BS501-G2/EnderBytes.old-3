@@ -1,34 +1,13 @@
 import { Knex } from "knex";
-import { userSessionExpiryDuration } from "../../shared/db/user-session.js";
+import { UnlockedUserSession, userSessionExpiryDuration, UserSessionResource, UserSessionType } from "../../shared/db/user-session.js";
 import { decryptSymmetric, encryptSymmetric, randomBytes } from "../crypto.js";
 import { Database } from "../database.js";
-import { Resource, ResourceManager } from "../resource.js";
+import {  ResourceManager } from "../resource.js";
 import {
-  UnlockedUserAuthentication,
-  UserAuthentication,
   UserAuthenticationManager,
 } from "./user-authentication.js";
 import { UserManager } from "./user.js";
-
-export type UserSessionType = "browser" | "sync-app";
-
-export interface UserSessionResource
-  extends Resource<UserSessionResource, UserSessionManager> {
-  expireTime: number;
-  userId: number;
-  originUserAuthenticationId: number;
-
-  encryptedPrivateKey: Uint8Array;
-  encrypterPrivateKeyIv: Uint8Array;
-  encrypterPrivateKeyAuthTag: Uint8Array;
-
-  type: UserSessionType;
-}
-
-export interface UnlockedUserSession extends UserSessionResource {
-  key: Uint8Array;
-  privateKey: Uint8Array;
-}
+import { UnlockedUserAuthentication, UserAuthentication } from "../../shared.js";
 
 export class UserSessionManager extends ResourceManager<
   UserSessionResource,

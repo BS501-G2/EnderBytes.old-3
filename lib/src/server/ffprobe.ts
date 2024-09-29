@@ -47,7 +47,9 @@ export abstract class FFmpegStream {
       const codecName: string = data.codec_name;
       const codecLongName: string = data.codec_long_name;
       const timeBase: number = ((timeBase) =>
-        timeBase === 0 ? 0 : 1 / timeBase)(eval(data.codec_time_base || data.time_base) || 0);
+        timeBase === 0 ? 0 : 1 / timeBase)(
+        eval(data.codec_time_base || data.time_base) || 0
+      );
       const tag: number = Number(data.codec_tag) || 0;
       const tagString: string = data.codec_tag_string;
 
@@ -216,14 +218,16 @@ export class FFmpegMediaInfo {
       ffprobe.once("close", (code) => {
         if (code === 0) {
           try {
-            const json = Buffer.concat(output).toString();
+            const json = Buffer.concat(output as Uint8Array[]).toString();
 
             resolve(new this(JSON.parse(json)));
           } catch (error) {
             reject(error);
           }
         } else {
-          const message = Buffer.concat(output).toString().trim();
+          const message = Buffer.concat(output as Uint8Array[])
+            .toString()
+            .trim();
 
           reject(new Error(message));
         }

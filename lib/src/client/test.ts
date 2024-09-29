@@ -27,7 +27,7 @@ export const testFunctions: Record<string, () => void> = {
     await authenticate(
       ["username", "testuser"],
       "password",
-      Buffer.from("testuser123;", "utf-8")
+      Buffer.from("testuser123;", "utf-8") as Uint8Array
     );
 
     const me = await whoAmI();
@@ -49,7 +49,7 @@ export const testFunctions: Record<string, () => void> = {
       for (let position = 0; position < fileSize; position += fileBufferSize) {
         let localBuffer = Buffer.alloc(fileBufferSize);
         const { bytesRead: bufferSize } = await fileHandle.read(
-          localBuffer,
+          localBuffer as Uint8Array,
           0,
           fileBufferSize,
           position
@@ -57,7 +57,11 @@ export const testFunctions: Record<string, () => void> = {
 
         localBuffer = localBuffer.subarray(0, bufferSize);
 
-        await writeFile(remoteFileHandleId, position, localBuffer);
+        await writeFile(
+          remoteFileHandleId,
+          position,
+          localBuffer as Uint8Array
+        );
         const remoteBuffer = await readFile(
           remoteFileHandleId,
           position,

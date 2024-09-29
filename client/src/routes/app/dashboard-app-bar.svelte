@@ -36,7 +36,7 @@
 		outline={false}
 		buttonClass={$viewMode & ViewMode.Mobile ? 'transparent' : 'primary'}
 		onClick={() => window.history.back()}
-		container={topBarButtonContainer}
+		container={topBarButtonContainer as Snippet}
 	>
 		<i class="fa-solid fa-chevron-left"></i>
 	</Button>
@@ -47,7 +47,7 @@
 		outline={false}
 		buttonClass={$viewMode & ViewMode.Mobile ? 'transparent' : 'primary'}
 		onClick={() => window.history.forward()}
-		container={topBarButtonContainer}
+		container={topBarButtonContainer as Snippet}
 	>
 		<i class="fa-solid fa-chevron-right"></i>
 	</Button>
@@ -75,7 +75,7 @@
 		buttonClass="transparent"
 		outline={false}
 		onClick={() => {}}
-		container={topBarButtonContainer}
+		container={topBarButtonContainer as Snippet}
 	>
 		<i class="fa-solid fa-search"></i>
 	</Button>
@@ -91,7 +91,7 @@
 				}
 			];
 		}}
-		container={topBarButtonContainer}
+		container={topBarButtonContainer as Snippet}
 	>
 		<i class="fa-solid fa-ellipsis-vertical"></i>
 	</Button>
@@ -108,13 +108,13 @@
 		class:mobile={$viewMode & ViewMode.Mobile}
 		class:desktop={$viewMode & ViewMode.Desktop}
 	>
-		{@render card('arrows', leftArrowCard)}
+		{@render card('arrows', leftArrowCard as Snippet)}
 
 		{#if $viewMode & ViewMode.Desktop}
-			{@render card('arrows', rightArrowCard)}
+			{@render card('arrows', rightArrowCard as Snippet)}
 		{/if}
 
-		{@render card('title', titleCard)}
+		{@render card('title', titleCard as Snippet)}
 	</div>
 
 	<div
@@ -132,7 +132,7 @@
 				/>
 			</div>
 		{:else if $viewMode & ViewMode.Mobile}
-			{@render card('right', rightTopBar)}
+			{@render card('right', rightTopBar as Snippet)}
 		{/if}
 	</div>
 </div>

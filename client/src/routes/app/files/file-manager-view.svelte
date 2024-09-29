@@ -32,7 +32,7 @@
 			{#each [true, false] as value}
 				{#if $showSideBar == value}
 					<Button
-						container={buttonContainer}
+						container={buttonContainer as Snippet}
 						onClick={() => {
 							if ($showSideBar == value) {
 								$showSideBar = !value;
@@ -53,7 +53,7 @@
 
 			{#snippet button(name: string, value: string, icon: string)}
 				<Button
-					container={buttonContainer}
+					container={buttonContainer as Snippet}
 					buttonClass={value === sort ? 'primary' : 'transparent'}
 					onClick={() => {
 						sort = value;
@@ -76,7 +76,7 @@
 			<p class="label">List Mode</p>
 			{#each ['list', 'grid'] as FileManagerViewMode[] as value}
 				<Button
-					container={buttonContainer}
+					container={buttonContainer as Snippet}
 					buttonClass={value === $listViewMode ? 'primary' : 'transparent'}
 					onClick={() => {
 						$listViewMode = value;

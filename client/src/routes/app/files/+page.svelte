@@ -7,7 +7,7 @@
 		type FileManagerOnPageCallback
 	} from './file-manager.svelte';
 	import FileManagerNew from './file-manager-new.svelte';
-	import { getConnection2 } from '$lib/client/client';
+	import { getConnection } from '$lib/client/client';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { executeBackgroundTask } from '$lib/background-task.svelte';
@@ -15,13 +15,13 @@
 	import { getContext, onMount, type Snippet } from 'svelte';
 	import { DashboardContextName, type DashboardContext } from '../dashboard';
 	import { Title } from '@rizzzi/svelte-commons';
-	import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+	import type { FileResource } from '@rizzzi/enderdrive-lib/shared';
 
 	const { setMainContent } = getContext<DashboardContext>(DashboardContextName);
 
 	const {
 		serverFunctions: { getFile, createFolder, openNewFile, writeFile }
-	} = getConnection2();
+	} = getConnection();
 
 	const refresh: Writable<() => void> = writable(null as never);
 	const sort = derived(

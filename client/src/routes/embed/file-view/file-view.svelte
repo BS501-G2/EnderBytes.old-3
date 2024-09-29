@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { FileResource, Mime } from '@rizzzi/enderdrive-lib/server';
+	import type { FileResource, Mime } from "@rizzzi/enderdrive-lib/shared";
 
 	export interface FileViewProps {
 		file: FileResource;

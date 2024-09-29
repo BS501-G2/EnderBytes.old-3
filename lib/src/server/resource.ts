@@ -1,35 +1,14 @@
 import { Knex } from "knex";
 import { Database, ResourceManagerConstructor } from "./database.js";
 import { LogLevel } from "../shared/service.js";
-
-export interface ResourceHolder {
-  id: number;
-}
-
-export interface Resource<
-  R extends Resource<R, M> = never,
-  M extends ResourceManager<R, M> = never
-> {
-  dataId: number;
-  id: number;
-  createTime: number;
-
-  previousDataId: number | null;
-  nextDataId: number | null;
-}
-
-export interface ResourceRecordStats {
-  id: number;
-  createTime: number;
-  updateTime: number;
-}
+import { Resource, ResourceRecordStats } from "../shared/resource.js";
 
 export type ResourceManagerInitCallback = (
   onInit: (version?: number) => Promise<void>
 ) => void;
 
 export abstract class ResourceManager<
-  R extends Resource<R, M>,
+  R extends Resource,
   M extends ResourceManager<R, M>
 > {
   constructor(
@@ -98,7 +77,7 @@ export abstract class ResourceManager<
   async #init(version: number = 0): Promise<void> {
     if (version === 0) {
       await this.logSql(
-        'debug',
+        "debug",
         this.db.schema.createTable(this.#RECORD_TABLE, (table) => {
           table.increments("id");
           table.boolean("deleted");
@@ -106,7 +85,7 @@ export abstract class ResourceManager<
       );
 
       await this.logSql(
-        'debug',
+        "debug",
         this.db.schema.createTable(this.#DATA_TABLE, (table) => {
           table.increments("dataId");
           table.integer("id").notNullable();
@@ -119,14 +98,14 @@ export abstract class ResourceManager<
     }
 
     await this.logSql(
-      'debug',
+      "debug",
       this.db.schema.alterTable(this.#DATA_TABLE, (table) =>
         this.upgrade(table, version)
       )
     );
   }
 
-  public getManager<R extends Resource<R, M>, M extends ResourceManager<R, M>>(
+  public getManager<R extends Resource, M extends ResourceManager<R, M>>(
     init: ResourceManagerConstructor<R, M>
   ) {
     return this.#db.getManager<R, M>(init);
@@ -171,7 +150,7 @@ export abstract class ResourceManager<
   public async insert(data: Omit<R, keyof Resource>): Promise<R> {
     const resourceRecord = (
       await this.logSql(
-        'debug',
+        "debug",
         this.db
           .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
           .insert({ deleted: false })
@@ -180,7 +159,7 @@ export abstract class ResourceManager<
     )[0];
 
     const dataResult = await this.logSql(
-      'debug',
+      "debug",
       this.db
         .table<R, R[]>(this.#DATA_TABLE)
         .insert({
@@ -201,7 +180,7 @@ export abstract class ResourceManager<
     { includeDeleted = false, dataId }: GetByIdOptions<R, M> = {}
   ): Promise<R | null> {
     const resourceRecord = await this.logSql(
-      'debug',
+      "debug",
       this.db
         .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
         .where("id", "=", id)
@@ -216,7 +195,7 @@ export abstract class ResourceManager<
 
     if (dataId == null) {
       return (await this.logSql(
-        'debug',
+        "debug",
         this.db
           .table<R, R[]>(this.#DATA_TABLE)
           .where("id", "=", id)
@@ -226,7 +205,7 @@ export abstract class ResourceManager<
     }
 
     return (await this.logSql(
-      'debug',
+      "debug",
       this.db
         .table<R, R[]>(this.#DATA_TABLE)
         .where("id", "=", id)
@@ -241,7 +220,7 @@ export abstract class ResourceManager<
     options?: UpdateOptions<R, M>
   ): Promise<R> {
     const resourceRecord = await this.logSql(
-      'debug',
+      "debug",
       this.db
         .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
         .where("id", "=", data.id)
@@ -257,7 +236,7 @@ export abstract class ResourceManager<
     }
 
     const base = await this.logSql(
-      'debug',
+      "debug",
       this.db
         .table<R, R[]>(this.#DATA_TABLE)
         .where(
@@ -285,7 +264,7 @@ export abstract class ResourceManager<
 
     const newDataResult: R = (
       await this.logSql(
-        'debug',
+        "debug",
         this.db
           .table<R, R[]>(this.#DATA_TABLE)
           .insert(
@@ -298,7 +277,7 @@ export abstract class ResourceManager<
     )[0] as never;
 
     await this.logSql(
-      'debug',
+      "debug",
       this.db
         .table<R, R[]>(this.#DATA_TABLE)
         .where("dataId", "=", data.dataId)
@@ -314,7 +293,7 @@ export abstract class ResourceManager<
 
   public async delete(data: R): Promise<void> {
     await this.logSql(
-      'debug',
+      "debug",
       this.db
         .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
         .where("id", "=", data.id)
@@ -356,7 +335,7 @@ export abstract class ResourceManager<
     }, query);
 
     await this.logSql(
-      'debug',
+      "debug",
       this.db
         .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
         .update({ deleted: true })
@@ -379,7 +358,7 @@ export abstract class ResourceManager<
     }, query);
 
     await this.logSql(
-      'debug',
+      "debug",
       this.db
         .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
         .update({ deleted: false })
@@ -406,7 +385,7 @@ export abstract class ResourceManager<
 
   public async restore(data: R): Promise<void> {
     await this.logSql(
-      'debug',
+      "debug",
       this.db
         .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
         .where("id", "=", data.id)
@@ -416,12 +395,12 @@ export abstract class ResourceManager<
 
   public async purge(data: R): Promise<void> {
     await this.logSql(
-      'debug',
+      "debug",
       this.db.table<R, R[]>(this.#DATA_TABLE).where("id", "=", data.id).delete()
     );
 
     await this.logSql(
-      'debug',
+      "debug",
       this.db
         .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
         .where("id", "=", data.id)
@@ -458,7 +437,7 @@ export abstract class ResourceManager<
       }, query);
     }
 
-    return (await this.logSql('debug', query))["count"] as number;
+    return (await this.logSql("debug", query))["count"] as number;
   }
 
   public async read(options?: QueryOptions<R, M>): Promise<R[]> {
@@ -535,7 +514,7 @@ export abstract class ResourceManager<
         )
       );
 
-      const resources = await this.logSql('debug', query);
+      const resources = await this.logSql("debug", query);
 
       if (resources.length === 0) {
         break;
@@ -549,7 +528,7 @@ export abstract class ResourceManager<
         }
 
         const resourceRecord = await this.logSql(
-          'debug',
+          "debug",
           this.db
             .table<ResourceRecord, ResourceRecord[]>(this.#RECORD_TABLE)
             .select("*")
@@ -585,21 +564,21 @@ export interface ResourceRecord {
 }
 
 export interface UpdateOptions<
-  R extends Resource<R, M>,
+  R extends Resource,
   M extends ResourceManager<R, M>
 > {
   baseDataId?: number;
 }
 
 export interface DeleteOptions<
-  R extends Resource<R, M>,
+  R extends Resource,
   M extends ResourceManager<R, M>
 > {
   where?: WhereClause<R, M>[];
 }
 
 export interface GetByIdOptions<
-  R extends Resource<R, M>,
+  R extends Resource,
   M extends ResourceManager<R, M>
 > {
   includeDeleted?: boolean;
@@ -607,7 +586,7 @@ export interface GetByIdOptions<
 }
 
 export interface SearchOptions<
-  R extends Resource<R, M>,
+  R extends Resource,
   M extends ResourceManager<R, M>
 > {
   string: string;
@@ -616,7 +595,7 @@ export interface SearchOptions<
 }
 
 export type QueryOptions<
-  R extends Resource<R, M>,
+  R extends Resource,
   M extends ResourceManager<R, M>
 > = {
   where?: (WhereClause<R, M> | null)[];
@@ -641,7 +620,7 @@ export type QueryOptions<
 );
 
 export type WhereClause<
-  R extends Resource<R, M>,
+  R extends Resource,
   M extends ResourceManager<R, M>,
   T extends keyof R = keyof R
 > =
@@ -653,6 +632,6 @@ export type WhereClause<
   | [T, "in", R[T][]];
 
 export type OrderByClause<
-  R extends Resource<R, M>,
+  R extends Resource,
   M extends ResourceManager<R, M>
 > = [key: keyof R, descending?: boolean];

@@ -4,13 +4,12 @@ import {
   ServiceGetDataCallback,
   ServiceReadyCallback,
   ServiceSetDataCallback,
+  UnlockedFileResource,
 } from "../../shared.js";
-import { Mime } from "../api/connection-functions.js";
-import { FileContentResource } from "../db/file-content.js";
+import { FileContentResource } from "../../shared/db/file-content.js";
+import { FileSnapshotResource } from "../../shared/db/file-snapshot.js";
 import { FileDataManager } from "../db/file-data.js";
 import { FileMimeManager } from "../db/file-mime.js";
-import { FileSnapshotResource } from "../db/file-snapshot.js";
-import { UnlockedFileResource } from "../db/file.js";
 import { Server } from "./server.js";
 import mmm, { Magic } from "mmmagic";
 
@@ -89,7 +88,7 @@ export class MimeDetector extends Service<
     file: UnlockedFileResource,
     fileContent: FileContentResource,
     fileSnapshot: FileSnapshotResource
-  ): Promise<Mime> {
+  ): Promise<[mime: string, description: string]> {
     const [fileMimeManager, fileDataManager] = this.#database.getManagers(
       FileMimeManager,
       FileDataManager

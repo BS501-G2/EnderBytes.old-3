@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, type Snippet } from 'svelte';
 	import { page } from '$app/stores';
 	import { type UserResolvePayload } from '@rizzzi/enderdrive-lib/shared';
 	import { DashboardContextName, type DashboardContext } from '../dashboard';
@@ -27,7 +27,7 @@
 
 	const { setMainContent }: DashboardContext = getContext<DashboardContext>(DashboardContextName);
 
-	onMount(() => setMainContent(layout));
+	onMount(() => setMainContent(layout as Snippet));
 </script>
 
 {#snippet layout()}

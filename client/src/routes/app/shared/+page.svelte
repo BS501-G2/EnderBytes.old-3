@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, type Snippet } from 'svelte';
 	import { writable, type Writable } from 'svelte/store';
 	import { DashboardContextName, type DashboardContext } from '../dashboard';
 	import FileManager, {
@@ -23,7 +23,7 @@
 		goto(`/app/files${newFileId != null ? `?fileId=${newFileId}` : ''}`);
 	};
 
-	onMount(() => setMainContent(layout));
+	onMount(() => setMainContent(layout as Snippet));
 </script>
 
 <Title title="Shared Files" />

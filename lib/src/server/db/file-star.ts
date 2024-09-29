@@ -1,14 +1,10 @@
 import { Knex } from "knex";
 import { Database } from "../database.js";
-import { Resource, ResourceManager } from "../resource.js";
-import { FileManager, FileResource } from "./file.js";
-import { UserManager, UserResource } from "./user.js";
-
-export interface FileStarResource
-  extends Resource<FileStarResource, FileStarManager> {
-  userId: number;
-  fileId: number;
-}
+import { ResourceManager } from "../resource.js";
+import { FileManager } from "./file.js";
+import { UserManager } from "./user.js";
+import { FileStarResource } from "../../shared/db/file-star.js";
+import { FileResource, UserResource } from "../../shared.js";
 
 export class FileStarManager extends ResourceManager<
   FileStarResource,

@@ -1,7 +1,11 @@
 import { Knex } from "knex";
-import { UserAuthenticationType } from "../../shared/db/user-authentication.js";
+import {
+  UnlockedUserAuthentication,
+  UserAuthentication,
+  UserAuthenticationType,
+} from "../../shared/db/user-authentication.js";
 import { Database } from "../database.js";
-import { Resource, ResourceManager } from "../resource.js";
+import { ResourceManager } from "../resource.js";
 import {
   decryptAsymmetric,
   decryptSymmetric,
@@ -11,24 +15,7 @@ import {
   hashPayload,
   randomBytes,
 } from "../crypto.js";
-import { UserResource } from "./user.js";
-
-export interface UserAuthentication
-  extends Resource<UserAuthentication, UserAuthenticationManager> {
-  userId: number;
-  type: UserAuthenticationType;
-  iterations: number;
-  salt: Uint8Array;
-  iv: Uint8Array;
-  encryptedPrivateKeyAuthTag: Uint8Array;
-
-  encryptedPrivateKey: Uint8Array;
-  publicKey: Uint8Array;
-}
-
-export interface UnlockedUserAuthentication extends UserAuthentication {
-  privateKey: Uint8Array;
-}
+import { UserResource } from "../../shared.js";
 
 export class UserAuthenticationManager extends ResourceManager<
   UserAuthentication,
@@ -156,10 +143,7 @@ export class UserAuthenticationManager extends ResourceManager<
     oldPassword: string,
     newPassword: string
   ): Promise<UnlockedUserAuthentication> {
-    for await (const userAuthentication of this.list(
-      user,
-      'password'
-    )) {
+    for await (const userAuthentication of this.list(user, "password")) {
       let unlockedUserKey: UnlockedUserAuthentication;
       try {
         unlockedUserKey = await this.unlock(

@@ -1,4 +1,18 @@
+import { Resource } from "../resource.js";
+
 export type FileAccessLevel = "None" | "Read" | "ReadWrite" | "Manage" | "Full";
+
+export interface FileAccessResource extends Resource {
+  userId: number;
+  fileId: number;
+  level: number;
+  encryptedKey: Uint8Array;
+  granterUserId: number;
+}
+
+export interface UnlockedFileAccess extends FileAccessResource {
+  key: Uint8Array;
+}
 
 const fileAccessLevelConversionOrder: FileAccessLevel[] = [
   "None",

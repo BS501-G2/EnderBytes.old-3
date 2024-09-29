@@ -1,19 +1,13 @@
 import { Knex } from "knex";
-import { Resource, ResourceManager } from "../resource.js";
+import { ResourceManager } from "../resource.js";
 import { Database } from "../database.js";
-import { FileManager, FileResource } from "./file.js";
-import { FileSnapshotManager, FileSnapshotResource } from "./file-snapshot.js";
-import { ScanFolderSortType, FileThumbnailerStatusType } from "../../shared.js";
-import { FileContentManager, FileContentResource } from "./file-content.js";
-
-export interface FileThumbnailResource extends Resource {
-  fileId: number;
-  fileSnapshotId: number;
-
-  status: FileThumbnailerStatusType;
-
-  fileThumbnailContentId?: number;
-}
+import { FileManager } from "./file.js";
+import { FileSnapshotManager } from "./file-snapshot.js";
+import { FileThumbnailerStatusType, FileResource } from "../../shared.js";
+import { FileContentManager } from "./file-content.js";
+import { FileThumbnailResource } from "../../shared/db/file-thumbnail.js";
+import { FileSnapshotResource } from "../../shared/db/file-snapshot.js";
+import { FileContentResource } from "../../shared/db/file-content.js";
 
 export class FileThumbnailManager extends ResourceManager<
   FileThumbnailResource,

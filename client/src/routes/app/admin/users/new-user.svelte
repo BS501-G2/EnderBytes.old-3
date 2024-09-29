@@ -14,7 +14,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 
-	import { getConnection2 } from '$lib/client/client';
+	import { getConnection } from '$lib/client/client';
 
 	import { Button, Dialog, Input } from '@rizzzi/svelte-commons';
 	import { writable, type Writable } from 'svelte/store';
@@ -22,7 +22,7 @@
 	const { onDismiss }: { onDismiss: () => void } = $props();
 	const {
 		serverFunctions: { createUser }
-	} = getConnection2();
+	} = getConnection();
 
 	const username = writable('');
 	const password = writable(getRandomPassword());

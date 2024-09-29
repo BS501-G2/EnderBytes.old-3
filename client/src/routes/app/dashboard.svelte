@@ -2,7 +2,7 @@
 	import { getLocale } from '$lib/locale.svelte';
 
 	import LogoutConfirmationDialog from './dashboard-logout-confirm.svelte';
-	import { Keyboard, ViewMode, currentColorScheme, viewMode } from '@rizzzi/svelte-commons';
+	import { Keyboard, ViewMode, viewMode } from '@rizzzi/svelte-commons';
 	import SettingsDialog from './settings-dialog.svelte';
 	import { onMount, setContext, type Snippet } from 'svelte';
 	import { type Writable, writable } from 'svelte/store';

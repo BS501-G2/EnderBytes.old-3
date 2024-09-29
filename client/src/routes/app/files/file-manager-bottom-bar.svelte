@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext } from 'svelte';
   import { FileManagerContextName, type FileManagerContext } from './file-manager.svelte';
-  import type { FileResource } from '@rizzzi/enderdrive-lib/server';
+  import type { FileResource } from '@rizzzi/enderdrive-lib/shared';
 
   const { resolved } = getContext<FileManagerContext>(FileManagerContextName);
 

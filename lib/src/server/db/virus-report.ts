@@ -1,17 +1,14 @@
 import { Knex } from "knex";
-import { Resource, ResourceManager } from "../resource.js";
-import { FileManager, FileResource } from "./file.js";
-import { FileContentManager, FileContentResource } from "./file-content.js";
-import { FileSnapshotManager, FileSnapshotResource } from "./file-snapshot.js";
+import { ResourceManager } from "../resource.js";
+import { FileManager } from "./file.js";
+import { FileContentManager } from "./file-content.js";
+import { FileSnapshotManager } from "./file-snapshot.js";
 import { Database } from "../database.js";
 import { VirusReportEntryManager } from "./virus-report-entry.js";
-
-export interface VirusReportResource
-  extends Resource<VirusReportResource, VirusReportManager> {
-  fileId: number;
-  fileContentId: number;
-  fileSnapshotId: number;
-}
+import { VirusReportResource } from "../../shared/db/virus-report.js";
+import { FileSnapshotResource } from "../../shared/db/file-snapshot.js";
+import { FileContentResource } from "../../shared/db/file-content.js";
+import { FileResource } from "../../shared.js";
 
 export class VirusReportManager extends ResourceManager<
   VirusReportResource,
@@ -95,7 +92,9 @@ export class VirusReportManager extends ResourceManager<
     });
 
     if (virusReport != null) {
-      await virusReportEntries.deleteWhere([["virusReportId", "=", virusReport.id]]);
+      await virusReportEntries.deleteWhere([
+        ["virusReportId", "=", virusReport.id],
+      ]);
     } else {
       virusReport = await this.insert({
         fileId: file.id,

@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { getConnection2 } from '$lib/client/client';
+	import { getConnection } from '$lib/client/client';
 	import User from '$lib/client/user.svelte';
-	import type {
-		FileAccessResource,
-		FileLogResource,
-		FileResource,
-		UserResource
-	} from '@rizzzi/enderdrive-lib/server';
-	import { byteUnit, deserializeFileAccessLevel } from '@rizzzi/enderdrive-lib/shared';
+	import {
+	byteUnit,
+		deserializeFileAccessLevel,
+		type FileAccessResource,
+		type FileLogResource,
+		type FileResource,
+		type UserResource	} from '@rizzzi/enderdrive-lib/shared';
 	import {
 		Awaiter,
 		Button,
@@ -69,7 +69,7 @@
 				getFileMime,
 				listFileLogs
 			}
-		} = getConnection2();
+		} = getConnection();
 
 		const owner = await getUser(['userId', file.ownerUserId]);
 		const creator = await getUser(['userId', file.creatorUserId]);
@@ -196,7 +196,7 @@
 	</div>
 
 	<Button
-		container={buttonContainer}
+		container={buttonContainer as Snippet}
 		onClick={() => {
 			$accessDialogs = [file];
 		}}
@@ -234,7 +234,7 @@
 
 				<Button
 					buttonClass="transparent"
-					container={buttonContainer}
+					container={buttonContainer as Snippet}
 					outline={false}
 					onClick={() => {
 						tab = index;

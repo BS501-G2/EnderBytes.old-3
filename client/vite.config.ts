@@ -5,7 +5,7 @@ export default defineConfig({
 	plugins: [sveltekit()],
 	server: {
 		proxy: {
-			'/ws': {
+			'/api/socket.io': {
 				target: 'http://localhost:8082/ws',
 				changeOrigin: true,
 				secure: false,

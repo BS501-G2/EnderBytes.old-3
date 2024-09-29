@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { UserResource } from '@rizzzi/enderdrive-lib/server';
+  import type { UserResource } from '@rizzzi/enderdrive-lib/shared';
   import { Button, Dialog } from '@rizzzi/svelte-commons';
 
   const {
