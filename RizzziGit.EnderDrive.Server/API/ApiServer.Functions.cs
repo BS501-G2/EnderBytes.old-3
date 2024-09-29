@@ -10,12 +10,5 @@ public sealed partial class ApiServer
 {
     private void RegsiterHandlers(List<ApiRequestHook> handlers)
     {
-        handlers.AddFunctionHandler<string, string>(
-            new("/ECHO", RegexOptions.IgnoreCase),
-            async (match, context, request) =>
-            {
-                return request;
-            }
-        );
     }
 }

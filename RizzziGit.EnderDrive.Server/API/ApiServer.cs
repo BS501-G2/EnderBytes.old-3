@@ -128,5 +128,8 @@ public sealed partial class ApiServer(Server server, int httpPort, int httpsPort
 
     private async Task Handle(WebSocket webSocket, CancellationToken cancellationToken)
     {
+        CompositeBuffer message = [];
+
+        
     }
 }

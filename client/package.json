@@ -13,6 +13,7 @@
 	},
 	"devDependencies": {
 		"@fortawesome/fontawesome-free": "^6.6.0",
+		"@rizzzi/enderdrive-lib": "file:../lib",
 		"@rizzzi/svelte-commons": "file:../../svelte-commons",
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/adapter-node": "^5.2.2",
