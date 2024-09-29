@@ -8,6 +8,9 @@
     },
     {
       "path": "RizzziGit.EnderDrive.Server"
+    },
+    {
+      "path": "RizzziGit.EnderDrive.Client"
     }
   ],
   "settings": {}

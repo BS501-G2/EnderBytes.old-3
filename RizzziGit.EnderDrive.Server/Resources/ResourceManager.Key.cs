@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
+using Newtonsoft.Json;
 namespace RizzziGit.EnderDrive.Server.Resources;
 
 using System;
@@ -16,6 +17,7 @@ public class KeyAccess : ResourceData
     public required ObjectId KeyId;
     public required ObjectId UserId;
 
+    [JsonIgnore]
     public required byte[] EncryptedAesKey;
 
     public UnlockedKeyAccess Unlock(UnlockedUserAuthentication userAuthentication)

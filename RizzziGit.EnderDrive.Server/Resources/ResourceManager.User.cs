@@ -6,11 +6,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using Newtonsoft.Json;
 
 namespace RizzziGit.EnderDrive.Server.Resources;
 
-using MongoDB.Bson;
 using Services;
 
 [Flags]
@@ -33,6 +34,8 @@ public class User : ResourceData
     public required string? DisplayName;
 
     public required UserRole Role;
+
+    [JsonIgnore]
     public required byte[] RsaPublicKey;
 }
 

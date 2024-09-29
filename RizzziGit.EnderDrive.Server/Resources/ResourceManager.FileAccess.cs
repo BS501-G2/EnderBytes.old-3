@@ -3,6 +3,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using Newtonsoft.Json;
 
 namespace RizzziGit.EnderDrive.Server.Resources;
 
@@ -29,7 +30,10 @@ public class FileAccess : ResourceData
     public required FileAccessTargetEntityType TargetEntityType;
     public required ObjectId TargetEntityId;
 
+    [JsonIgnore]
     public required byte[] EncryptedAesKey;
+
+    [JsonIgnore]
     public required byte[] AesIv;
 
     public required FileAccessLevel Level;

@@ -2,11 +2,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\RizzziGit.Commons\RizzziGit.Commons.csproj" />
+    <ProjectReference Include="..\RizzziGit.EnderDrive.Shared\RizzziGit.EnderDrive.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="ClamAV.Net" Version="0.1.166" />
-    <PackageReference Include="MongoDB.Driver" Version="2.28.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.29.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
   </ItemGroup>

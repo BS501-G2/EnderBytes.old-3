@@ -21,7 +21,6 @@
 		"@types/eslint": "^9.6.0",
 		"@types/mmmagic": "^0.4.33",
 		"axios": "^1.7.7",
-		"bson": "^6.8.0",
 		"buffer": "^6.0.3",
 		"eslint": "^9.0.0",
 		"eslint-config-prettier": "^9.1.0",

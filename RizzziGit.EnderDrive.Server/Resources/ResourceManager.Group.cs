@@ -6,10 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using RizzziGit.EnderDrive.Server.Services;
+using Newtonsoft.Json;
 
 namespace RizzziGit.EnderDrive.Server.Resources;
 
+using Services;
 public class Group : ResourceData
 {
     public static implicit operator RSA(Group groupMembership) =>
@@ -18,6 +19,7 @@ public class Group : ResourceData
     public required string Name;
     public required string? Description;
 
+    [JsonIgnore]
     public required byte[] RsaPublicKey;
 }
 

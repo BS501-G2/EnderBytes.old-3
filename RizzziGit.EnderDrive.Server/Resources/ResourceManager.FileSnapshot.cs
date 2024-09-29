@@ -6,19 +6,18 @@ using MongoDB.Bson;
 namespace RizzziGit.EnderDrive.Server.Resources;
 
 using MongoDB.Driver;
+public class FileSnapshot : ResourceData
+{
+    public required ObjectId FileId;
+    public required ObjectId FileContentId;
+    public required ObjectId AuthorUserId;
+    public required ObjectId? BaseFileSnapshotId;
 
-    public class FileSnapshot : ResourceData
-    {
-        public required ObjectId FileId;
-        public required ObjectId FileContentId;
-        public required ObjectId AuthorUserId;
-        public required ObjectId? BaseFileSnapshotId;
+    public required long Size;
+}
 
-        public required long Size;
-    }
 public sealed partial class ResourceManager
 {
-
     public async Task<FileSnapshot> CreateFileSnapshot(
         ResourceTransaction transaction,
         UnlockedFile file,

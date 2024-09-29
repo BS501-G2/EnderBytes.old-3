@@ -1,11 +1,12 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using Newtonsoft.Json;
 
 namespace RizzziGit.EnderDrive.Server.Resources;
 
-using System.Collections.Generic;
 using Services;
 
 public enum FileType
@@ -22,7 +23,10 @@ public class File : ResourceData
     public required string Name;
     public required FileType Type;
 
+    [JsonIgnore]
     public required byte[] EncryptedAesKey;
+
+    [JsonIgnore]
     public required byte[] AesIv;
 
     public UnlockedFile Unlock(UnlockedUserAuthentication userAuthentication)

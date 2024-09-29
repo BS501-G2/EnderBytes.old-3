@@ -14,17 +14,18 @@ using Commons.Services;
 using Core;
 using Services;
 
+
+public abstract class ResourceData
+{
+    public required ObjectId Id;
+}
+
 public sealed class MainResourceManagerData
 {
     public required ILoggerFactory LoggerFactory;
     public required IMongoClient Client;
     public required RandomNumberGenerator RandomNumberGenerator;
     public required Logger Logger;
-}
-
-public abstract class ResourceData
-{
-    public required ObjectId Id;
 }
 
 public sealed partial class ResourceManager(Server server)
@@ -55,7 +56,7 @@ public sealed partial class ResourceManager(Server server)
                 new MongoClientSettings()
                 {
                     Server = new MongoServerAddress("127.0.0.1"),
-                    LoggingSettings = new(loggerFactory)
+                    LoggingSettings = new(loggerFactory),
                 }
             );
 

@@ -1,14 +1,15 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Newtonsoft.Json;
 
 namespace RizzziGit.EnderDrive.Server.Resources;
 
-using System.Collections.Generic;
-using System.Linq;
 using Services;
 
 public enum UserAuthenticationType
@@ -25,11 +26,19 @@ public class UserAuthentication : ResourceData
     public required ObjectId UserId;
     public required UserAuthenticationType Type;
 
+    [JsonIgnore]
     public required int Iterations;
+
+    [JsonIgnore]
     public required byte[] Salt;
+
+    [JsonIgnore]
     public required byte[] AesIv;
 
+    [JsonIgnore]
     public required byte[] RsaPublicKey;
+
+    [JsonIgnore]
     public required byte[] EncryptedRsaPrivateKey;
 
     public UnlockedUserAuthentication Unlock(UnlockedUserAuthentication userAuthentication) =>
