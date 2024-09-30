@@ -30,7 +30,7 @@ export const testFunctions: TestFunctions = {
 
     for await (const fileBuffer of getThumbnail(generatorFromStream(file))) {
       console.log(fileBuffer.length);
-      await outputFile.write(fileBuffer);
+      await outputFile.write(fileBuffer as Uint8Array);
     }
 
     await outputFile.close();

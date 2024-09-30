@@ -1,7 +1,7 @@
 <script lang="ts" generics="T extends any">
 	import { Button, LoadingBar } from '@rizzzi/svelte-commons';
 	import { DashboardContextName, type DashboardContext } from './dashboard';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, type Snippet } from 'svelte';
 	import { BackgroundTaskStatus, type BackgroundTask } from '$lib/background-task';
 
 	const {
@@ -12,7 +12,7 @@
 
 	const { pushOverlayContent } = getContext<DashboardContext>(DashboardContextName);
 
-	onMount(() => pushOverlayContent(card));
+	onMount(() => pushOverlayContent(card as Snippet));
 
 	function progressToString(progress: number): string {
 		if (task.status === BackgroundTaskStatus.Failed) {

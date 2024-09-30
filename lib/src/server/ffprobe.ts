@@ -216,14 +216,14 @@ export class FFmpegMediaInfo {
       ffprobe.once("close", (code) => {
         if (code === 0) {
           try {
-            const json = Buffer.concat(output).toString();
+            const json = Buffer.concat(output as Uint8Array[]).toString();
 
             resolve(new this(JSON.parse(json)));
           } catch (error) {
             reject(error);
           }
         } else {
-          const message = Buffer.concat(output).toString().trim();
+          const message = Buffer.concat(output as Uint8Array[]).toString().trim();
 
           reject(new Error(message));
         }

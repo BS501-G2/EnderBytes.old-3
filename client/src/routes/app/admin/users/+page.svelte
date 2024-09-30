@@ -19,8 +19,8 @@
 		serverFunctions: { listUsers }
 	} = getConnection();
 
-	onMount(() => setMainContent(main));
-	onMount(() => pushTopContent(top));
+	onMount(() => setMainContent(main as Snippet));
+	onMount(() => pushTopContent(top as Snippet));
 
 	const searchString: Writable<string> = writable('');
 	let newUserDialog: boolean = $state(false);
@@ -49,7 +49,7 @@
 			{/snippet}
 
 			<Button
-				container={actionContainer}
+				container={actionContainer as Snippet}
 				onClick={() => {
 					newUserDialog = true;
 				}}

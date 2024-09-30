@@ -96,7 +96,7 @@ export class Thumbnailer extends Service<ThumbnailerData, ThumbnailerOptions> {
           thumbnailContent,
           thumbnailSnapshot,
           written,
-          chunk
+          chunk as Uint8Array
         );
         written += chunk.length;
       }
@@ -248,7 +248,7 @@ export async function* getThumbnail(
       }
 
       if (code !== 0) {
-        push(new Error(Buffer.concat(error).toString()));
+        push(new Error(Buffer.concat(error as Uint8Array[]).toString()));
       } else {
         push(null);
       }

@@ -57,8 +57,8 @@
     {/snippet}
 
     {#snippet actions()}
-      <Button container={buttonContainer} onClick={() => resolve(true)}>Yes</Button>
-      <Button container={buttonContainer} buttonClass='transparent' onClick={() => resolve(false)}>No</Button>
+      <Button container={buttonContainer as Snippet} onClick={() => resolve(true)}>Yes</Button>
+      <Button container={buttonContainer as Snippet} buttonClass='transparent' onClick={() => resolve(false)}>No</Button>
     {/snippet}
   </Dialog>
 {/snippet}

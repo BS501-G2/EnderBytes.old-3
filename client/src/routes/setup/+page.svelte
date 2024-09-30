@@ -13,15 +13,16 @@
 
 	import { goto } from '$app/navigation';
 	import { getConnection } from '$lib/client/client';
+	import type { Snippet } from 'svelte';
 
 	const tabs: TabItem[] = [
 		{
 			name: 'Login Credentials',
-			view: loginCredentialsTab
+			view: loginCredentialsTab as Snippet
 		},
 		{
 			name: 'Profile',
-			view: profileTab
+			view: profileTab as Snippet
 		}
 	];
 
@@ -84,7 +85,7 @@
 		<Tab id={tabId}>
 			{#snippet view(view)}
 				<div class="tab-view">
-					{@render view()}
+					{@render (view as any)()}
 				</div>
 			{/snippet}
 		</Tab>
@@ -95,7 +96,7 @@
 			{#snippet view()}{/snippet}
 			{#snippet host(tabs, currentTabIndex, setTab)}
 				<Button
-					onClick={() => setTab(currentTabIndex - 1)}
+					onClick={() => (setTab as any)(currentTabIndex - 1)}
 					buttonClass="background"
 					enabled={currentTabIndex > 0}
 				>
@@ -105,7 +106,7 @@
 				<Button
 					onClick={async () => {
 						if (currentTabIndex !== tabs.length - 1) {
-							setTab(currentTabIndex + 1);
+							(setTab as any)(currentTabIndex + 1);
 						} else {
 							getConnection().serverFunctions.register(
 								$username,
