@@ -7,6 +7,7 @@
 	import { goto } from '$app/navigation';
 	import Icon from '$lib/ui/icon.svelte';
 	import { FileManagerViewMode } from '../files/file-manager-folder-list';
+	import SharedFiles from './shared-files.svelte';
 
 	const {
 		serverFunctions: { listSharedFiles, getFile, whoAmI }
@@ -32,48 +33,7 @@
 </script>
 
 {#snippet sharedFiles(loading: boolean, fileAccesses: FileAccessResource[])}
-	{#if loading}
-		<div class="section-loading">
-			<LoadingSpinner size="1em" />
-		</div>
-	{:else if fileAccesses.length > 0}
-		<div class="file-accesses">
-			<div class="header">
-				<h2>Recently Shared Files</h2>
-				<Button onClick={() => goto('/app/shared')}>See More</Button>
-			</div>
-			<div class="list">
-				{#each groupByTime(fileAccesses) as group}
-					<div class="group">
-						<div class="sharer">
-							<p>
-								<Icon icon="user-group" thickness="solid" /> Shared by <User
-									userId={group[0].granterUserId}
-								/>
-							</p>
-						</div>
-						<div class="entries">
-							{#each group as fileAccess}
-								{#await getFile(fileAccess.fileId)}
-									<LoadingSpinner size="1em" />
-								{:then file}
-									<div class="file-entry">
-										<FileManagerFileEntry
-											{file}
-											listViewMode={FileManagerViewMode.Grid}
-											selected={false}
-											onClick={() => goto(`/app/files?fileId=${file.id}`)}
-											onDblClick={() => goto(`/app/files?fileId=${file.id}`)}
-										/>
-									</div>
-								{/await}
-							{/each}
-						</div>
-					</div>
-				{/each}
-			</div>
-		</div>
-	{/if}
+	<SharedFiles {loading} {fileAccesses} />
 {/snippet}
 
 <div class="page">
